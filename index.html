@@ -417,6 +417,9 @@
         // ─── [FIX 2] lock ป้องกันสแกนซ้ำขณะรอ API ─────────────────────────
         var isProcessing = false;
 
+        // cache ข้อมูลทั้งหมด เพื่อให้ scanner ค้นหา client-side ได้เลย
+        var cachedAllData = [];
+
         // ─── [FIX 3] Server-time offset (ms) ─────────────────────────────────
         var serverTimeOffsetMs = 0;
 
@@ -544,6 +547,7 @@
                 }
 
                 const rows = allData || [];
+                cachedAllData = rows; // cache ไว้ให้ scanner ใช้
 
                 // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────────
                 const checkinData = rows
@@ -674,9 +678,15 @@
                 }
             }
 
-            const startTimeStr     = heroItem['เวลาเริ่มแสดง'] || "";
-            const endTimeStr       = heroItem['เวลาสิ้นสุด']    || "";
+            // ── ชื่อคอลัมน์จริงจาก DB schema ──────────────────────────────
+            const startTimeStr     = heroItem['เวลาการนำเสนอ'] || "";
+            const endTimeStr       = heroItem['หมดการนำเสนอ']   || "";
             const isCurrentlyLive  = isLive(startTimeStr, endTimeStr);
+            const heroFullName     = [heroItem['ชื่อ'], heroItem['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+            const heroTitle        = heroItem['ชื่อผลงาน'] || '-';
+            const heroGroup        = heroItem['ด้านของบทคัดย่อ'] || heroItem['สาขา'] || '-';
+            const heroRoom         = heroItem['จอที่'] ? `จอที่ ${heroItem['จอที่']}` : '-';
+            const heroUniqueKey    = heroItem['QR CODE'] ?? heroItem['รหัสผลงาน'];
 
             let liveBadge = "";
             if (isCheckinSec) {
@@ -688,16 +698,15 @@
             }
 
             let rippleAnimClass = "";
-            if (isCheckinSec && heroItem.id !== lastCheckinId) {
+            if (isCheckinSec && heroUniqueKey !== lastCheckinId) {
                 if (!isInitialLoad) { playSuccessSound(); }
-                lastCheckinId   = heroItem.id;
+                lastCheckinId   = heroUniqueKey;
                 rippleAnimClass = "animate-new-ripple";
-            } else if (!isCheckinSec && heroItem.id !== lastRewardId) {
+            } else if (!isCheckinSec && heroUniqueKey !== lastRewardId) {
                 if (!isInitialLoad) { playSuccessSound(); }
-                lastRewardId = heroItem.id;
+                lastRewardId = heroUniqueKey;
             }
 
-            let roomInfo = heroItem['ห้องจัดแสดง'] || "-";
             let timeInfo = (startTimeStr || endTimeStr)
                 ? ` (${startTimeStr || '-'}-${endTimeStr || '-'} น.)` : "";
 
@@ -719,19 +728,19 @@
                     </div>
                     <div class="z-10 relative">
                         <h3 class="text-xl lg:text-2xl font-extrabold mb-1 tracking-wide leading-snug drop-shadow-sm">
-                            ${heroItem['ชื่อ-สกุล'] || 'ไม่ระบุชื่อ'}
+                            ${heroFullName}
                         </h3>
                         <p class="text-white/80 text-xs lg:text-sm font-semibold truncate mb-4">
-                            ${heroItem['ชื่อผลงาน ภาษาไทย'] || heroItem['ชื่อผลงาน ภาษาอังกฤษ'] || '-'}
+                            ${heroTitle}
                         </p>
                         <div class="flex flex-wrap items-center gap-3 border-t border-white/20 pt-4 text-xs font-semibold">
                             <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl">
                                 <i data-lucide="map-pin" class="w-3.5 h-3.5 text-white"></i>
-                                <span>${heroItem['กลุ่มงาน'] || '-'}</span>
+                                <span>${heroGroup}</span>
                             </div>
                             <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl ml-auto">
                                 <i data-lucide="presentation" class="w-3.5 h-3.5 text-white"></i>
-                                <span>จัดแสดง: ${roomInfo}${timeInfo}</span>
+                                <span>จัดแสดง: ${heroRoom}${timeInfo}</span>
                             </div>
                         </div>
                     </div>
@@ -752,9 +761,10 @@
                     }
                 }
 
-                const itemStart  = item['เวลาเริ่มแสดง'] || "";
-                const itemEnd    = item['เวลาสิ้นสุด']    || "";
-                const isItemLive = isLive(itemStart, itemEnd);
+                const itemStart    = item['เวลาการนำเสนอ'] || "";
+                const itemEnd      = item['หมดการนำเสนอ']   || "";
+                const isItemLive   = isLive(itemStart, itemEnd);
+                const itemFullName = [item['ชื่อ'], item['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
 
                 let listLiveBadge = "";
                 if (isCheckinSec) {
@@ -775,9 +785,9 @@
                             <div class="overflow-hidden">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-xs font-extrabold text-indigo-600 tracking-wider">${item['รหัสผลงาน'] || 'N/A'}</span>
-                                    <h4 class="text-sm font-bold text-slate-800 truncate">${item['ชื่อ-สกุล'] || 'ไม่ระบุชื่อ'}</h4>
+                                    <h4 class="text-sm font-bold text-slate-800 truncate">${itemFullName}</h4>
                                 </div>
-                                <p class="text-[11px] text-slate-500 font-medium truncate">${item['ชื่อผลงาน ภาษาไทย'] || item['ชื่อผลงาน ภาษาอังกฤษ'] || '-'}</p>
+                                <p class="text-[11px] text-slate-500 font-medium truncate">${item['ชื่อผลงาน'] || '-'}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
@@ -1061,13 +1071,20 @@
             try {
                 setScanFeedback("กำลังตรวจค้นรหัส: " + code + "...", "indigo");
 
-                const { data, error } = await supabaseClient
-                    .from('eposter_works')
-                    .select('*')
-                    .eq('รหัสผลงาน', code)
-                    .single();
+                // ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่
+                let rows = cachedAllData;
+                if (rows.length === 0) {
+                    const { data: fresh } = await supabaseClient.from('eposter_works').select('*');
+                    rows = fresh || [];
+                    cachedAllData = rows;
+                }
 
-                if (error || !data) {
+                // ค้นหา client-side — หลีกเลี่ยงการส่ง Thai column ไปใน .eq()
+                const data = rows.find(r =>
+                    String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase()
+                ) || null;
+
+                if (!data) {
                     setScanFeedback(`ไม่พบข้อมูลรหัส: ${code}`, "rose");
                     playErrorTone();
                     return;
@@ -1117,12 +1134,13 @@
             iconWrapper.className = `w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner ${iconColorClass}`;
 
             document.getElementById('confirmIcon').setAttribute('data-lucide', icon);
+            const modalFullName = [currentScannedItem['ชื่อ'], currentScannedItem['นามสกุล']].filter(Boolean).join(' ') || "ไม่ระบุชื่อ";
             document.getElementById('cId').innerText   = currentScannedItem['รหัสผลงาน'] || "-";
-            document.getElementById('cName').innerText = currentScannedItem['ชื่อ-สกุล']  || "ไม่ระบุชื่อ";
+            document.getElementById('cName').innerText = modalFullName;
 
-            let roomText = currentScannedItem['ห้องจัดแสดง'] || "-";
-            const start  = currentScannedItem['เวลาเริ่มแสดง'] || "";
-            const end    = currentScannedItem['เวลาสิ้นสุด']    || "";
+            let roomText = currentScannedItem['จอที่'] ? `จอที่ ${currentScannedItem['จอที่']}` : "-";
+            const start  = currentScannedItem['เวลาการนำเสนอ'] || "";
+            const end    = currentScannedItem['หมดการนำเสนอ']   || "";
             if (start || end) roomText += ` (${start || '-'}-${end || '-'} น.)`;
             document.getElementById('cRoom').innerText = roomText;
 
@@ -1149,8 +1167,8 @@
         async function submitConfirmedAction() {
             if (!currentScannedItem) return;
 
-            const startTimeStr    = currentScannedItem['เวลาเริ่มแสดง'] || "";
-            const endTimeStr      = currentScannedItem['เวลาสิ้นสุด']    || "";
+            const startTimeStr    = currentScannedItem['เวลาการนำเสนอ'] || "";
+            const endTimeStr      = currentScannedItem['หมดการนำเสนอ']   || "";
             const isCurrentlyLive = isLive(startTimeStr, endTimeStr);
 
             if (autoDeterminedAction === "ENTRY" && !isCurrentlyLive) {
@@ -1172,10 +1190,12 @@
                     updatePayload = { "รับประกาศ": "Y", "เวลารับประกาศ": nowISO };
                 }
 
+                // ใช้ "QR CODE" (bigint, ASCII) เป็น identifier แทน id
+                // เพราะ schema ไม่มีคอลัมน์ id และ Thai column ใน .eq() ทำให้ PostgREST พัง
                 const { error } = await supabaseClient
                     .from('eposter_works')
                     .update(updatePayload)
-                    .eq('id', currentScannedItem.id)
+                    .eq('QR CODE', currentScannedItem['QR CODE'])
                     .select();
 
                 if (error) throw error;
