@@ -623,19 +623,29 @@
                     .select('*');
 
                 if (fetchError) {
+                    console.error('[Supabase Error]', fetchError);
                     showEmptyOrErrorState(
                         `เชื่อมต่อฐานข้อมูลไม่ได้: ${fetchError.message} (Code: ${fetchError.code})`, true
                     );
                     return;
                 }
 
-                // log column names ครั้งแรกเพื่อ debug
-                if (allData && allData.length > 0 && isInitialLoad) {
-                    console.log('[DB Columns]', Object.keys(allData[0]));
-                }
-
                 const rows = allData || [];
                 cachedAllData = rows; // cache ไว้ให้ scanner ใช้
+
+                // ── debug: แสดงจำนวน row ที่ดึงได้เสมอ ────────────────────────
+                console.log(`[DB] ดึงข้อมูลได้ ${rows.length} rows`);
+                if (rows.length > 0) {
+                    console.log('[DB Columns]', Object.keys(rows[0]));
+                    console.log('[DB Sample Check-in values]',
+                        rows.slice(0, 5).map(r => ({ id: r['รหัสผลงาน'], ci: r['Check-in'], ra: r['รับประกาศ'] }))
+                    );
+                } else {
+                    // rows = 0 อาจเป็น RLS หรือตารางยังว่าง
+                    console.warn('[DB] ไม่มีข้อมูล – ตรวจสอบ RLS Policy ใน Supabase และยืนยันว่ามีข้อมูลในตาราง');
+                    showEmptyOrErrorState('ไม่พบข้อมูลในตาราง — กรุณาตรวจสอบ RLS Policy และการนำเข้าข้อมูล', true);
+                    return;
+                }
 
                 // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────────
                 const checkinData = rows
