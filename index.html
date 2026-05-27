@@ -1313,11 +1313,34 @@
         // =============================================================
         // 🔧 Process Scanned Code
         // =============================================================
-        async function processScannedCode(code) {
+        async function processScannedCode(rawCode) {
             try {
+                // ── 1. ดึง "รหัส" ออกจาก QR ที่อาจเป็น URL หรือตัวเลขล้วน ──────
+                let code = rawCode.trim();
+
+                // ถ้า QR เป็น URL (http/https) ให้ดึง path ส่วนท้ายหรือ query param
+                if (/^https?:\/\//i.test(code)) {
+                    try {
+                        const u = new URL(code);
+                        // ลอง query params: ?code=, ?id=, ?qr=, ?poster=
+                        const qParam = u.searchParams.get('code')
+                                    || u.searchParams.get('id')
+                                    || u.searchParams.get('qr')
+                                    || u.searchParams.get('poster');
+                        if (qParam) {
+                            code = qParam.trim();
+                        } else {
+                            // ใช้ path ส่วนท้ายสุด (e.g. /poster/P001 → P001)
+                            const parts = u.pathname.replace(/\/$/, '').split('/');
+                            code = parts[parts.length - 1] || code;
+                        }
+                    } catch (_) { /* ใช้ rawCode เดิม */ }
+                }
+
+                console.log('[SCAN] rawCode =', rawCode, '| parsed code =', code);
                 setScanFeedback("กำลังตรวจค้นรหัส: " + code + "...", "indigo");
 
-                // ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่
+                // ── 2. ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่ ─────────────
                 let rows = cachedAllData;
                 if (rows.length === 0) {
                     const { data: fresh } = await supabaseClient.from('eposter_works').select('*');
@@ -1325,12 +1348,22 @@
                     cachedAllData = rows;
                 }
 
-                // ค้นหา client-side — หลีกเลี่ยงการส่ง Thai column ไปใน .eq()
-                const data = rows.find(r =>
-                    String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase()
-                ) || null;
+                console.log('[SCAN] ค้นใน', rows.length, 'rows, ตัวอย่างรหัสผลงาน:',
+                    rows.slice(0, 5).map(r => r['รหัสผลงาน']));
+
+                // ── 3. ค้นหา: รองรับทั้ง รหัสผลงาน และ QR CODE (bigint) ────────
+                const codeUp = code.toUpperCase();
+                const codeNum = Number(code);          // สำหรับ match กับ QR CODE bigint
+                const data = rows.find(r => {
+                    const byCode = String(r['รหัสผลงาน'] || '').toUpperCase() === codeUp;
+                    const byQR   = !isNaN(codeNum) && Number(r['QR CODE']) === codeNum;
+                    return byCode || byQR;
+                }) || null;
 
                 if (!data) {
+                    console.warn('[SCAN] ไม่พบ:', code,
+                        '| ตัวอย่าง DB:', rows.slice(0, 3).map(r =>
+                            ({ รหัส: r['รหัสผลงาน'], qr: r['QR CODE'] })));
                     setScanFeedback(`ไม่พบข้อมูลรหัส: ${code}`, "rose");
                     playErrorTone();
                     return;
