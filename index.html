@@ -55,6 +55,9 @@
                 inset 0 1px 1px rgba(255,255,255,1);
         }
 
+        /* expired card ทำให้จาง + เป็นขาวดำ */
+        .expired-card { opacity: 0.35; filter: grayscale(1); }
+
         /* Animations */
         @keyframes slideInUp {
             from { opacity: 0; transform: translateY(15px); }
@@ -730,195 +733,323 @@
             return now >= start && now < end;
         }
 
+        // ── helper: format datetime field → "HH:MM น." ─────────────────────
+        function formatThaiTime(field) {
+            if (!field) return "-";
+            const d = new Date(field);
+            if (!isNaN(d.getTime())) return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
+            return String(field);
+        }
+
+        // ── helper: check expired (> 2 hrs past endTime) ────────────────────
+        function isExpired(endTimeStr) {
+            if (!endTimeStr) return false;
+            const end = parseTime(endTimeStr);
+            if (!end) return false;
+            return (getSyncedTime().getTime() - end.getTime()) > 2 * 60 * 60 * 1000;
+        }
+
         function renderSection(section, data) {
             const heroContainer = document.getElementById(`${section}Hero`);
             const listContainer = document.getElementById(`${section}List`);
+            const isCheckinSec  = (section === 'checkin');
 
             if (data.length === 0) {
-                heroContainer.innerHTML = '';
-                listContainer.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-16 text-slate-400">
-                        <i data-lucide="inbox" class="w-12 h-12 mb-3 opacity-40"></i>
-                        <p class="text-sm font-medium">ไม่มีรายการคิวขณะนี้</p>
+                const emptyMsg = isCheckinSec
+                    ? "จุดนี้ยังว่างอยู่... จิบกาแฟรอได้เลย ☕️"
+                    : "ยังไม่มีคิวมารับใบประกาศครับ 🏅";
+                heroContainer.innerHTML = `
+                    <div class="bg-white/40 border border-slate-100 border-dashed rounded-[1.5rem] h-32
+                                flex flex-col items-center justify-center gap-2 text-slate-400">
+                        <i data-lucide="${isCheckinSec ? 'coffee' : 'award'}" class="w-8 h-8 opacity-40"></i>
+                        <span class="text-sm font-medium">${emptyMsg}</span>
                     </div>`;
+                listContainer.innerHTML = '';
                 return;
             }
 
-            const heroItem  = data[0];
-            const listItems = data.slice(1);
-            const isCheckinSec  = (section === 'checkin');
-            const heroColorClass = isCheckinSec ? 'from-blue-600 to-indigo-600' : 'from-amber-500 to-orange-500';
-            const iconName      = isCheckinSec ? 'user-check' : 'award';
-            const timeField     = isCheckinSec ? heroItem['เวลา Check-in'] : heroItem['เวลารับประกาศ'];
+            const heroItem    = data[0];
+            const listItems   = data.slice(1);
+            const uniqueKey   = heroItem['QR CODE'] ?? heroItem['รหัสผลงาน'];
+            const fullName    = [heroItem['ชื่อ'], heroItem['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+            const startTime   = heroItem['เวลาการนำเสนอ'] || "";
+            const endTime     = heroItem['หมดการนำเสนอ']   || "";
+            const heroLive    = isLive(startTime, endTime);
+            const heroExpired = isExpired(endTime);
+            const recordTime  = isCheckinSec ? heroItem['เวลา Check-in'] : heroItem['เวลารับประกาศ'];
 
-            let displayTime = "-";
-            if (timeField) {
-                const tObj = new Date(timeField);
-                if (!isNaN(tObj.getTime())) {
-                    displayTime = tObj.toLocaleTimeString('th-TH', {
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    }) + " น.";
-                } else {
-                    displayTime = timeField;
-                }
+            // ripple เมื่อ hero เปลี่ยน
+            let rippleClass = "";
+            if (isCheckinSec && uniqueKey !== lastCheckinId) {
+                if (!isInitialLoad) playSuccessSound();
+                lastCheckinId = uniqueKey;
+                rippleClass   = "animate-new-ripple";
+            } else if (!isCheckinSec && uniqueKey !== lastRewardId) {
+                if (!isInitialLoad) playSuccessSound();
+                lastRewardId  = uniqueKey;
             }
 
-            // ── ชื่อคอลัมน์จริงจาก DB schema ──────────────────────────────
-            const startTimeStr     = heroItem['เวลาการนำเสนอ'] || "";
-            const endTimeStr       = heroItem['หมดการนำเสนอ']   || "";
-            const isCurrentlyLive  = isLive(startTimeStr, endTimeStr);
-            const heroFullName     = [heroItem['ชื่อ'], heroItem['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
-            const heroTitle        = heroItem['ชื่อผลงาน'] || '-';
-            const heroGroup        = heroItem['ด้านของบทคัดย่อ'] || heroItem['สาขา'] || '-';
-            const heroRoom         = heroItem['จอที่'] ? `จอที่ ${heroItem['จอที่']}` : '-';
-            const heroUniqueKey    = heroItem['QR CODE'] ?? heroItem['รหัสผลงาน'];
-
-            let liveBadge = "";
+            // Live badge สำหรับ checkin
+            let heroLiveBadge = "";
             if (isCheckinSec) {
-                liveBadge = isCurrentlyLive
-                    ? `<span class="bg-emerald-500 text-white text-[10px] font-extrabold px-3 py-1 rounded-full animate-pulse flex items-center gap-1">
-                           <span class="w-1.5 h-1.5 bg-white rounded-full"></span> LIVE NOW
+                heroLiveBadge = heroLive
+                    ? `<span class="bg-rose-100 text-rose-600 px-3 py-1 rounded-lg text-[11px] font-bold
+                                   flex items-center gap-1.5 mb-2 w-max shadow-sm">
+                           <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                           Live กำลังนำเสนอ
                        </span>`
-                    : `<span class="bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1 rounded-full">PENDING</span>`;
+                    : "";
             }
 
-            let rippleAnimClass = "";
-            if (isCheckinSec && heroUniqueKey !== lastCheckinId) {
-                if (!isInitialLoad) { playSuccessSound(); }
-                lastCheckinId   = heroUniqueKey;
-                rippleAnimClass = "animate-new-ripple";
-            } else if (!isCheckinSec && heroUniqueKey !== lastRewardId) {
-                if (!isInitialLoad) { playSuccessSound(); }
-                lastRewardId = heroUniqueKey;
-            }
-
-            let timeInfo = (startTimeStr || endTimeStr)
-                ? ` (${startTimeStr || '-'}-${endTimeStr || '-'} น.)` : "";
+            // style ตาม section
+            const st = isCheckinSec
+                ? { bg: 'bg-blue-50',  text: 'text-blue-700',  dot: 'bg-blue-500',
+                    msg: 'รอ ณ จุดพักคอยก่อนเวลา 15 นาที',
+                    border: 'border-blue-200/70 hover:border-blue-300' }
+                : { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500',
+                    msg: 'กรุณารอสักครู่ เจ้าหน้าที่กำลังเตรียมใบประกาศ',
+                    border: 'border-amber-200/70 hover:border-amber-300' };
 
             heroContainer.innerHTML = `
-                <div class="relative bg-gradient-to-r ${heroColorClass} text-white rounded-[1.8rem] p-6 shadow-xl ${rippleAnimClass} transition-all duration-300 transform hover:scale-[1.01] overflow-hidden">
-                    <div class="absolute -right-6 -bottom-6 opacity-15 pointer-events-none">
-                        <i data-lucide="${iconName}" class="w-36 h-36"></i>
-                    </div>
-                    <div class="flex justify-between items-start mb-4 z-10 relative">
-                        <span class="bg-white/20 backdrop-blur-md text-white text-[11px] font-extrabold px-3 py-1.5 rounded-xl uppercase tracking-wider">
+                <div class="highlight-card rounded-[1.5rem] p-5 lg:p-6 relative overflow-hidden
+                            transition-all duration-500 ${rippleClass} ${heroExpired ? 'opacity-40 grayscale' : ''}">
+                    <!-- Header row -->
+                    <div class="flex justify-between items-center mb-4 relative z-10">
+                        <span class="bg-slate-800 text-white px-3 py-1 rounded-full text-xs font-bold
+                                     tracking-wider shadow-sm">
                             ${heroItem['รหัสผลงาน'] || 'N/A'}
                         </span>
-                        <div class="flex items-center gap-2">
-                            ${liveBadge}
-                            <span class="text-[11px] font-bold bg-black/20 px-3 py-1.5 rounded-xl">
-                                ${displayTime}
-                            </span>
-                        </div>
+                        <span class="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            ${formatThaiTime(recordTime)}
+                        </span>
                     </div>
-                    <div class="z-10 relative">
-                        <h3 class="text-xl lg:text-2xl font-extrabold mb-1 tracking-wide leading-snug drop-shadow-sm">
-                            ${heroFullName}
-                        </h3>
-                        <p class="text-white/80 text-xs lg:text-sm font-semibold truncate mb-4">
-                            ${heroTitle}
+
+                    <!-- Name -->
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-3 relative z-10 text-slate-800
+                               leading-relaxed py-1 break-words">
+                        ${fullName}
+                    </h2>
+
+                    <!-- Info box -->
+                    <div class="bg-white/80 rounded-xl p-3 mb-4 text-sm relative z-10
+                                border border-slate-100 shadow-sm flex flex-col gap-1">
+                        ${heroLiveBadge}
+                        <p class="font-bold text-indigo-700">
+                            นำเสนอจอที่ ${heroItem['จอที่'] || "-"}
+                            เวลา ${startTime || "-"}${endTime ? " – " + endTime : ""} น.
                         </p>
-                        <div class="flex flex-wrap items-center gap-3 border-t border-white/20 pt-4 text-xs font-semibold">
-                            <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl">
-                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-white"></i>
-                                <span>${heroGroup}</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl ml-auto">
-                                <i data-lucide="presentation" class="w-3.5 h-3.5 text-white"></i>
-                                <span>จัดแสดง: ${heroRoom}${timeInfo}</span>
-                            </div>
-                        </div>
+                        <p class="text-slate-600 font-semibold text-xs">
+                            <span class="text-slate-400">ด้าน:</span>
+                            ${heroItem['ด้านของบทคัดย่อ'] || "-"}
+                        </p>
+                        <p class="text-slate-600 font-semibold text-xs">
+                            <span class="text-slate-400">สาขา:</span>
+                            ${heroItem['สาขา'] || "-"}
+                        </p>
+                        <p class="text-slate-600 font-semibold text-xs line-clamp-2">
+                            <span class="text-slate-400">เรื่อง:</span>
+                            ${heroItem['ชื่อผลงาน'] || "ไม่ระบุ"}
+                        </p>
+                    </div>
+
+                    <!-- Status badge -->
+                    <div class="inline-flex items-center gap-2.5 ${st.bg} ${st.text}
+                                px-4 py-2.5 rounded-xl text-xs font-semibold w-full">
+                        <span class="w-2 h-2 rounded-full ${st.dot} shrink-0 animate-pulse"></span>
+                        <span>${st.msg}</span>
                     </div>
                 </div>`;
 
+            // ── List items — แยก active / expired ──────────────────────────
+            const syncedNow   = getSyncedTime();
+            const activeItems = listItems.filter(it => !isExpired(it['หมดการนำเสนอ'] || ""));
+            const expiredItems = listItems.filter(it => isExpired(it['หมดการนำเสนอ'] || ""));
+            const orderedItems = [...activeItems, ...expiredItems];
+
             let listHtml = "";
-            listItems.forEach((item, index) => {
-                const itemTime = isCheckinSec ? item['เวลา Check-in'] : item['เวลารับประกาศ'];
-                let formattedItemTime = "-";
-                if (itemTime) {
-                    const itemTObj = new Date(itemTime);
-                    if (!isNaN(itemTObj.getTime())) {
-                        formattedItemTime = itemTObj.toLocaleTimeString('th-TH', {
-                            hour: '2-digit', minute: '2-digit'
-                        }) + " น.";
-                    } else {
-                        formattedItemTime = itemTime;
-                    }
-                }
+            orderedItems.forEach((item, idx) => {
+                const iName    = [item['ชื่อ'], item['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+                const iStart   = item['เวลาการนำเสนอ'] || "";
+                const iEnd     = item['หมดการนำเสนอ']   || "";
+                const iLive    = isCheckinSec && isLive(iStart, iEnd);
+                const iExp     = isExpired(iEnd);
+                const iRecord  = isCheckinSec ? item['เวลา Check-in'] : item['เวลารับประกาศ'];
 
-                const itemStart    = item['เวลาการนำเสนอ'] || "";
-                const itemEnd      = item['หมดการนำเสนอ']   || "";
-                const isItemLive   = isLive(itemStart, itemEnd);
-                const itemFullName = [item['ชื่อ'], item['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
-
-                let listLiveBadge = "";
-                if (isCheckinSec) {
-                    listLiveBadge = isItemLive
-                        ? `<span class="bg-emerald-50 text-emerald-600 text-[10px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0">
-                               <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> LIVE
-                           </span>`
-                        : `<span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">WAIT</span>`;
-                }
+                const liveBadge = iLive
+                    ? `<span class="bg-rose-100 text-rose-600 px-2 py-0.5 rounded text-[10px] font-bold
+                                   flex items-center gap-1 mt-1 w-max">
+                           <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Live
+                       </span>` : "";
 
                 listHtml += `
-                    <div class="bg-white/90 border border-slate-100 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all duration-200 list-enter transform hover:-translate-y-0.5" style="animation-delay: ${index * 0.05}s">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-10 h-10 rounded-xl bg-slate-50 flex-col flex items-center justify-center shrink-0 border border-slate-100">
-                                <span class="text-[10px] font-bold text-slate-400">ลำดับ</span>
-                                <span class="text-sm font-extrabold text-slate-700 leading-none mt-0.5">${index + 2}</span>
-                            </div>
-                            <div class="overflow-hidden">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-xs font-extrabold text-indigo-600 tracking-wider">${item['รหัสผลงาน'] || 'N/A'}</span>
-                                    <h4 class="text-sm font-bold text-slate-800 truncate">${itemFullName}</h4>
-                                </div>
-                                <p class="text-[11px] text-slate-500 font-medium truncate">${item['ชื่อผลงาน'] || '-'}</p>
-                            </div>
+                    <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-start gap-4
+                                list-enter transition-all border ${st.border} shadow-sm
+                                hover:-translate-y-0.5 hover:shadow-md
+                                ${iExp ? 'expired-card' : ''}"
+                         style="animation-delay:${idx * 0.06}s">
+                        <!-- ID badge -->
+                        <div class="bg-slate-100 px-2.5 py-1.5 rounded-lg flex items-center justify-center
+                                    shrink-0 border border-slate-200 shadow-inner min-w-[52px] mt-0.5">
+                            <span class="text-[10px] font-extrabold text-slate-600 uppercase tracking-wide
+                                         leading-tight text-center">${item['รหัสผลงาน'] || 'N/A'}</span>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            ${listLiveBadge}
-                            <span class="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-xl tabular-nums">
-                                ${formattedItemTime}
-                            </span>
+                        <!-- Detail -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start gap-2 mb-1">
+                                <h3 class="text-sm font-bold text-slate-800 leading-relaxed break-words">
+                                    ${iName}
+                                </h3>
+                                <span class="text-[10px] font-medium text-slate-400 shrink-0 mt-0.5">
+                                    ${formatThaiTime(iRecord)}
+                                </span>
+                            </div>
+                            <div class="flex flex-col gap-0.5 text-[11px]">
+                                <span class="text-indigo-600 font-bold">
+                                    นำเสนอจอที่ ${item['จอที่'] || "-"}
+                                    เวลา ${iStart || "-"}${iEnd ? " – " + iEnd : ""} น.
+                                </span>
+                                ${liveBadge}
+                                <span class="text-slate-500 font-medium truncate mt-0.5">
+                                    <span class="text-slate-400">ด้าน:</span> ${item['ด้านของบทคัดย่อ'] || "-"}
+                                    <span class="text-slate-300 mx-1">|</span>
+                                    <span class="text-slate-400">สาขา:</span> ${item['สาขา'] || "-"}
+                                </span>
+                                <span class="text-slate-500 font-medium truncate">
+                                    <span class="text-slate-400">เรื่อง:</span>
+                                    ${item['ชื่อผลงาน'] || "-"}
+                                </span>
+                            </div>
                         </div>
                     </div>`;
             });
-
             listContainer.innerHTML = listHtml;
+            // reset scroll position when new data arrives
+            if (section === 'checkin') { cScrollPos = 0; listContainer.scrollTop = 0; }
+            else                       { rScrollPos = 0; listContainer.scrollTop = 0; }
         }
 
         function showEmptyOrErrorState(errorMessage = null) {
-            const emptyC = `
-                <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-                    <i data-lucide="user-check" class="w-16 h-16 mb-4 opacity-30"></i>
-                    <p class="text-base font-semibold">ไม่มีรายการคิวรอสแตนด์บาย</p>
-                    <p class="text-xs text-slate-400 mt-1">เจ้าหน้าที่จะแอดคิวเข้าสู่ระบบเมื่อคุณรายงานตัว</p>
-                </div>`;
-            const emptyR = `
-                <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-                    <i data-lucide="award" class="w-16 h-16 mb-4 opacity-30"></i>
-                    <p class="text-base font-semibold">ไม่มีคิวที่นำเสนอสำเร็จ</p>
-                    <p class="text-xs text-slate-400 mt-1">ยินดีต้อนรับสู่งานประชุมวิชาการฯ</p>
+            const makeEmpty = (msg, icon) => `
+                <div class="w-full h-40 flex flex-col items-center justify-center p-8
+                            bg-white/40 rounded-[1.5rem] border border-slate-100 border-dashed">
+                    <i data-lucide="${icon}" class="w-10 h-10 text-slate-300 mb-3 opacity-60"></i>
+                    <span class="text-slate-400 font-medium text-sm text-center leading-relaxed">${msg}</span>
                 </div>`;
 
             if (errorMessage) {
                 const errBox = `
-                    <div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl text-rose-700 flex flex-col items-center justify-center text-center">
-                        <i data-lucide="alert-triangle" class="w-10 h-10 mb-2"></i>
+                    <div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl text-rose-700
+                                flex flex-col items-center justify-center text-center">
+                        <i data-lucide="wifi-off" class="w-10 h-10 mb-2"></i>
                         <h4 class="font-bold">เกิดข้อผิดพลาดในการโหลดคิว</h4>
                         <p class="text-xs mt-1 font-medium">${errorMessage}</p>
                     </div>`;
-                document.getElementById('checkinHero').innerHTML = '';
-                document.getElementById('checkinList').innerHTML  = errBox;
-                document.getElementById('rewardHero').innerHTML  = '';
-                document.getElementById('rewardList').innerHTML   = errBox;
+                ['checkinHero','checkinList','rewardHero','rewardList'].forEach(id => {
+                    document.getElementById(id).innerHTML = id.includes('Hero') ? '' : errBox;
+                });
             } else {
                 document.getElementById('checkinHero').innerHTML = '';
-                document.getElementById('checkinList').innerHTML  = emptyC;
                 document.getElementById('rewardHero').innerHTML  = '';
-                document.getElementById('rewardList').innerHTML   = emptyR;
+                document.getElementById('checkinList').innerHTML  =
+                    makeEmpty("จุดนี้ยังว่างอยู่... จิบกาแฟรอได้เลย ☕️", "coffee");
+                document.getElementById('rewardList').innerHTML   =
+                    makeEmpty("ยังไม่มีคิวมารับใบประกาศครับ 🏅", "award");
             }
             lucide.createIcons();
+        }
+
+        // =============================================================
+        // 📜 AUTO-SCROLL SYSTEM (requestAnimationFrame)
+        // =============================================================
+        var scrollSpeed       = 0.4;          // px per frame
+        var cScrollPos        = 0;            // current scroll position – checkin
+        var rScrollPos        = 0;            // current scroll position – reward
+        var isHoveringCheckin = false;
+        var isHoveringReward  = false;
+        var isPausedCheckin   = false;        // paused by touch
+        var isPausedReward    = false;
+        var scrollAnimId      = null;
+
+        function initScrollListeners() {
+            var cList = document.getElementById('checkinList');
+            var rList = document.getElementById('rewardList');
+
+            // ---------- checkin list ----------
+            if (cList) {
+                cList.addEventListener('mouseenter', () => { isHoveringCheckin = true; });
+                cList.addEventListener('mouseleave', () => { isHoveringCheckin = false; });
+                cList.addEventListener('touchstart', () => { isPausedCheckin = true;  }, { passive: true });
+                cList.addEventListener('touchend',   () => {
+                    setTimeout(() => { isPausedCheckin = false; }, 2000);
+                });
+                // sync cScrollPos when user manually scrolls
+                cList.addEventListener('scroll', () => {
+                    if (isPausedCheckin || isHoveringCheckin) cScrollPos = cList.scrollTop;
+                });
+            }
+
+            // ---------- reward list ----------
+            if (rList) {
+                rList.addEventListener('mouseenter', () => { isHoveringReward = true; });
+                rList.addEventListener('mouseleave', () => { isHoveringReward = false; });
+                rList.addEventListener('touchstart', () => { isPausedReward = true;  }, { passive: true });
+                rList.addEventListener('touchend',   () => {
+                    setTimeout(() => { isPausedReward = false; }, 2000);
+                });
+                rList.addEventListener('scroll', () => {
+                    if (isPausedReward || isHoveringReward) rScrollPos = rList.scrollTop;
+                });
+            }
+        }
+
+        function autoScrollLoop() {
+            var cList = document.getElementById('checkinList');
+            var rList = document.getElementById('rewardList');
+
+            // --- checkin ---
+            if (cList && !isHoveringCheckin && !isPausedCheckin) {
+                var cMax = cList.scrollHeight - cList.clientHeight;
+                if (cMax > 0) {
+                    cScrollPos += scrollSpeed;
+                    if (cScrollPos >= cMax) {
+                        // pause briefly at bottom then reset to top
+                        cScrollPos = cMax;
+                        cList.scrollTop = cScrollPos;
+                        setTimeout(() => {
+                            cScrollPos = 0;
+                            if (cList) cList.scrollTop = 0;
+                        }, 2200);
+                    } else {
+                        cList.scrollTop = cScrollPos;
+                    }
+                }
+            }
+
+            // --- reward ---
+            if (rList && !isHoveringReward && !isPausedReward) {
+                var rMax = rList.scrollHeight - rList.clientHeight;
+                if (rMax > 0) {
+                    rScrollPos += scrollSpeed;
+                    if (rScrollPos >= rMax) {
+                        rScrollPos = rMax;
+                        rList.scrollTop = rScrollPos;
+                        setTimeout(() => {
+                            rScrollPos = 0;
+                            if (rList) rList.scrollTop = 0;
+                        }, 2200);
+                    } else {
+                        rList.scrollTop = rScrollPos;
+                    }
+                }
+            }
+
+            scrollAnimId = requestAnimationFrame(autoScrollLoop);
+        }
+
+        function startAutoScroll() {
+            if (scrollAnimId) cancelAnimationFrame(scrollAnimId);
+            scrollAnimId = requestAnimationFrame(autoScrollLoop);
         }
 
         // =============================================================
@@ -1343,6 +1474,8 @@
 
             fetchDashboardData();
             initSupabaseSubscription();
+            initScrollListeners();
+            startAutoScroll();
 
             // Polling สำรอง 15 วินาที เผื่อ Realtime subscription ขัดข้อง
             setInterval(fetchDashboardData, 15000);
