@@ -914,12 +914,12 @@
             return String(field);
         }
 
-        // ── helper: check expired (> 2 hrs past endTime) ────────────────────
+        // ── helper: check expired (> 1 hr past endTime) ────────────────────
         function isExpired(endTimeStr) {
             if (!endTimeStr) return false;
             const end = parseTime(endTimeStr);
             if (!end) return false;
-            return (getSyncedTime().getTime() - end.getTime()) > 2 * 60 * 60 * 1000;
+            return (getSyncedTime().getTime() - end.getTime()) > 1 * 60 * 60 * 1000;
         }
 
         function renderSection(section, data) {
@@ -1103,9 +1103,16 @@
                     </div>`;
             });
             listContainer.innerHTML = listHtml;
-            // reset scroll position when new data arrives
-            if (section === 'checkin') { cScrollPos = 0; listContainer.scrollTop = 0; }
-            else                       { rScrollPos = 0; listContainer.scrollTop = 0; }
+            // reset scroll position + state when new data arrives
+            if (section === 'checkin') {
+                cScrollPos = 0; listContainer.scrollTop = 0;
+                scrollState.checkin = 'scrolling';
+                clearTimeout(scrollPauseTimer.checkin);
+            } else {
+                rScrollPos = 0; listContainer.scrollTop = 0;
+                scrollState.reward = 'scrolling';
+                clearTimeout(scrollPauseTimer.reward);
+            }
         }
 
         function showEmptyOrErrorState(errorMessage = null) {
@@ -1139,91 +1146,130 @@
         }
 
         // =============================================================
-        // 📜 AUTO-SCROLL SYSTEM (requestAnimationFrame)
+        // 📜 AUTO-SCROLL SYSTEM (requestAnimationFrame — state machine)
         // =============================================================
-        var scrollSpeed       = 0.4;          // px per frame
-        var cScrollPos        = 0;            // current scroll position – checkin
-        var rScrollPos        = 0;            // current scroll position – reward
+        var scrollSpeed       = 0.15;   // px/frame — ช้าอ่านได้สบาย
+        var cScrollPos        = 0;
+        var rScrollPos        = 0;
         var isHoveringCheckin = false;
         var isHoveringReward  = false;
-        var isPausedCheckin   = false;        // paused by touch
+        var isPausedCheckin   = false;
         var isPausedReward    = false;
         var scrollAnimId      = null;
 
-        function initScrollListeners() {
-            var cList = document.getElementById('checkinList');
-            var rList = document.getElementById('rewardList');
+        // state: 'scrolling' | 'paused' | 'returning'
+        var scrollState      = { checkin: 'scrolling', reward: 'scrolling' };
+        var scrollPauseTimer = { checkin: null, reward: null };
 
-            // ---------- checkin list ----------
-            if (cList) {
-                cList.addEventListener('mouseenter', () => { isHoveringCheckin = true; });
-                cList.addEventListener('mouseleave', () => { isHoveringCheckin = false; });
-                cList.addEventListener('touchstart', () => { isPausedCheckin = true;  }, { passive: true });
-                cList.addEventListener('touchend',   () => {
-                    setTimeout(() => { isPausedCheckin = false; }, 2000);
-                });
-                // sync cScrollPos when user manually scrolls
-                cList.addEventListener('scroll', () => {
-                    if (isPausedCheckin || isHoveringCheckin) cScrollPos = cList.scrollTop;
-                });
+        // ── หาจุดหยุดสูงสุด: หยุดก่อน expired card แรก ─────────────────────
+        function getScrollMax(listEl) {
+            const expired = listEl.querySelectorAll('.expired-card');
+            if (expired.length > 0) {
+                // หยุดที่ top ของ expired card แรก ลบ margin เล็กน้อย
+                const boundary = expired[0].offsetTop - 24;
+                const fullMax  = listEl.scrollHeight - listEl.clientHeight;
+                return Math.max(0, Math.min(boundary, fullMax));
             }
+            return listEl.scrollHeight - listEl.clientHeight;
+        }
 
-            // ---------- reward list ----------
-            if (rList) {
-                rList.addEventListener('mouseenter', () => { isHoveringReward = true; });
-                rList.addEventListener('mouseleave', () => { isHoveringReward = false; });
-                rList.addEventListener('touchstart', () => { isPausedReward = true;  }, { passive: true });
-                rList.addEventListener('touchend',   () => {
-                    setTimeout(() => { isPausedReward = false; }, 2000);
-                });
-                rList.addEventListener('scroll', () => {
-                    if (isPausedReward || isHoveringReward) rScrollPos = rList.scrollTop;
-                });
+        // ── Smooth return-to-top ด้วย easing ────────────────────────────────
+        function doReturnToTop(sec, listEl) {
+            scrollState[sec] = 'returning';
+            const startPos  = listEl.scrollTop;
+            const duration  = 1500; // 1.5 วินาที — ค่อยๆ ไต่ขึ้น
+            const startTime = performance.now();
+
+            function step(now) {
+                if (scrollState[sec] !== 'returning') return; // ถูก interrupt
+                const t    = Math.min((now - startTime) / duration, 1);
+                // ease-in-out cubic
+                const ease = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+                const newPos = startPos * (1 - ease);
+                listEl.scrollTop = newPos;
+                if (sec === 'checkin') cScrollPos = newPos;
+                else                  rScrollPos = newPos;
+
+                if (t < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    listEl.scrollTop = 0;
+                    if (sec === 'checkin') cScrollPos = 0;
+                    else                  rScrollPos = 0;
+                    scrollState[sec] = 'scrolling';
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // ── tick แต่ละฝั่ง ──────────────────────────────────────────────────
+        function tickSection(sec, listEl) {
+            if (!listEl) return;
+            const hovering = sec === 'checkin' ? isHoveringCheckin : isHoveringReward;
+            const paused   = sec === 'checkin' ? isPausedCheckin   : isPausedReward;
+            if (hovering || paused || scrollState[sec] !== 'scrolling') return;
+
+            const maxPos = getScrollMax(listEl);
+            if (maxPos <= 0) return;
+
+            let pos = (sec === 'checkin' ? cScrollPos : rScrollPos) + scrollSpeed;
+
+            if (pos >= maxPos) {
+                pos = maxPos;
+                listEl.scrollTop = pos;
+                if (sec === 'checkin') cScrollPos = pos;
+                else                  rScrollPos = pos;
+
+                // ค้าง 2.5 วิ แล้ว smooth return
+                scrollState[sec] = 'paused';
+                clearTimeout(scrollPauseTimer[sec]);
+                scrollPauseTimer[sec] = setTimeout(() => {
+                    doReturnToTop(sec, listEl);
+                }, 2500);
+            } else {
+                listEl.scrollTop = pos;
+                if (sec === 'checkin') cScrollPos = pos;
+                else                  rScrollPos = pos;
             }
         }
 
         function autoScrollLoop() {
-            var cList = document.getElementById('checkinList');
-            var rList = document.getElementById('rewardList');
-
-            // --- checkin ---
-            if (cList && !isHoveringCheckin && !isPausedCheckin) {
-                var cMax = cList.scrollHeight - cList.clientHeight;
-                if (cMax > 0) {
-                    cScrollPos += scrollSpeed;
-                    if (cScrollPos >= cMax) {
-                        // pause briefly at bottom then reset to top
-                        cScrollPos = cMax;
-                        cList.scrollTop = cScrollPos;
-                        setTimeout(() => {
-                            cScrollPos = 0;
-                            if (cList) cList.scrollTop = 0;
-                        }, 2200);
-                    } else {
-                        cList.scrollTop = cScrollPos;
-                    }
-                }
-            }
-
-            // --- reward ---
-            if (rList && !isHoveringReward && !isPausedReward) {
-                var rMax = rList.scrollHeight - rList.clientHeight;
-                if (rMax > 0) {
-                    rScrollPos += scrollSpeed;
-                    if (rScrollPos >= rMax) {
-                        rScrollPos = rMax;
-                        rList.scrollTop = rScrollPos;
-                        setTimeout(() => {
-                            rScrollPos = 0;
-                            if (rList) rList.scrollTop = 0;
-                        }, 2200);
-                    } else {
-                        rList.scrollTop = rScrollPos;
-                    }
-                }
-            }
-
+            tickSection('checkin', document.getElementById('checkinList'));
+            tickSection('reward',  document.getElementById('rewardList'));
             scrollAnimId = requestAnimationFrame(autoScrollLoop);
+        }
+
+        function initScrollListeners() {
+            ['checkin','reward'].forEach(sec => {
+                const el = document.getElementById(`${sec}List`);
+                if (!el) return;
+                el.addEventListener('mouseenter', () => {
+                    if (sec === 'checkin') isHoveringCheckin = true;
+                    else isHoveringReward = true;
+                });
+                el.addEventListener('mouseleave', () => {
+                    if (sec === 'checkin') isHoveringCheckin = false;
+                    else isHoveringReward = false;
+                });
+                el.addEventListener('touchstart', () => {
+                    if (sec === 'checkin') isPausedCheckin = true;
+                    else isPausedReward = true;
+                }, { passive: true });
+                el.addEventListener('touchend', () => {
+                    setTimeout(() => {
+                        if (sec === 'checkin') isPausedCheckin = false;
+                        else isPausedReward = false;
+                    }, 2000);
+                });
+                el.addEventListener('scroll', () => {
+                    const h = sec === 'checkin' ? isHoveringCheckin : isHoveringReward;
+                    const p = sec === 'checkin' ? isPausedCheckin   : isPausedReward;
+                    if (h || p) {
+                        if (sec === 'checkin') cScrollPos = el.scrollTop;
+                        else rScrollPos = el.scrollTop;
+                    }
+                });
+            });
         }
 
         function startAutoScroll() {
@@ -1688,14 +1734,13 @@
         // 📊 Stats Dashboard
         // =============================================================
         function showStatsDashboard() {
-            const rows = cachedAllData;
-            const total     = rows.length;
+            const rows    = cachedAllData;
+            const now     = getSyncedTime();
+            const total   = rows.length;
             const checkedIn = rows.filter(r => r['Check-in'] === 'Y').length;
             const rewarded  = rows.filter(r => r['รับประกาศ'] === 'Y').length;
-            const pending   = total - checkedIn;
-            const waiting   = checkedIn - rewarded;   // เช็คอินแล้ว รอรับประกาศ
 
-            // ─── Top grid ─────────────────────────────────────────────
+            // ─── Top grid ──────────────────────────────────────────────────
             document.getElementById('statsTopGrid').innerHTML = `
                 <div class="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
                     <p class="text-3xl font-extrabold text-slate-800">${total}</p>
@@ -1716,13 +1761,11 @@
                         <div class="bar-fill bg-amber-500 h-full rounded-full" style="width:${total>0?Math.round(rewarded/total*100):0}%"></div>
                     </div>
                     <p class="text-[10px] text-amber-400 mt-1">${total>0?Math.round(rewarded/total*100):0}%</p>
-                </div>
-            `;
+                </div>`;
 
-            // ─── Branch breakdown ───────────────────────────────────
+            // ─── Branch breakdown ───────────────────────────────────────────
             const branchMap = {};
             BRANCH_ORDER.forEach(b => branchMap[b] = { total:0, checkin:0, reward:0 });
-
             rows.forEach(r => {
                 const b = getBranchFromCode(r['รหัสผลงาน']);
                 if (!branchMap[b]) branchMap[b] = { total:0, checkin:0, reward:0 };
@@ -1730,13 +1773,12 @@
                 if (r['Check-in'] === 'Y') branchMap[b].checkin++;
                 if (r['รับประกาศ'] === 'Y') branchMap[b].reward++;
             });
-
             const branchHtml = BRANCH_ORDER.map(bName => {
                 const d = branchMap[bName];
                 if (d.total === 0) return '';
                 const col = BRANCH_COLORS[bName] || { bg:'bg-slate-50', bar:'bg-slate-400', text:'text-slate-700', icon:'📁' };
-                const pctCheckin = d.total > 0 ? Math.round(d.checkin / d.total * 100) : 0;
-                const pctReward  = d.total > 0 ? Math.round(d.reward  / d.total * 100) : 0;
+                const pctC = d.total > 0 ? Math.round(d.checkin/d.total*100) : 0;
+                const pctR = d.total > 0 ? Math.round(d.reward /d.total*100) : 0;
                 return `
                     <div class="${col.bg} rounded-2xl p-4 border border-slate-100">
                         <div class="flex justify-between items-center mb-3">
@@ -1746,28 +1788,110 @@
                         <div class="space-y-2 text-xs">
                             <div>
                                 <div class="flex justify-between text-slate-500 mb-1">
-                                    <span>เช็คอิน</span>
-                                    <span class="font-bold ${col.text}">${d.checkin} / ${d.total}</span>
+                                    <span>เช็คอิน</span><span class="font-bold ${col.text}">${d.checkin}/${d.total}</span>
                                 </div>
                                 <div class="bg-white/70 rounded-full h-2 overflow-hidden border border-slate-200/60">
-                                    <div class="bar-fill ${col.bar} h-full rounded-full" style="width:${pctCheckin}%"></div>
+                                    <div class="bar-fill ${col.bar} h-full rounded-full" style="width:${pctC}%"></div>
                                 </div>
                             </div>
                             <div>
                                 <div class="flex justify-between text-slate-500 mb-1">
-                                    <span>รับประกาศ</span>
-                                    <span class="font-bold text-amber-600">${d.reward} / ${d.total}</span>
+                                    <span>รับประกาศ</span><span class="font-bold text-amber-600">${d.reward}/${d.total}</span>
                                 </div>
                                 <div class="bg-white/70 rounded-full h-2 overflow-hidden border border-slate-200/60">
-                                    <div class="bar-fill bg-amber-400 h-full rounded-full" style="width:${pctReward}%"></div>
+                                    <div class="bar-fill bg-amber-400 h-full rounded-full" style="width:${pctR}%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>`;
             }).join('');
+            document.getElementById('statsBranchList').innerHTML = branchHtml || `<p class="text-center text-sm text-slate-400 py-4">ยังไม่มีข้อมูล</p>`;
 
-            document.getElementById('statsBranchList').innerHTML = branchHtml || `
-                <p class="text-center text-sm text-slate-400 py-6">ยังไม่มีข้อมูล</p>`;
+            // ─── ⚠️ ยังไม่เช็คอิน + ใกล้เวลา ──────────────────────────────
+            const urgentList = rows
+                .filter(r => r['Check-in'] !== 'Y')
+                .map(r => {
+                    const start = parseTime(r['เวลาการนำเสนอ'] || '');
+                    if (!start) return null;
+                    const diffMin = Math.round((start - now) / 60000);
+                    if (diffMin > 60 || diffMin < -30) return null; // ไม่เกี่ยวข้อง
+                    return { r, diffMin };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.diffMin - b.diffMin);
+
+            let urgentHtml = '';
+            if (urgentList.length > 0) {
+                urgentHtml = `
+                <div>
+                    <h4 class="text-sm font-bold text-orange-600 mb-3 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        ยังไม่เช็คอิน (${urgentList.length} คน)
+                    </h4>
+                    <div class="space-y-2">
+                        ${urgentList.map(({ r, diffMin }) => {
+                            const name = [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+                            let badge, bg;
+                            if (diffMin <= 0)       { badge = `เลยเวลาแล้ว ${Math.abs(diffMin)} นาที`; bg = 'bg-rose-50 border-rose-200'; }
+                            else if (diffMin <= 15)  { badge = `🔴 อีก ${diffMin} นาที`;  bg = 'bg-rose-50 border-rose-200'; }
+                            else if (diffMin <= 30)  { badge = `🟠 อีก ${diffMin} นาที`;  bg = 'bg-orange-50 border-orange-200'; }
+                            else                     { badge = `อีก ${diffMin} นาที`;     bg = 'bg-yellow-50 border-yellow-200'; }
+                            return `
+                                <div class="${bg} border rounded-xl px-4 py-2.5 flex justify-between items-center gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-slate-800 truncate">${name}</p>
+                                        <p class="text-[11px] text-slate-500">${r['รหัสผลงาน'] || '-'} · จอ ${r['จอที่'] || '-'} · ${r['เวลาการนำเสนอ'] || '-'} น.</p>
+                                    </div>
+                                    <span class="text-xs font-bold shrink-0 text-slate-600">${badge}</span>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // ─── 🏆 เช็คอินแล้ว แต่ยังไม่รับประกาศ (พ้นเวลานำเสนอแล้ว) ─────
+            const noRewardList = rows.filter(r => {
+                if (r['Check-in'] !== 'Y')   return false;
+                if (r['รับประกาศ'] === 'Y') return false;
+                const end = parseTime(r['หมดการนำเสนอ'] || '');
+                return end && now > end;
+            });
+
+            let noRewardHtml = '';
+            if (noRewardList.length > 0) {
+                noRewardHtml = `
+                <div>
+                    <h4 class="text-sm font-bold text-amber-600 mb-3 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        นำเสนอเสร็จแล้ว ยังไม่มารับประกาศ (${noRewardList.length} คน)
+                    </h4>
+                    <div class="space-y-2">
+                        ${noRewardList.map(r => {
+                            const name = [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+                            const end = parseTime(r['หมดการนำเสนอ'] || '');
+                            const waitMin = end ? Math.round((now - end) / 60000) : 0;
+                            return `
+                                <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex justify-between items-center gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-slate-800 truncate">${name}</p>
+                                        <p class="text-[11px] text-slate-500">${r['รหัสผลงาน'] || '-'} · จอ ${r['จอที่'] || '-'}</p>
+                                    </div>
+                                    <span class="text-xs font-bold text-amber-600 shrink-0">รอ ${waitMin} นาที</span>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // ─── inject alert sections ──────────────────────────────────────
+            let alertSection = document.getElementById('statsAlertSection');
+            if (!alertSection) {
+                alertSection = document.createElement('div');
+                alertSection.id = 'statsAlertSection';
+                alertSection.className = 'space-y-5';
+                document.getElementById('statsBranchList').parentElement.after(alertSection);
+            }
+            alertSection.innerHTML = urgentHtml + noRewardHtml;
 
             lucide.createIcons();
             document.getElementById('statsModal').classList.remove('hidden');
