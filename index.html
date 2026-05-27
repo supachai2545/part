@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart E-Queue Dashboard (Supabase Edition)</title>
+
+    <!-- Scripts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <!-- นำเข้าไลบรารีของ Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Google Fonts: Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            color: #1e293b;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Smooth Shadows & Cards */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow:
+                0 10px 25px -5px rgba(0, 0, 0, 0.05),
+                inset 0 1px 1px rgba(255,255,255,1);
+        }
+
+        /* Animations */
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .list-enter {
+            animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes pulseSoft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.98); }
+        }
+        .skeleton-pulse {
+            animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes ringRipple {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .animate-new-ripple {
+            animation: ringRipple 1.5s ease-out;
+        }
+
+        /* Bottom Sheet Transition */
+        .bottom-sheet {
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .bottom-sheet.active { transform: translateY(0); }
+
+        /* Scanner UI Override */
+        #reader {
+            width: 100% !important;
+            border: none !important;
+            background-color: transparent !important;
+            border-radius: 1.5rem;
+            overflow: hidden;
+        }
+        #reader video {
+            object-fit: cover !important;
+            border-radius: 1.5rem;
+        }
+        #reader__dashboard_section_csr span, #reader__dashboard_section_swaplink { display: none !important; }
+
+        /* ซ่อนกล่องแรเงาเดิมของ html5-qrcode เคลียร์ UI ขยะ */
+        #reader__scan_region { background: transparent; }
+        #reader__scan_region > img, #reader__dashboard_section_csr { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col select-none lg:overflow-hidden font-['Sarabun'] relative">
+
+    <div class="fixed bottom-6 left-6 z-40 bg-white/90 backdrop-blur-md p-3 rounded-[1.2rem] shadow-lg border border-slate-200/60 hidden lg:flex items-center gap-3">
+        <div class="w-16 h-16 bg-white rounded-lg border border-slate-200 flex items-center justify-center p-1">
+            <img id="mobileQrCode" src="" alt="QR" class="w-full h-full object-contain">
+        </div>
+        <div>
+            <p class="text-sm font-bold text-slate-800">ติดตามคิวส่วนตัว</p>
+            <p class="text-[11px] font-medium text-slate-500">สแกนเพื่อดูสถานะผ่านมือถือ</p>
+        </div>
+    </div>
+
+    <!-- ================= HEADER ================= -->
+    <header class="glass-panel py-3 px-4 lg:px-8 flex justify-between items-center relative z-20 shrink-0 sticky top-0">
+        <div class="flex items-center space-x-3 lg:space-x-4">
+            <div class="flex items-center space-x-2 shrink-0">
+                <div class="w-10 h-10 lg:w-12 lg:h-12 bg-white rounded-full p-1.5 shadow-sm flex items-center justify-center">
+                    <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png" alt="Logo DMSC" class="h-full object-contain">
+                </div>
+                <div class="w-10 h-10 lg:w-12 lg:h-12 bg-white rounded-full p-1 shadow-sm flex items-center justify-center">
+                    <img src="https://conferenceplan.dmsc.moph.go.th/templates/yootheme/cache/b4/logo-prachum%20wichakar-34-Final-b4d9df54.webp" alt="Logo Conference" class="h-full object-contain">
+                </div>
+            </div>
+            <div>
+                <h1 class="text-xl lg:text-2xl font-extrabold text-slate-800 tracking-tight leading-normal">Smart E-Queue</h1>
+                <p class="text-slate-500 text-[10px] lg:text-xs font-medium mt-0.5 line-clamp-1 lg:line-clamp-none">ระบบเช็กอินและบริหารคิวอัจฉริยะสำหรับงานประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 shrink-0">
+            <div id="networkStatusBadge" class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex">
+                <span id="networkDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="networkText" class="text-[10px] font-bold text-emerald-700 tracking-wider">ONLINE</span>
+            </div>
+
+            <div class="bg-white/60 px-4 py-2 rounded-2xl flex items-center space-x-3 shadow-sm border border-slate-100 hidden sm:flex">
+                <i data-lucide="clock" class="text-indigo-400 w-5 h-5"></i>
+                <div class="text-right">
+                    <div id="clockTime" class="text-sm lg:text-xl font-bold text-slate-700 tabular-nums leading-none">--:--:--</div>
+                    <div id="clockDate" class="hidden lg:block text-[11px] font-medium text-slate-500 mt-0.5">กำลังโหลด...</div>
+                </div>
+            </div>
+            <button onclick="promptStaffPin()" class="w-10 h-10 lg:w-11 lg:h-11 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-sm" title="โหมดสแกนเนอร์">
+                <i data-lucide="qr-code" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="flex-grow p-4 lg:p-6 lg:px-8 max-w-[1920px] mx-auto w-full flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-80px)] overflow-y-auto lg:overflow-hidden">
+
+        <!-- ฝั่งซ้าย: คิวเช็คอินเข้างาน (60%) -->
+        <section class="w-full lg:w-[60%] flex flex-col lg:h-full min-h-[500px] glass-panel rounded-[2rem] p-5 lg:p-6 relative overflow-hidden">
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200/60 z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i data-lucide="user-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg lg:text-xl font-bold text-slate-800 flex items-center gap-2">
+                            คิวเช็คอินเข้างาน
+                            <span id="checkinCountBadge" class="hidden text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">0 คิว</span>
+                        </h2>
+                        <p class="text-[11px] lg:text-xs text-slate-500 font-medium">รอสแตนด์บายที่จุดนำเสนอ</p>
+                    </div>
+                </div>
+                <div class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">Step 1</div>
+            </div>
+
+            <div id="checkinHero" class="mb-4 z-10 shrink-0">
+                <div class="bg-white rounded-[1.5rem] p-6 skeleton-pulse border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="h-6 w-16 bg-slate-100 rounded-full"></div>
+                        <div class="h-6 w-20 bg-slate-100 rounded-full"></div>
+                    </div>
+                    <div class="h-8 w-3/4 bg-slate-100 rounded-lg mb-3"></div>
+                    <div class="h-4 w-1/2 bg-slate-100 rounded-lg mb-4"></div>
+                    <div class="h-10 w-full bg-slate-100 rounded-xl"></div>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-y-auto pr-2 space-y-3 z-10 pb-4 relative" id="checkinList">
+                <!-- Data will be injected here -->
+            </div>
+
+            <div class="absolute -bottom-10 -left-10 opacity-5 pointer-events-none z-0">
+                <i data-lucide="users" class="w-72 h-72 lg:w-96 lg:h-96 text-blue-900"></i>
+            </div>
+        </section>
+
+        <!-- ฝั่งขวา: รอรับใบประกาศ (40%) -->
+        <section class="w-full lg:w-[40%] flex flex-col lg:h-full min-h-[400px] glass-panel rounded-[2rem] p-5 lg:p-6 relative overflow-hidden">
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200/60 z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i data-lucide="award" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg lg:text-xl font-bold text-slate-800 flex items-center gap-2">
+                            รอรับใบประกาศ
+                            <span id="rewardCountBadge" class="hidden text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">0 คิว</span>
+                        </h2>
+                        <p class="text-[11px] lg:text-xs text-slate-500 font-medium">นำเสนอเสร็จสิ้น</p>
+                    </div>
+                </div>
+                <div class="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">Step 2</div>
+            </div>
+
+            <div id="rewardHero" class="mb-4 z-10 shrink-0">
+                 <div class="bg-white rounded-[1.5rem] p-6 skeleton-pulse border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="h-6 w-16 bg-slate-100 rounded-full"></div>
+                        <div class="h-6 w-20 bg-slate-100 rounded-full"></div>
+                    </div>
+                    <div class="h-8 w-2/3 bg-slate-100 rounded-lg mb-3"></div>
+                    <div class="h-4 w-1/2 bg-slate-100 rounded-lg mb-4"></div>
+                    <div class="h-10 w-full bg-slate-100 rounded-xl"></div>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-y-auto pr-2 space-y-3 z-10 pb-4 relative" id="rewardList">
+                <!-- Data will be injected here -->
+            </div>
+
+            <div class="absolute -bottom-10 -right-10 opacity-5 pointer-events-none z-0">
+                <i data-lucide="file-badge" class="w-60 h-60 lg:w-80 lg:h-80 text-amber-900"></i>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= STAFF SYSTEM SCANNER (Bottom Sheet) ================= -->
+    <div id="staffOverlayBg" class="fixed inset-0 bg-slate-900/60 z-[50] opacity-0 pointer-events-none transition-opacity duration-300 backdrop-blur-sm"></div>
+    <div id="staffSheet" class="bottom-sheet fixed inset-0 bg-slate-50 z-[60] flex flex-col w-full h-full">
+
+        <div class="px-6 py-4 lg:py-5 border-b border-gray-200 flex justify-between items-center bg-white shadow-sm shrink-0">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800">ระบบสแกนคิว (Staff Mode)</h2>
+                <p class="text-[11px] text-slate-500 mt-1">จัดตำแหน่ง QR Code ให้อยู่ในกรอบเพื่อสแกนอัตโนมัติ</p>
+            </div>
+            <button onclick="toggleStaffMode(false)" class="p-2 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 hover:text-rose-500 active:scale-95 transition-all flex items-center justify-center">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 flex flex-col justify-center items-center h-full">
+            <div class="max-w-md w-full flex flex-col gap-4">
+                <div class="bg-white p-4 rounded-[2rem] shadow-xl border border-slate-100 relative flex flex-col">
+
+                    <div class="relative w-full aspect-[4/5] bg-black rounded-[1.5rem] overflow-hidden shadow-inner flex items-center justify-center">
+                        <div id="reader" class="w-full h-full"></div>
+
+                        <div id="scanFocusBox" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 max-w-[250px] aspect-square border-4 border-white rounded-2xl z-10 transition-colors duration-200 shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] pointer-events-none"></div>
+                    </div>
+
+                    <div class="mt-5 mb-2 flex flex-col items-center justify-center w-full">
+                        <p id="scanFeedback" class="text-center text-sm font-semibold text-slate-500 bg-slate-100 px-6 py-2.5 rounded-full mb-4 transition-colors duration-300">
+                            กำลังเตรียมกล้อง...
+                        </p>
+
+                        <div class="w-full border-t border-slate-100 pt-4">
+                            <p class="text-[11px] font-medium text-slate-400 text-center mb-2">ค้นหาด้วยรหัสผลงาน (Manual Search)</p>
+                            <div class="flex gap-2 w-full max-w-[280px] mx-auto">
+                                <input type="text" id="manualCodeInput" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 uppercase focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-center tracking-wider placeholder:text-slate-300 placeholder:normal-case placeholder:font-normal" placeholder="กรอกรหัสผลงาน">
+                                <button onclick="searchManualCode()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0">
+                                    <i data-lucide="search" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <div id="confirmModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm transition-all duration-200">
+        <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-[slideInUp_0.3s_ease-out]" id="confirmCard">
+            <div class="text-center mb-5">
+                <div id="confirmIconWrapper" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i id="confirmIcon" class="w-8 h-8"></i>
+                </div>
+                <h3 id="confirmTitle" class="text-xl font-bold text-slate-800">ตรวจสอบข้อมูล</h3>
+                <p id="confirmSubtitle" class="text-xs text-slate-500 mt-1">กรุณาตรวจสอบความถูกต้องก่อนยืนยัน</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3 mb-6 text-sm">
+                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span class="text-slate-500 shrink-0">รหัสผลงาน</span>
+                    <span id="cId" class="font-bold text-slate-800 text-right truncate pl-2">-</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span class="text-slate-500 shrink-0">ชื่อ - นามสกุล</span>
+                    <span id="cName" class="font-semibold text-slate-800 text-right leading-relaxed pl-2">-</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span class="text-slate-500 shrink-0">เวลาจัดแสดง</span>
+                    <span id="cRoom" class="font-bold text-slate-800 text-right pl-2 text-[11px] sm:text-[13px]">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500 shrink-0">เวลาที่บันทึก</span>
+                    <span id="cTime" class="font-semibold text-slate-800 text-right pl-2">-</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal(false)" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors">ยกเลิก</button>
+                <button id="btnConfirmSubmit" onclick="submitConfirmedAction()" class="flex-1 py-3 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm transition-all duration-200">
+        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-[slideInUp_0.3s_ease-out]">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i data-lucide="check-circle" class="w-10 h-10"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">บันทึกสำเร็จ!</h3>
+            <p id="successDesc" class="text-sm text-slate-500 mb-6 leading-relaxed">ระบบได้อัปเดตสถานะขึ้นจอภาพเรียบร้อยแล้ว<br/><span class="text-emerald-600 font-medium mt-1 block">พร้อมสแกนคิวถัดไป</span></p>
+            <button onclick="closeSuccess()" class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-700 transition-colors shadow-md active:scale-95">รับทราบ</button>
+        </div>
+    </div>
+
+    <div id="pinModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-[slideInUp_0.3s_ease-out]">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="lock" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">เข้าสู่ระบบเจ้าหน้าที่</h3>
+                <p class="text-xs text-slate-500 mt-1">กรุณากรอกรหัสผ่าน (PIN)</p>
+            </div>
+            <div class="mb-6">
+                <input type="password" id="staffPinInput" class="w-full text-center text-3xl tracking-[0.5em] font-bold bg-slate-50 border border-slate-200 rounded-xl py-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all text-slate-700" placeholder="••••" maxlength="4" autocomplete="off" inputmode="numeric">
+                <p id="pinError" class="text-rose-500 text-xs font-semibold text-center mt-2 hidden">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closePinModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors">ยกเลิก</button>
+                <button id="btnVerifyPin" onclick="verifyPin()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overridePinModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-[slideInUp_0.3s_ease-out]">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="shield-alert" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">ยืนยันสิทธิ์อนุโลมคิว</h3>
+                <p class="text-xs text-slate-500 mt-1">กรุณากรอกรหัส PIN ระดับหัวหน้า</p>
+            </div>
+            <div class="mb-6">
+                <input type="password" id="overridePinInput" class="w-full text-center text-3xl tracking-[0.5em] font-bold bg-slate-50 border border-slate-200 rounded-xl py-3 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all text-slate-700" placeholder="••••" maxlength="4" autocomplete="off" inputmode="numeric">
+                <p id="overridePinError" class="text-rose-500 text-xs font-semibold text-center mt-2 hidden">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeOverridePinModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors">ยกเลิก</button>
+                <button id="btnVerifyOverridePin" onclick="verifyOverridePin()" class="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorModal" class="hidden fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-[slideInUp_0.3s_ease-out]">
+            <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 border border-rose-100">
+                <i data-lucide="alert-circle" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">แจ้งเตือน</h3>
+            <p id="errorModalMsg" class="text-sm text-slate-600 mb-6 font-medium leading-relaxed">เกิดข้อผิดพลาดบางประการ</p>
+            <button onclick="closeErrorModal()" class="w-full bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors active:scale-95">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+        lucide.createIcons();
+
+        // =============================================================
+        // 🔧 CONFIG — แก้ค่าที่นี่ที่เดียว
+        // =============================================================
+        var RAW_SUPABASE_URL = 'https://jdujdpqihtknelmpqxhy.supabase.co/rest/v1/';
+        var SUPABASE_KEY     = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
+
+        // ─── [FIX 1] PIN เป็น SHA-256 Hash แทนตัวอักษรตรงๆ ─────────────────
+        // เปลี่ยน PIN ผ่านฟังก์ชัน hashPin() แล้วคัดลอกค่ามาใส่ด้านล่าง
+        // SHA-256("1234") = 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4
+        // SHA-256("9999") = 1b4f0e9851971998e732078544c96b36c3d01cedf7caa332359d6f1d83567014
+        var STAFF_PIN_HASH    = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+        var OVERRIDE_PIN_HASH = "1b4f0e9851971998e732078544c96b36c3d01cedf7caa332359d6f1d83567014";
+
+        // ─── Clean URL ──────────────────────────────────────────────────────
+        var SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, "");
+        var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // =============================================================
+        // 🔧 STATE — ตัวแปรสถานะทั่วไป
+        // =============================================================
+        var lastCheckinId      = null;
+        var lastRewardId       = null;
+        var isInitialLoad      = true;
+        var html5QrCode        = null;
+        var currentScannedItem = null;
+        var autoDeterminedAction = "ENTRY";
+        var isStopping         = false;
+
+        // ─── [FIX 2] lock ป้องกันสแกนซ้ำขณะรอ API ─────────────────────────
+        var isProcessing = false;
+
+        // ─── [FIX 3] Server-time offset (ms) ─────────────────────────────────
+        var serverTimeOffsetMs = 0;
+
+        // Smart Render
+        var lastCheckinDataStr = "";
+        var lastRewardDataStr  = "";
+
+        // QR Mobile — สร้างครั้งเดียว ไม่ regenerate ทุก render
+        document.getElementById('mobileQrCode').src =
+            'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' +
+            encodeURIComponent(window.location.href);
+
+        // =============================================================
+        // 🔧 [FIX 1] PIN Hashing ด้วย Web Crypto API
+        // =============================================================
+        async function sha256(text) {
+            const buf = await crypto.subtle.digest(
+                "SHA-256",
+                new TextEncoder().encode(text)
+            );
+            return Array.from(new Uint8Array(buf))
+                .map(b => b.toString(16).padStart(2, "0"))
+                .join("");
+        }
+
+        // helper สำหรับ developer เปลี่ยน PIN: เรียก hashPin("รหัสใหม่") ใน console แล้วเอาค่าไปใส่ใน HASH constants
+        window.hashPin = async function(pin) {
+            const h = await sha256(String(pin));
+            console.log(`SHA-256("${pin}") = ${h}`);
+            return h;
+        };
+
+        // =============================================================
+        // 🔧 [FIX 3] ซิงค์เวลากับ Server Supabase ครั้งแรก
+        // =============================================================
+        async function syncServerTime() {
+            try {
+                // ใช้ Supabase built-in endpoint เพื่อดึงเวลา server
+                const localBefore = Date.now();
+                const { data, error } = await supabaseClient.rpc('now');
+                const localAfter = Date.now();
+
+                if (!error && data) {
+                    const serverMs   = new Date(data).getTime();
+                    const roundtrip  = localAfter - localBefore;
+                    const localGuess = localBefore + Math.floor(roundtrip / 2);
+                    serverTimeOffsetMs = serverMs - localGuess;
+                    console.log(`[TimeSync] offset = ${serverTimeOffsetMs} ms`);
+                }
+            } catch (e) {
+                // fallback: ใช้ worldtimeapi
+                try {
+                    const res  = await fetch('https://worldtimeapi.org/api/timezone/Asia/Bangkok');
+                    const json = await res.json();
+                    const serverMs = new Date(json.datetime).getTime();
+                    serverTimeOffsetMs = serverMs - Date.now();
+                    console.log(`[TimeSync-fallback] offset = ${serverTimeOffsetMs} ms`);
+                } catch (_) {
+                    console.warn('[TimeSync] ใช้เวลาเครื่อง (offset = 0)');
+                }
+            }
+        }
+
+        // คืนค่าเวลาที่ sync แล้ว
+        function getSyncedTime() {
+            return new Date(Date.now() + serverTimeOffsetMs);
+        }
+
+        // =============================================================
+        // 🔧 Clock & Network
+        // =============================================================
+        function updateClock() {
+            const now = getSyncedTime();
+            document.getElementById('clockTime').innerText =
+                now.toLocaleTimeString('th-TH', { hour12: false });
+            document.getElementById('clockDate').innerText =
+                now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function updateNetworkStatus() {
+            const badge = document.getElementById('networkStatusBadge');
+            const dot   = document.getElementById('networkDot');
+            const text  = document.getElementById('networkText');
+            if (navigator.onLine) {
+                badge.className = "bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
+                dot.className   = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                text.className  = "text-[10px] font-bold text-emerald-700 tracking-wider";
+                text.innerText  = "ONLINE";
+            } else {
+                badge.className = "bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
+                dot.className   = "w-2.5 h-2.5 rounded-full bg-rose-500";
+                text.className  = "text-[10px] font-bold text-rose-700 tracking-wider";
+                text.innerText  = "OFFLINE";
+            }
+        }
+        window.addEventListener('online',  updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
+
+        // =============================================================
+        // 🔧 Fetch Dashboard Data (Supabase)
+        // =============================================================
+        async function fetchDashboardData() {
+            try {
+                const { data: allCheckin, error: errCheckin } = await supabaseClient
+                    .from('eposter_works')
+                    .select('*')
+                    .eq('Check-in', 'Y')
+                    .order('เวลา Check-in', { ascending: false });
+
+                if (errCheckin) {
+                    showEmptyOrErrorState(
+                        `ข้อผิดพลาดการดึงคิวเข้างาน: ${errCheckin.message} (Code: ${errCheckin.code})`, true
+                    );
+                    return;
+                }
+
+                const checkinData = (allCheckin || []).filter(item => item['รับประกาศ'] !== 'Y');
+
+                const { data: rewardData, error: errReward } = await supabaseClient
+                    .from('eposter_works')
+                    .select('*')
+                    .eq('รับประกาศ', 'Y')
+                    .order('เวลารับประกาศ', { ascending: false });
+
+                if (errReward) {
+                    showEmptyOrErrorState(
+                        `ข้อผิดพลาดการดึงคิวรับใบประกาศ: ${errReward.message} (Code: ${errReward.code})`, true
+                    );
+                    return;
+                }
+
+                isInitialLoad = false;
+                updateCounters(checkinData.length, rewardData.length);
+
+                // ─── [FIX 4] Smart Render: re-render เฉพาะเมื่อ data เปลี่ยน
+                // ลบเงื่อนไข "minute" ออก เพราะ Realtime subscription จะ trigger อยู่แล้ว
+                const checkinStr = JSON.stringify(checkinData);
+                const rewardStr  = JSON.stringify(rewardData);
+
+                const renderC = checkinStr !== lastCheckinDataStr;
+                const renderR = rewardStr  !== lastRewardDataStr;
+
+                if (renderC || renderR) {
+                    if (checkinData.length > 0 || rewardData.length > 0) {
+                        if (renderC) {
+                            renderSection('checkin', checkinData);
+                            lastCheckinDataStr = checkinStr;
+                        }
+                        if (renderR) {
+                            renderSection('reward', rewardData);
+                            lastRewardDataStr = rewardStr;
+                        }
+                        // ─── [FIX 5] เรียก lucide เฉพาะเมื่อ inject HTML ใหม่จริงๆ ─
+                        lucide.createIcons();
+                    } else {
+                        showEmptyOrErrorState();
+                    }
+                }
+
+            } catch (error) {
+                console.error("Dashboard Fetch Error:", error);
+                if (isInitialLoad) {
+                    showEmptyOrErrorState(
+                        'เกิดข้อผิดพลาดภายนอกในการเชื่อมต่อ: ' + (error.message || error), true
+                    );
+                }
+            }
+        }
+
+        function updateCounters(checkinLen, rewardLen) {
+            const cBadge = document.getElementById('checkinCountBadge');
+            const rBadge = document.getElementById('rewardCountBadge');
+            if (checkinLen > 0) {
+                cBadge.innerText = `ทั้งหมด ${checkinLen} คิว`;
+                cBadge.classList.remove('hidden');
+            } else {
+                cBadge.classList.add('hidden');
+            }
+            if (rewardLen > 0) {
+                rBadge.innerText = `แสดงสำเร็จ ${rewardLen} รายการ`;
+                rBadge.classList.remove('hidden');
+            } else {
+                rBadge.classList.add('hidden');
+            }
+        }
+
+        // =============================================================
+        // 🔧 Render Section UI
+        // =============================================================
+        function parseTime(timeStr) {
+            if (!timeStr || timeStr === "-") return null;
+            const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+            if (!match) return null;
+            const d = getSyncedTime();
+            d.setHours(parseInt(match[1], 10));
+            d.setMinutes(parseInt(match[2], 10));
+            d.setSeconds(0);
+            return d;
+        }
+
+        function isLive(startTimeStr, endTimeStr) {
+            if (!startTimeStr || !endTimeStr) return false;
+            const now   = getSyncedTime();
+            const start = parseTime(startTimeStr);
+            const end   = parseTime(endTimeStr);
+            if (!start || !end) return false;
+            return now >= start && now < end;
+        }
+
+        function renderSection(section, data) {
+            const heroContainer = document.getElementById(`${section}Hero`);
+            const listContainer = document.getElementById(`${section}List`);
+
+            if (data.length === 0) {
+                heroContainer.innerHTML = '';
+                listContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+                        <i data-lucide="inbox" class="w-12 h-12 mb-3 opacity-40"></i>
+                        <p class="text-sm font-medium">ไม่มีรายการคิวขณะนี้</p>
+                    </div>`;
+                return;
+            }
+
+            const heroItem  = data[0];
+            const listItems = data.slice(1);
+            const isCheckinSec  = (section === 'checkin');
+            const heroColorClass = isCheckinSec ? 'from-blue-600 to-indigo-600' : 'from-amber-500 to-orange-500';
+            const iconName      = isCheckinSec ? 'user-check' : 'award';
+            const timeField     = isCheckinSec ? heroItem['เวลา Check-in'] : heroItem['เวลารับประกาศ'];
+
+            let displayTime = "-";
+            if (timeField) {
+                const tObj = new Date(timeField);
+                if (!isNaN(tObj.getTime())) {
+                    displayTime = tObj.toLocaleTimeString('th-TH', {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    }) + " น.";
+                } else {
+                    displayTime = timeField;
+                }
+            }
+
+            const startTimeStr     = heroItem['เวลาเริ่มแสดง'] || "";
+            const endTimeStr       = heroItem['เวลาสิ้นสุด']    || "";
+            const isCurrentlyLive  = isLive(startTimeStr, endTimeStr);
+
+            let liveBadge = "";
+            if (isCheckinSec) {
+                liveBadge = isCurrentlyLive
+                    ? `<span class="bg-emerald-500 text-white text-[10px] font-extrabold px-3 py-1 rounded-full animate-pulse flex items-center gap-1">
+                           <span class="w-1.5 h-1.5 bg-white rounded-full"></span> LIVE NOW
+                       </span>`
+                    : `<span class="bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1 rounded-full">PENDING</span>`;
+            }
+
+            let rippleAnimClass = "";
+            if (isCheckinSec && heroItem.id !== lastCheckinId) {
+                if (!isInitialLoad) { playSuccessSound(); }
+                lastCheckinId   = heroItem.id;
+                rippleAnimClass = "animate-new-ripple";
+            } else if (!isCheckinSec && heroItem.id !== lastRewardId) {
+                if (!isInitialLoad) { playSuccessSound(); }
+                lastRewardId = heroItem.id;
+            }
+
+            let roomInfo = heroItem['ห้องจัดแสดง'] || "-";
+            let timeInfo = (startTimeStr || endTimeStr)
+                ? ` (${startTimeStr || '-'}-${endTimeStr || '-'} น.)` : "";
+
+            heroContainer.innerHTML = `
+                <div class="relative bg-gradient-to-r ${heroColorClass} text-white rounded-[1.8rem] p-6 shadow-xl ${rippleAnimClass} transition-all duration-300 transform hover:scale-[1.01] overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 opacity-15 pointer-events-none">
+                        <i data-lucide="${iconName}" class="w-36 h-36"></i>
+                    </div>
+                    <div class="flex justify-between items-start mb-4 z-10 relative">
+                        <span class="bg-white/20 backdrop-blur-md text-white text-[11px] font-extrabold px-3 py-1.5 rounded-xl uppercase tracking-wider">
+                            ${heroItem['รหัสผลงาน'] || 'N/A'}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            ${liveBadge}
+                            <span class="text-[11px] font-bold bg-black/20 px-3 py-1.5 rounded-xl">
+                                ${displayTime}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="z-10 relative">
+                        <h3 class="text-xl lg:text-2xl font-extrabold mb-1 tracking-wide leading-snug drop-shadow-sm">
+                            ${heroItem['ชื่อ-สกุล'] || 'ไม่ระบุชื่อ'}
+                        </h3>
+                        <p class="text-white/80 text-xs lg:text-sm font-semibold truncate mb-4">
+                            ${heroItem['ชื่อผลงาน ภาษาไทย'] || heroItem['ชื่อผลงาน ภาษาอังกฤษ'] || '-'}
+                        </p>
+                        <div class="flex flex-wrap items-center gap-3 border-t border-white/20 pt-4 text-xs font-semibold">
+                            <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-white"></i>
+                                <span>${heroItem['กลุ่มงาน'] || '-'}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 bg-white/10 px-3 py-2 rounded-xl ml-auto">
+                                <i data-lucide="presentation" class="w-3.5 h-3.5 text-white"></i>
+                                <span>จัดแสดง: ${roomInfo}${timeInfo}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            let listHtml = "";
+            listItems.forEach((item, index) => {
+                const itemTime = isCheckinSec ? item['เวลา Check-in'] : item['เวลารับประกาศ'];
+                let formattedItemTime = "-";
+                if (itemTime) {
+                    const itemTObj = new Date(itemTime);
+                    if (!isNaN(itemTObj.getTime())) {
+                        formattedItemTime = itemTObj.toLocaleTimeString('th-TH', {
+                            hour: '2-digit', minute: '2-digit'
+                        }) + " น.";
+                    } else {
+                        formattedItemTime = itemTime;
+                    }
+                }
+
+                const itemStart  = item['เวลาเริ่มแสดง'] || "";
+                const itemEnd    = item['เวลาสิ้นสุด']    || "";
+                const isItemLive = isLive(itemStart, itemEnd);
+
+                let listLiveBadge = "";
+                if (isCheckinSec) {
+                    listLiveBadge = isItemLive
+                        ? `<span class="bg-emerald-50 text-emerald-600 text-[10px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0">
+                               <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> LIVE
+                           </span>`
+                        : `<span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">WAIT</span>`;
+                }
+
+                listHtml += `
+                    <div class="bg-white/90 border border-slate-100 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all duration-200 list-enter transform hover:-translate-y-0.5" style="animation-delay: ${index * 0.05}s">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-10 h-10 rounded-xl bg-slate-50 flex-col flex items-center justify-center shrink-0 border border-slate-100">
+                                <span class="text-[10px] font-bold text-slate-400">ลำดับ</span>
+                                <span class="text-sm font-extrabold text-slate-700 leading-none mt-0.5">${index + 2}</span>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-extrabold text-indigo-600 tracking-wider">${item['รหัสผลงาน'] || 'N/A'}</span>
+                                    <h4 class="text-sm font-bold text-slate-800 truncate">${item['ชื่อ-สกุล'] || 'ไม่ระบุชื่อ'}</h4>
+                                </div>
+                                <p class="text-[11px] text-slate-500 font-medium truncate">${item['ชื่อผลงาน ภาษาไทย'] || item['ชื่อผลงาน ภาษาอังกฤษ'] || '-'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${listLiveBadge}
+                            <span class="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-xl tabular-nums">
+                                ${formattedItemTime}
+                            </span>
+                        </div>
+                    </div>`;
+            });
+
+            listContainer.innerHTML = listHtml;
+        }
+
+        function showEmptyOrErrorState(errorMessage = null) {
+            const emptyC = `
+                <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <i data-lucide="user-check" class="w-16 h-16 mb-4 opacity-30"></i>
+                    <p class="text-base font-semibold">ไม่มีรายการคิวรอสแตนด์บาย</p>
+                    <p class="text-xs text-slate-400 mt-1">เจ้าหน้าที่จะแอดคิวเข้าสู่ระบบเมื่อคุณรายงานตัว</p>
+                </div>`;
+            const emptyR = `
+                <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <i data-lucide="award" class="w-16 h-16 mb-4 opacity-30"></i>
+                    <p class="text-base font-semibold">ไม่มีคิวที่นำเสนอสำเร็จ</p>
+                    <p class="text-xs text-slate-400 mt-1">ยินดีต้อนรับสู่งานประชุมวิชาการฯ</p>
+                </div>`;
+
+            if (errorMessage) {
+                const errBox = `
+                    <div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl text-rose-700 flex flex-col items-center justify-center text-center">
+                        <i data-lucide="alert-triangle" class="w-10 h-10 mb-2"></i>
+                        <h4 class="font-bold">เกิดข้อผิดพลาดในการโหลดคิว</h4>
+                        <p class="text-xs mt-1 font-medium">${errorMessage}</p>
+                    </div>`;
+                document.getElementById('checkinHero').innerHTML = '';
+                document.getElementById('checkinList').innerHTML  = errBox;
+                document.getElementById('rewardHero').innerHTML  = '';
+                document.getElementById('rewardList').innerHTML   = errBox;
+            } else {
+                document.getElementById('checkinHero').innerHTML = '';
+                document.getElementById('checkinList').innerHTML  = emptyC;
+                document.getElementById('rewardHero').innerHTML  = '';
+                document.getElementById('rewardList').innerHTML   = emptyR;
+            }
+            lucide.createIcons();
+        }
+
+        // =============================================================
+        // 🔧 [FIX 6] Supabase Realtime + cleanup beforeunload
+        // =============================================================
+        var realtimeChannel = null;
+
+        function initSupabaseSubscription() {
+            try {
+                realtimeChannel = supabaseClient.channel('realtime_eposter_works')
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'eposter_works' },
+                        (payload) => {
+                            console.log('Realtime Change Received:', payload);
+                            fetchDashboardData();
+                        }
+                    )
+                    .subscribe();
+            } catch (err) {
+                console.error("Realtime subscription failed:", err);
+            }
+        }
+
+        // cleanup เมื่อปิดหน้าต่าง/tab
+        window.addEventListener('beforeunload', () => {
+            if (realtimeChannel) {
+                supabaseClient.removeChannel(realtimeChannel);
+            }
+            stopScanner();
+        });
+
+        // =============================================================
+        // 🔧 Sound
+        // =============================================================
+        async function playSuccessSound() {
+            try {
+                await Tone.start();
+                const synth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 }
+                }).toDestination();
+                synth.volume.value = -10;
+                synth.triggerAttackRelease("C6", "16n");
+                setTimeout(() => synth.triggerAttackRelease("E6", "8n"), 100);
+            } catch (e) {
+                console.log("Audio play blocked or failed", e);
+            }
+        }
+
+        function playErrorTone() {
+            try {
+                const synth = new Tone.Synth().toDestination();
+                synth.triggerAttackRelease("D4", "4n");
+            } catch (e) {}
+        }
+
+        // =============================================================
+        // 🔧 Staff PIN Modal — ใช้ SHA-256 verify
+        // =============================================================
+        function promptStaffPin() {
+            document.getElementById('staffPinInput').value = "";
+            document.getElementById('pinError').classList.add('hidden');
+            document.getElementById('pinModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('staffPinInput').focus(), 300);
+        }
+
+        function closePinModal() {
+            document.getElementById('pinModal').classList.add('hidden');
+        }
+
+        async function verifyPin() {
+            const pinVal = document.getElementById('staffPinInput').value;
+            const hashed = await sha256(pinVal);
+            if (hashed === STAFF_PIN_HASH) {
+                closePinModal();
+                toggleStaffMode(true);
+            } else {
+                document.getElementById('pinError').classList.remove('hidden');
+                document.getElementById('staffPinInput').value = "";
+                document.getElementById('staffPinInput').focus();
+            }
+        }
+
+        document.getElementById('staffPinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyPin();
+        });
+
+        // =============================================================
+        // 🔧 Override PIN Modal — ใช้ SHA-256 verify
+        // =============================================================
+        var pendingOverrideCallback = null;
+
+        function promptOverridePin(callback) {
+            pendingOverrideCallback = callback;
+            document.getElementById('overridePinInput').value = "";
+            document.getElementById('overridePinError').classList.add('hidden');
+            document.getElementById('overridePinModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('overridePinInput').focus(), 300);
+        }
+
+        function closeOverridePinModal() {
+            document.getElementById('overridePinModal').classList.add('hidden');
+            pendingOverrideCallback = null;
+        }
+
+        async function verifyOverridePin() {
+            const pinVal = document.getElementById('overridePinInput').value;
+            const hashed = await sha256(pinVal);
+            if (hashed === OVERRIDE_PIN_HASH) {
+                const action = pendingOverrideCallback;
+                closeOverridePinModal();
+                if (action) action();
+            } else {
+                document.getElementById('overridePinError').classList.remove('hidden');
+                document.getElementById('overridePinInput').value = "";
+                document.getElementById('overridePinInput').focus();
+            }
+        }
+
+        document.getElementById('overridePinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyOverridePin();
+        });
+
+        // =============================================================
+        // 🔧 Scanner
+        // =============================================================
+        function toggleStaffMode(active) {
+            const sheet    = document.getElementById('staffSheet');
+            const bg       = document.getElementById('staffOverlayBg');
+            const focusBox = document.getElementById('scanFocusBox');
+
+            if (active) {
+                sheet.classList.add('active');
+                bg.classList.remove('pointer-events-none');
+                bg.classList.add('opacity-100');
+
+                setScanFeedback("กำลังสแตนด์บายกล้องสแกน...", "slate");
+                focusBox.classList.remove('hidden');
+                focusBox.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 max-w-[250px] aspect-square border-4 border-slate-300 rounded-2xl z-10 shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] pointer-events-none";
+                startScanner();
+            } else {
+                sheet.classList.remove('active');
+                bg.classList.add('pointer-events-none');
+                bg.classList.remove('opacity-100');
+                focusBox.classList.add('hidden');
+                stopScanner();
+            }
+        }
+
+        // helper เพื่อลดการเขียนซ้ำ
+        function setScanFeedback(text, color) {
+            const el = document.getElementById('scanFeedback');
+            el.innerText = text;
+            const colorMap = {
+                slate:  "text-center text-sm font-semibold text-slate-500 bg-slate-100 px-6 py-2.5 rounded-full mb-4",
+                indigo: "text-center text-sm font-semibold text-indigo-600 bg-indigo-50 px-6 py-2.5 rounded-full mb-4 animate-pulse",
+                rose:   "text-center text-sm font-semibold text-rose-600 bg-rose-50 border border-rose-100 px-6 py-2.5 rounded-full mb-4",
+            };
+            el.className = colorMap[color] || colorMap.slate;
+        }
+
+        function startScanner() {
+            isStopping  = false;
+            isProcessing = false;   // reset lock เมื่อเริ่มกล้องใหม่
+            html5QrCode = new Html5Qrcode("reader");
+            const config = {
+                fps: 15,
+                qrbox: (w, h) => {
+                    const size = Math.floor(Math.min(w, h) * 0.7);
+                    return { width: size, height: size };
+                }
+            };
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).then(() => {
+                setScanFeedback("วาง QR Code ให้อยู่ในกรอบเลนส์เพื่อสแกน", "slate");
+                document.getElementById('scanFocusBox').className =
+                    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 max-w-[250px] aspect-square border-4 border-indigo-500 rounded-2xl z-10 shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] pointer-events-none";
+            }).catch(err => {
+                console.error("Camera open error:", err);
+                setScanFeedback("ไม่สามารถเปิดกล้องได้ หรือสิทธิ์กล้องถูกปฏิเสธ", "rose");
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                isStopping = true;
+                html5QrCode.stop()
+                    .then(() => { html5QrCode = null; })
+                    .catch(err => console.error("Error stopping scanner:", err));
+            }
+        }
+
+        // ─── [FIX 2] ป้องกันสแกนซ้ำขณะรอ API ────────────────────────────────
+        function onScanSuccess(decodedText) {
+            if (isStopping || isProcessing) return;
+            isProcessing = true;
+            processScannedCode(decodedText).finally(() => {
+                // ปล่อย lock หลังจากที่ modal แสดงขึ้นมาแล้ว (หรือ error)
+                isProcessing = false;
+            });
+        }
+
+        function onScanFailure() {
+            // ดำเนินการเงียบ — ไม่ต้องทำอะไร
+        }
+
+        function searchManualCode() {
+            const code = document.getElementById('manualCodeInput').value.trim().toUpperCase();
+            if (!code) {
+                showError("กรุณากรอกรหัสผลงานก่อนค้นหา");
+                return;
+            }
+            if (isProcessing) return;
+            isProcessing = true;
+            processScannedCode(code).finally(() => {
+                isProcessing = false;
+            });
+            document.getElementById('manualCodeInput').value = "";
+        }
+
+        document.getElementById('manualCodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchManualCode();
+        });
+
+        // =============================================================
+        // 🔧 Process Scanned Code
+        // =============================================================
+        async function processScannedCode(code) {
+            try {
+                setScanFeedback("กำลังตรวจค้นรหัส: " + code + "...", "indigo");
+
+                const { data, error } = await supabaseClient
+                    .from('eposter_works')
+                    .select('*')
+                    .eq('รหัสผลงาน', code)
+                    .single();
+
+                if (error || !data) {
+                    setScanFeedback(`ไม่พบข้อมูลรหัส: ${code}`, "rose");
+                    playErrorTone();
+                    return;
+                }
+
+                currentScannedItem = data;
+
+                if (data['Check-in'] !== 'Y') {
+                    autoDeterminedAction = "ENTRY";
+                    showConfirmModal(
+                        "เช็คอินเข้ารายงานตัว",
+                        "ลงเวลาเพื่อขึ้นแสดงผลหน้าจอหลัก",
+                        "user-check",
+                        "bg-blue-100 text-blue-600",
+                        "bg-blue-600 hover:bg-blue-700"
+                    );
+                } else if (data['รับประกาศ'] !== 'Y') {
+                    autoDeterminedAction = "REWARD";
+                    showConfirmModal(
+                        "ยืนยันนำเสนอเสร็จสิ้น",
+                        "เปลี่ยนสถานะเป็นผู้แสดงผลสำเร็จแล้วเพื่อรับใบประกาศ",
+                        "award",
+                        "bg-amber-100 text-amber-600",
+                        "bg-amber-500 hover:bg-amber-600"
+                    );
+                } else {
+                    setScanFeedback(`สิทธิ์ ${code} ทำรายการเสร็จสิ้นครบถ้วนแล้ว`, "slate");
+                    showError(
+                        `ผู้ส่งผลงานรหัส ${code} ได้เข้าร่วมการนำเสนอและสแกนรับใบประกาศเรียบร้อยแล้วเมื่อ ${data['เวลารับประกาศ'] || '-'}`
+                    );
+                }
+
+            } catch (err) {
+                console.error("Database connection failed during verification:", err);
+                showError("ล้มเหลวในการดึงข้อมูลจาก Server กรุณาเชื่อมต่อโครงข่ายใหม่อีกครั้ง");
+            }
+        }
+
+        // =============================================================
+        // 🔧 Confirm Modal
+        // =============================================================
+        function showConfirmModal(title, subtitle, icon, iconColorClass, btnColorClass) {
+            document.getElementById('confirmTitle').innerText    = title;
+            document.getElementById('confirmSubtitle').innerText = subtitle;
+
+            const iconWrapper = document.getElementById('confirmIconWrapper');
+            iconWrapper.className = `w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner ${iconColorClass}`;
+
+            document.getElementById('confirmIcon').setAttribute('data-lucide', icon);
+            document.getElementById('cId').innerText   = currentScannedItem['รหัสผลงาน'] || "-";
+            document.getElementById('cName').innerText = currentScannedItem['ชื่อ-สกุล']  || "ไม่ระบุชื่อ";
+
+            let roomText = currentScannedItem['ห้องจัดแสดง'] || "-";
+            const start  = currentScannedItem['เวลาเริ่มแสดง'] || "";
+            const end    = currentScannedItem['เวลาสิ้นสุด']    || "";
+            if (start || end) roomText += ` (${start || '-'}-${end || '-'} น.)`;
+            document.getElementById('cRoom').innerText = roomText;
+
+            const now = getSyncedTime();
+            document.getElementById('cTime').innerText = now.toLocaleTimeString('th-TH') + " น.";
+
+            const submitBtn = document.getElementById('btnConfirmSubmit');
+            submitBtn.className = `flex-1 py-3 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 ${btnColorClass}`;
+
+            document.getElementById('confirmModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeConfirmModal(resetFeedback = true) {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (resetFeedback && html5QrCode) {
+                setScanFeedback("วาง QR Code ให้อยู่ในกรอบเลนส์เพื่อสแกน", "slate");
+            }
+        }
+
+        // =============================================================
+        // 🔧 Submit / Execute DB Update
+        // =============================================================
+        async function submitConfirmedAction() {
+            if (!currentScannedItem) return;
+
+            const startTimeStr    = currentScannedItem['เวลาเริ่มแสดง'] || "";
+            const endTimeStr      = currentScannedItem['เวลาสิ้นสุด']    || "";
+            const isCurrentlyLive = isLive(startTimeStr, endTimeStr);
+
+            if (autoDeterminedAction === "ENTRY" && !isCurrentlyLive) {
+                closeConfirmModal(false);
+                promptOverridePin(() => { executeDatabaseUpdate(); });
+            } else {
+                executeDatabaseUpdate();
+            }
+        }
+
+        async function executeDatabaseUpdate() {
+            try {
+                const nowISO      = new Date().toISOString();
+                let updatePayload = {};
+
+                if (autoDeterminedAction === "ENTRY") {
+                    updatePayload = { "Check-in": "Y", "เวลา Check-in": nowISO };
+                } else if (autoDeterminedAction === "REWARD") {
+                    updatePayload = { "รับประกาศ": "Y", "เวลารับประกาศ": nowISO };
+                }
+
+                const { error } = await supabaseClient
+                    .from('eposter_works')
+                    .update(updatePayload)
+                    .eq('id', currentScannedItem.id)
+                    .select();
+
+                if (error) throw error;
+
+                closeConfirmModal(false);
+                document.getElementById('successModal').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Supabase Database Update Failure:", err);
+                showError("ไม่สามารถเขียนค่าลงฐานข้อมูลหลักได้: " + (err.message || err));
+            }
+        }
+
+        function closeSuccess() {
+            document.getElementById('successModal').classList.add('hidden');
+            if (html5QrCode) {
+                setScanFeedback("วาง QR Code ให้อยู่ในกรอบเลนส์เพื่อสแกน", "slate");
+            }
+        }
+
+        // =============================================================
+        // 🔧 Error Modal
+        // =============================================================
+        function showError(message) {
+            document.getElementById('errorModalMsg').innerText = message;
+            document.getElementById('errorModal').classList.remove('hidden');
+        }
+
+        function closeErrorModal() {
+            document.getElementById('errorModal').classList.add('hidden');
+            if (html5QrCode) {
+                setScanFeedback("วาง QR Code ให้อยู่ในกรอบเลนส์เพื่อสแกน", "slate");
+            }
+        }
+
+        // =============================================================
+        // 🚀 INIT
+        // =============================================================
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Sync เวลาก่อน แล้วค่อยโหลดข้อมูล เพื่อให้ LIVE badge ถูกต้อง
+            await syncServerTime();
+
+            fetchDashboardData();
+            initSupabaseSubscription();
+
+            // Polling สำรอง 15 วินาที เผื่อ Realtime subscription ขัดข้อง
+            setInterval(fetchDashboardData, 15000);
+        });
+    </script>
+</body>
+</html>
