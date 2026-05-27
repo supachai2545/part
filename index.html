@@ -523,11 +523,12 @@
         // =============================================================
         async function fetchDashboardData() {
             try {
+                // หมายเหตุ: ไม่ใช้ .order() ฝั่ง Supabase เพราะ PostgREST (PGRST100)
+                // parse ชื่อคอลัมน์ภาษาไทยใน ORDER BY ไม่ได้ → sort client-side แทน
                 const { data: allCheckin, error: errCheckin } = await supabaseClient
                     .from('eposter_works')
                     .select('*')
-                    .eq('Check-in', 'Y')
-                    .order('เวลา Check-in', { ascending: false });
+                    .eq('Check-in', 'Y');
 
                 if (errCheckin) {
                     showEmptyOrErrorState(
@@ -536,13 +537,19 @@
                     return;
                 }
 
-                const checkinData = (allCheckin || []).filter(item => item['รับประกาศ'] !== 'Y');
+                // sort client-side: เวลา Check-in ล่าสุดก่อน (descending)
+                const checkinData = (allCheckin || [])
+                    .filter(item => item['รับประกาศ'] !== 'Y')
+                    .sort((a, b) => {
+                        const ta = a['เวลา Check-in'] ? new Date(a['เวลา Check-in']).getTime() : 0;
+                        const tb = b['เวลา Check-in'] ? new Date(b['เวลา Check-in']).getTime() : 0;
+                        return tb - ta;
+                    });
 
                 const { data: rewardData, error: errReward } = await supabaseClient
                     .from('eposter_works')
                     .select('*')
-                    .eq('รับประกาศ', 'Y')
-                    .order('เวลารับประกาศ', { ascending: false });
+                    .eq('รับประกาศ', 'Y');
 
                 if (errReward) {
                     showEmptyOrErrorState(
@@ -551,25 +558,33 @@
                     return;
                 }
 
+                // sort client-side: เวลารับประกาศล่าสุดก่อน (descending)
+                const rewardDataSorted = (rewardData || [])
+                    .sort((a, b) => {
+                        const ta = a['เวลารับประกาศ'] ? new Date(a['เวลารับประกาศ']).getTime() : 0;
+                        const tb = b['เวลารับประกาศ'] ? new Date(b['เวลารับประกาศ']).getTime() : 0;
+                        return tb - ta;
+                    });
+
                 isInitialLoad = false;
                 updateCounters(checkinData.length, rewardData.length);
 
                 // ─── [FIX 4] Smart Render: re-render เฉพาะเมื่อ data เปลี่ยน
                 // ลบเงื่อนไข "minute" ออก เพราะ Realtime subscription จะ trigger อยู่แล้ว
                 const checkinStr = JSON.stringify(checkinData);
-                const rewardStr  = JSON.stringify(rewardData);
+                const rewardStr  = JSON.stringify(rewardDataSorted);
 
                 const renderC = checkinStr !== lastCheckinDataStr;
                 const renderR = rewardStr  !== lastRewardDataStr;
 
                 if (renderC || renderR) {
-                    if (checkinData.length > 0 || rewardData.length > 0) {
+                    if (checkinData.length > 0 || rewardDataSorted.length > 0) {
                         if (renderC) {
                             renderSection('checkin', checkinData);
                             lastCheckinDataStr = checkinStr;
                         }
                         if (renderR) {
-                            renderSection('reward', rewardData);
+                            renderSection('reward', rewardDataSorted);
                             lastRewardDataStr = rewardStr;
                         }
                         // ─── [FIX 5] เรียก lucide เฉพาะเมื่อ inject HTML ใหม่จริงๆ ─
