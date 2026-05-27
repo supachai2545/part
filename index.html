@@ -150,6 +150,48 @@
         }
         .success-overlay-anim { animation: successFade 2s ease forwards; }
         .success-icon-anim    { animation: successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both; }
+
+        /* ─── Scanner: gradient background เหมือนหน้าหลัก ────────────────── */
+        #staffSheet {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #1e40af 55%, #0c1a3a 100%) !important;
+        }
+
+        /* ─── Scan frame green glow เมื่อสแกนสำเร็จ ───────────────────────── */
+        @keyframes successGlow {
+            0%   { opacity:1; }
+            25%  { opacity:0.6; }
+            50%  { opacity:1; }
+            75%  { opacity:0.7; }
+            100% { opacity:1; }
+        }
+        #scanFrame.scan-success .scan-corner {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 16px 4px rgba(34,197,94,0.7);
+            animation: successGlow 0.5s ease-in-out 3 !important;
+        }
+        #scanFrame.scan-success #scanLine {
+            background: linear-gradient(90deg, transparent, #4ade80, #22c55e, #4ade80, transparent) !important;
+            box-shadow: 0 0 10px 3px rgba(34,197,94,0.8) !important;
+        }
+
+        /* ─── Countdown badge ───────────────────────────────────────────────── */
+        @keyframes liveFlash {
+            0%,100% { opacity:1; } 50% { opacity:0.6; }
+        }
+        .badge-live { animation: liveFlash 1.2s ease-in-out infinite; }
+
+        /* ─── Stats Modal slide-up ──────────────────────────────────────────── */
+        @keyframes slideUpModal {
+            from { transform: translateY(100%); opacity:0; }
+            to   { transform: translateY(0);   opacity:1; }
+        }
+        .stats-modal-enter { animation: slideUpModal 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        /* ─── Progress bar fill ─────────────────────────────────────────────── */
+        @keyframes fillBar {
+            from { width: 0; }
+        }
+        .bar-fill { animation: fillBar 0.8s cubic-bezier(0.16,1,0.3,1) forwards; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col select-none lg:overflow-hidden font-['Sarabun'] relative">
@@ -283,7 +325,7 @@
     </main>
 
     <!-- ================= STAFF SYSTEM SCANNER (Fullscreen Immersive) ================= -->
-    <div id="staffSheet" class="bottom-sheet fixed inset-0 z-[60] w-full h-full bg-black overflow-hidden">
+    <div id="staffSheet" class="bottom-sheet fixed inset-0 z-[60] w-full h-full overflow-hidden">
 
         <!-- กล้องเต็มจอ — ไม่มีจุดดำ -->
         <div class="absolute inset-0 z-0">
@@ -353,6 +395,15 @@
                     </button>
                 </div>
             </div>
+
+            <!-- ปุ่ม Stats Dashboard -->
+            <button onclick="showStatsDashboard()"
+                    class="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md
+                           border border-white/20 text-white px-5 py-2.5 rounded-xl font-semibold text-sm
+                           transition-all active:scale-95 shadow-md">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                สรุปภาพรวม
+            </button>
         </div>
 
         <!-- ─── Scan Success Overlay ──────────────────────────────── -->
@@ -471,6 +522,56 @@
         </div>
     </div>
 
+    <!-- ================= STATS DASHBOARD MODAL ================= -->
+    <div id="statsModal" class="hidden fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 backdrop-blur-sm p-0">
+        <div id="statsCard" class="stats-modal-enter bg-white w-full max-w-2xl rounded-t-[2rem] shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">สรุปภาพรวม</h3>
+                        <p class="text-xs text-slate-400 font-medium">ข้อมูล ณ ขณะนี้</p>
+                    </div>
+                </div>
+                <button onclick="closeStatsDashboard()"
+                        class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all active:scale-90">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+                <!-- Top counters -->
+                <div class="grid grid-cols-3 gap-3" id="statsTopGrid">
+                    <!-- injected by JS -->
+                </div>
+
+                <!-- Branch breakdown -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        แยกตามสาขา
+                    </h4>
+                    <div id="statsBranchList" class="space-y-3">
+                        <!-- injected by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Close bar -->
+            <div class="shrink-0 px-6 py-4 border-t border-slate-100">
+                <button onclick="closeStatsDashboard()"
+                        class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT ================= -->
     <script>
         lucide.createIcons();
@@ -490,6 +591,72 @@
         // ─── Clean URL ──────────────────────────────────────────────────────
         var SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, "");
         var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // =============================================================
+        // 🔧 Branch helper — แยกสาขาจากรหัสผลงาน
+        // =============================================================
+        var BRANCH_ORDER = ['R&D สาขา 1','R&D สาขา 2','R&D สาขา 3','R&D สาขา 4','R2R สาขา 1','R2R สาขา 2'];
+        var BRANCH_COLORS = {
+            'R&D สาขา 1': { bg:'bg-blue-50',   bar:'bg-blue-500',   text:'text-blue-700',   icon:'🔬' },
+            'R&D สาขา 2': { bg:'bg-indigo-50',  bar:'bg-indigo-500', text:'text-indigo-700', icon:'🧬' },
+            'R&D สาขา 3': { bg:'bg-violet-50',  bar:'bg-violet-500', text:'text-violet-700', icon:'🧪' },
+            'R&D สาขา 4': { bg:'bg-purple-50',  bar:'bg-purple-500', text:'text-purple-700', icon:'🔭' },
+            'R2R สาขา 1': { bg:'bg-emerald-50', bar:'bg-emerald-500',text:'text-emerald-700',icon:'📋' },
+            'R2R สาขา 2': { bg:'bg-teal-50',    bar:'bg-teal-500',   text:'text-teal-700',   icon:'📊' },
+        };
+
+        function getBranchFromCode(code) {
+            if (!code) return 'อื่นๆ';
+            const c = String(code).toUpperCase().trim();
+            // ต้องเช็ค RP ก่อน P เพื่อกันการ match ผิด
+            if (c.startsWith('RP2')) return 'R2R สาขา 2';
+            if (c.startsWith('RP1')) return 'R2R สาขา 1';
+            if (c.startsWith('P4'))  return 'R&D สาขา 4';
+            if (c.startsWith('P3'))  return 'R&D สาขา 3';
+            if (c.startsWith('P2'))  return 'R&D สาขา 2';
+            if (c.startsWith('P1'))  return 'R&D สาขา 1';
+            return 'อื่นๆ';
+        }
+
+        // =============================================================
+        // ⏱️ Countdown / Time-status helper
+        // =============================================================
+        // เก็บ timings ของ hero card ปัจจุบัน เพื่อ update countdown ทุก 30s
+        var heroTimings = { checkin: { start:'', end:'' }, reward: { start:'', end:'' } };
+
+        function getTimeStatus(startStr, endStr) {
+            if (!startStr && !endStr) return null;
+            const now   = getSyncedTime();
+            const start = parseTime(startStr);
+            const end   = parseTime(endStr);
+            if (!start && !end) return null;
+
+            if (start && now < start) {
+                const diffMs  = start - now;
+                const diffMin = Math.round(diffMs / 60000);
+                if (diffMin < 1)
+                    return { html: `<span class="text-orange-600 font-bold text-xs">⏰ เริ่มในอีกไม่กี่วินาที</span>` };
+                return { html: `<span class="text-blue-600 font-bold text-xs">⏳ เริ่มใน <span class="text-base font-extrabold">${diffMin}</span> นาที</span>` };
+            }
+            if (start && end && now >= start && now < end) {
+                const diffMin = Math.round((end - now) / 60000);
+                return { html: `<span class="badge-live text-rose-600 font-bold text-xs">🔴 กำลังนำเสนออยู่ · เหลือ <span class="text-base font-extrabold">${diffMin}</span> นาที</span>` };
+            }
+            if (end && now >= end) {
+                return { html: `<span class="text-slate-400 font-semibold text-xs">✅ นำเสนอเสร็จสิ้นแล้ว</span>` };
+            }
+            return null;
+        }
+
+        function updateCountdowns() {
+            ['checkin','reward'].forEach(sec => {
+                const t = heroTimings[sec];
+                const el = document.getElementById(`${sec}HeroCountdown`);
+                if (!el || (!t.start && !t.end)) return;
+                const status = getTimeStatus(t.start, t.end);
+                el.innerHTML = status ? status.html : '';
+            });
+        }
 
         // =============================================================
         // 🔧 STATE — ตัวแปรสถานะทั่วไป
@@ -820,6 +987,10 @@
                     msg: 'กรุณารอสักครู่ เจ้าหน้าที่กำลังเตรียมใบประกาศ',
                     border: 'border-amber-200/70 hover:border-amber-300' };
 
+            // ── บันทึก timings ไว้ให้ countdown timer update ────────────────
+            heroTimings[section] = { start: startTime, end: endTime };
+            const timeStatus = getTimeStatus(startTime, endTime);
+
             heroContainer.innerHTML = `
                 <div class="highlight-card rounded-[1.5rem] p-5 lg:p-6 relative overflow-hidden
                             transition-all duration-500 ${rippleClass} ${heroExpired ? 'opacity-40 grayscale' : ''}">
@@ -845,6 +1016,8 @@
                     <div class="bg-white/80 rounded-xl p-3 mb-4 text-sm relative z-10
                                 border border-slate-100 shadow-sm flex flex-col gap-1">
                         ${heroLiveBadge}
+                        <!-- ⏱️ Countdown badge -->
+                        ${timeStatus ? `<div id="${section}HeroCountdown" class="mb-1">${timeStatus.html}</div>` : `<div id="${section}HeroCountdown"></div>`}
                         <p class="font-bold text-indigo-700">
                             นำเสนอจอที่ ${heroItem['จอที่'] || "-"}
                             เวลา ${startTime || "-"}${endTime ? " – " + endTime : ""} น.
@@ -1238,6 +1411,13 @@
             icon.classList.add('success-icon-anim');
             lucide.createIcons();
 
+            // ── Green glow บน scan frame ─────────────────────────────────
+            const frame = document.getElementById('scanFrame');
+            if (frame) {
+                frame.classList.add('scan-success');
+                setTimeout(() => frame.classList.remove('scan-success'), 2000);
+            }
+
             clearTimeout(successOverlayTimer);
             successOverlayTimer = setTimeout(() => {
                 overlay.classList.add('hidden');
@@ -1509,6 +1689,99 @@
         }
 
         // =============================================================
+        // 📊 Stats Dashboard
+        // =============================================================
+        function showStatsDashboard() {
+            const rows = cachedAllData;
+            const total     = rows.length;
+            const checkedIn = rows.filter(r => r['Check-in'] === 'Y').length;
+            const rewarded  = rows.filter(r => r['รับประกาศ'] === 'Y').length;
+            const pending   = total - checkedIn;
+            const waiting   = checkedIn - rewarded;   // เช็คอินแล้ว รอรับประกาศ
+
+            // ─── Top grid ─────────────────────────────────────────────
+            document.getElementById('statsTopGrid').innerHTML = `
+                <div class="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                    <p class="text-3xl font-extrabold text-slate-800">${total}</p>
+                    <p class="text-xs font-semibold text-slate-500 mt-1">ผลงานทั้งหมด</p>
+                </div>
+                <div class="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
+                    <p class="text-3xl font-extrabold text-blue-700">${checkedIn}</p>
+                    <p class="text-xs font-semibold text-blue-500 mt-1">✅ เช็คอินแล้ว</p>
+                    <div class="mt-2 bg-blue-200/50 rounded-full h-1.5 overflow-hidden">
+                        <div class="bar-fill bg-blue-500 h-full rounded-full" style="width:${total>0?Math.round(checkedIn/total*100):0}%"></div>
+                    </div>
+                    <p class="text-[10px] text-blue-400 mt-1">${total>0?Math.round(checkedIn/total*100):0}%</p>
+                </div>
+                <div class="bg-amber-50 rounded-2xl p-4 text-center border border-amber-100">
+                    <p class="text-3xl font-extrabold text-amber-700">${rewarded}</p>
+                    <p class="text-xs font-semibold text-amber-500 mt-1">🏆 รับประกาศแล้ว</p>
+                    <div class="mt-2 bg-amber-200/50 rounded-full h-1.5 overflow-hidden">
+                        <div class="bar-fill bg-amber-500 h-full rounded-full" style="width:${total>0?Math.round(rewarded/total*100):0}%"></div>
+                    </div>
+                    <p class="text-[10px] text-amber-400 mt-1">${total>0?Math.round(rewarded/total*100):0}%</p>
+                </div>
+            `;
+
+            // ─── Branch breakdown ───────────────────────────────────
+            const branchMap = {};
+            BRANCH_ORDER.forEach(b => branchMap[b] = { total:0, checkin:0, reward:0 });
+
+            rows.forEach(r => {
+                const b = getBranchFromCode(r['รหัสผลงาน']);
+                if (!branchMap[b]) branchMap[b] = { total:0, checkin:0, reward:0 };
+                branchMap[b].total++;
+                if (r['Check-in'] === 'Y') branchMap[b].checkin++;
+                if (r['รับประกาศ'] === 'Y') branchMap[b].reward++;
+            });
+
+            const branchHtml = BRANCH_ORDER.map(bName => {
+                const d = branchMap[bName];
+                if (d.total === 0) return '';
+                const col = BRANCH_COLORS[bName] || { bg:'bg-slate-50', bar:'bg-slate-400', text:'text-slate-700', icon:'📁' };
+                const pctCheckin = d.total > 0 ? Math.round(d.checkin / d.total * 100) : 0;
+                const pctReward  = d.total > 0 ? Math.round(d.reward  / d.total * 100) : 0;
+                return `
+                    <div class="${col.bg} rounded-2xl p-4 border border-slate-100">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-sm font-bold ${col.text}">${col.icon} ${bName}</span>
+                            <span class="text-xs font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">${d.total} ผลงาน</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <div class="flex justify-between text-slate-500 mb-1">
+                                    <span>เช็คอิน</span>
+                                    <span class="font-bold ${col.text}">${d.checkin} / ${d.total}</span>
+                                </div>
+                                <div class="bg-white/70 rounded-full h-2 overflow-hidden border border-slate-200/60">
+                                    <div class="bar-fill ${col.bar} h-full rounded-full" style="width:${pctCheckin}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-slate-500 mb-1">
+                                    <span>รับประกาศ</span>
+                                    <span class="font-bold text-amber-600">${d.reward} / ${d.total}</span>
+                                </div>
+                                <div class="bg-white/70 rounded-full h-2 overflow-hidden border border-slate-200/60">
+                                    <div class="bar-fill bg-amber-400 h-full rounded-full" style="width:${pctReward}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            document.getElementById('statsBranchList').innerHTML = branchHtml || `
+                <p class="text-center text-sm text-slate-400 py-6">ยังไม่มีข้อมูล</p>`;
+
+            lucide.createIcons();
+            document.getElementById('statsModal').classList.remove('hidden');
+        }
+
+        function closeStatsDashboard() {
+            document.getElementById('statsModal').classList.add('hidden');
+        }
+
+        // =============================================================
         // 🚀 INIT
         // =============================================================
         window.addEventListener('DOMContentLoaded', async () => {
@@ -1522,6 +1795,9 @@
 
             // Polling สำรอง 15 วินาที เผื่อ Realtime subscription ขัดข้อง
             setInterval(fetchDashboardData, 15000);
+
+            // Countdown timer — อัปเดต hero card ทุก 30 วินาที
+            setInterval(updateCountdowns, 30000);
         });
     </script>
 </body>
