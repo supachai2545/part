@@ -523,43 +523,40 @@
         // =============================================================
         async function fetchDashboardData() {
             try {
-                // หมายเหตุ: ไม่ใช้ .order() ฝั่ง Supabase เพราะ PostgREST (PGRST100)
-                // parse ชื่อคอลัมน์ภาษาไทยใน ORDER BY ไม่ได้ → sort client-side แทน
-                const { data: allCheckin, error: errCheckin } = await supabaseClient
+                // ─────────────────────────────────────────────────────────────
+                // PostgREST ไม่รองรับชื่อคอลัมน์ภาษาไทยใน .eq() และ .order()
+                // วิธีแก้: fetch ทุก row ครั้งเดียว แล้ว filter+sort client-side ทั้งหมด
+                // ─────────────────────────────────────────────────────────────
+                const { data: allData, error: fetchError } = await supabaseClient
                     .from('eposter_works')
-                    .select('*')
-                    .eq('Check-in', 'Y');
+                    .select('*');
 
-                if (errCheckin) {
+                if (fetchError) {
                     showEmptyOrErrorState(
-                        `ข้อผิดพลาดการดึงคิวเข้างาน: ${errCheckin.message} (Code: ${errCheckin.code})`, true
+                        `เชื่อมต่อฐานข้อมูลไม่ได้: ${fetchError.message} (Code: ${fetchError.code})`, true
                     );
                     return;
                 }
 
-                // sort client-side: เวลา Check-in ล่าสุดก่อน (descending)
-                const checkinData = (allCheckin || [])
-                    .filter(item => item['รับประกาศ'] !== 'Y')
+                // log column names ครั้งแรกเพื่อ debug
+                if (allData && allData.length > 0 && isInitialLoad) {
+                    console.log('[DB Columns]', Object.keys(allData[0]));
+                }
+
+                const rows = allData || [];
+
+                // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────────
+                const checkinData = rows
+                    .filter(r => r['Check-in'] === 'Y' && r['รับประกาศ'] !== 'Y')
                     .sort((a, b) => {
                         const ta = a['เวลา Check-in'] ? new Date(a['เวลา Check-in']).getTime() : 0;
                         const tb = b['เวลา Check-in'] ? new Date(b['เวลา Check-in']).getTime() : 0;
                         return tb - ta;
                     });
 
-                const { data: rewardData, error: errReward } = await supabaseClient
-                    .from('eposter_works')
-                    .select('*')
-                    .eq('รับประกาศ', 'Y');
-
-                if (errReward) {
-                    showEmptyOrErrorState(
-                        `ข้อผิดพลาดการดึงคิวรับใบประกาศ: ${errReward.message} (Code: ${errReward.code})`, true
-                    );
-                    return;
-                }
-
-                // sort client-side: เวลารับประกาศล่าสุดก่อน (descending)
-                const rewardDataSorted = (rewardData || [])
+                // ── rewardDataSorted: รับประกาศ = 'Y' ────────────────────────
+                const rewardDataSorted = rows
+                    .filter(r => r['รับประกาศ'] === 'Y')
                     .sort((a, b) => {
                         const ta = a['เวลารับประกาศ'] ? new Date(a['เวลารับประกาศ']).getTime() : 0;
                         const tb = b['เวลารับประกาศ'] ? new Date(b['เวลารับประกาศ']).getTime() : 0;
@@ -567,7 +564,7 @@
                     });
 
                 isInitialLoad = false;
-                updateCounters(checkinData.length, rewardData.length);
+                updateCounters(checkinData.length, rewardDataSorted.length);
 
                 // ─── [FIX 4] Smart Render: re-render เฉพาะเมื่อ data เปลี่ยน
                 // ลบเงื่อนไข "minute" ออก เพราะ Realtime subscription จะ trigger อยู่แล้ว
