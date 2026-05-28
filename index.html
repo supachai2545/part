@@ -262,6 +262,7 @@
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] sm:text-[12px] font-bold tracking-wider"></span>
                         <span id="viewerLocation" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
+                        <span id="viewerZone" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
                         <span id="viewerTime" class="text-indigo-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100"></span>
                     </div>
                     <h3 id="viewerTitle" class="font-black text-[15px] sm:text-[18px] text-gray-900 leading-snug"></h3>
@@ -641,13 +642,10 @@
                 const pdfUrl = `${STORAGE_BASE}/PDF/${id}.pdf`;
                 const jpgUrl = `${STORAGE_BASE}/JPG/${id}.jpg`;
 
-                const author = [item['คำนำหน้า'], item['ชื่อ'], item['นามสกุล']]
-                    .filter(Boolean).join('').replace(/(\S)(\s*)(\S)/, '$1 $3') || '';
-
                 const mappedItem = {
                     id:     id,
                     title:  item['ชื่อผลงาน']       || '',
-                    author: [item['คำนำหน้า'] || '', (item['ชื่อ'] || '') + ' ' + (item['นามสกุล'] || '')].join('').trim(),
+                    author: [item['คำนำหน้า'], item['ชื่อ'], item['นามสกุล']].filter(Boolean).join(' ').trim(),
                     time:   item['เวลาการนำเสนอ']   || '',
                     screen: String(item['แสดงจอที่'] || ''),
                     pdfUrl: pdfUrl,
@@ -663,13 +661,13 @@
                     mappedItem.calcBranch    = matchRP[1];
                     mappedItem.locationColor = 'bg-emerald-600';
                     mappedItem.zoneColor     = 'text-emerald-700 bg-emerald-100/80';
-                    mappedItem.displayZone   = `R2R (สาขา ${matchRP[1]})`;
+                    mappedItem.displayZone   = `R2R สาขา ${matchRP[1]}`;
                 } else if (matchP) {
                     mappedItem.calcZone      = 'R&D';
                     mappedItem.calcBranch    = matchP[1];
                     mappedItem.locationColor = 'bg-blue-600';
                     mappedItem.zoneColor     = 'text-blue-700 bg-blue-100/80';
-                    mappedItem.displayZone   = `R&D (สาขา ${matchP[1]})`;
+                    mappedItem.displayZone   = `R&D สาขา ${matchP[1]}`;
                 } else {
                     const zone   = item['ด้านของบทคัดย่อ'] || 'อื่นๆ';
                     const branch = String(item['สาขา'] || '');
@@ -677,7 +675,7 @@
                     mappedItem.calcBranch    = branch || 'All';
                     mappedItem.locationColor = 'bg-gray-500';
                     mappedItem.zoneColor     = 'text-gray-600 bg-gray-100';
-                    mappedItem.displayZone   = branch ? `${zone} (สาขา ${branch})` : zone;
+                    mappedItem.displayZone   = branch ? `${zone} สาขา ${branch}` : zone;
                 }
 
                 return mappedItem;
@@ -844,7 +842,7 @@
                         <p class="font-black text-lg sm:text-xl">ไม่พบผลงาน</p>
                     </div>`;
                 if (loadMoreBtn) { loadMoreBtn.classList.remove('flex'); loadMoreBtn.classList.add('hidden'); }
-                lucide.createIcons();
+                lucide.createIcons({ nodes: Array.from(grid.querySelectorAll('[data-lucide]')) });
                 return;
             }
 
@@ -854,7 +852,7 @@
 
             dataToShow.forEach(function(item, index) {
                 const isViewed = viewedList.indexOf(item.id) > -1;
-                const delay    = (index % itemsPerPage) * 0.05;
+                const delay    = Math.min((index % itemsPerPage) * 0.03, 0.25);
 
                 const cardHTML = `
                 <div class="card-3d-wrap w-full stagger-fade-in" style="animation-delay: ${delay}s">
@@ -864,7 +862,7 @@
                                 <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i></div>` : ''}
                         </div>
                         <div class="relative w-full aspect-[4/3] bg-gray-200 overflow-hidden border-b border-white/60 rounded-t-[18px]">
-                            <img src="${item.jpgUrl}" draggable="false" loading="lazy"
+                            <img src="${item.jpgUrl}" draggable="false" loading="lazy" decoding="async"
                                  onerror="this.onerror=null; this.src='https://placehold.co/800x600/f8fafc/ef4444?text=No+Image'; this.classList.remove('opacity-0')"
                                  onload="this.classList.remove('opacity-0')"
                                  class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 opacity-0">
@@ -902,7 +900,7 @@
                 if (visibleCount < currentFilteredData.length) { loadMoreBtn.classList.remove('hidden'); loadMoreBtn.classList.add('flex'); }
                 else { loadMoreBtn.classList.add('hidden'); loadMoreBtn.classList.remove('flex'); }
             }
-            lucide.createIcons();
+            lucide.createIcons({ nodes: Array.from(grid.querySelectorAll('[data-lucide]')) });
         }
 
         // =============================================================
@@ -919,8 +917,12 @@
             document.getElementById('viewerAuthorText').innerText  = activePoster.author;
 
             const locBadge = document.getElementById('viewerLocation');
-            locBadge.innerText = `จอที่ ${activePoster.screen} (${activePoster.displayZone})`;
-            locBadge.className = activePoster.calcZone === 'R&D'
+            locBadge.innerText = activePoster.screen ? `จอที่ ${activePoster.screen}` : '';
+            locBadge.className = "text-gray-700 font-bold text-[12px] sm:text-[13px] flex items-center bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200";
+
+            const zoneBadge = document.getElementById('viewerZone');
+            zoneBadge.innerText = activePoster.displayZone || '';
+            zoneBadge.className = activePoster.calcZone === 'R&D'
                 ? "text-blue-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100"
                 : activePoster.calcZone === 'R2R'
                     ? "text-emerald-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100"
@@ -950,10 +952,10 @@
 
             // แสดง PDF จาก Supabase Storage
             document.getElementById('viewerContentContainer').innerHTML = activePoster.pdfUrl
-                ? `<iframe src="${activePoster.pdfUrl}" class="w-full h-full border-0 absolute inset-0" allow="autoplay"></iframe>`
+                ? `<iframe src="${activePoster.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 absolute inset-0" allow="autoplay"></iframe>`
                 : '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์ PDF</p></div>';
 
-            lucide.createIcons();
+            lucide.createIcons({ nodes: Array.from(viewerModal.querySelectorAll('[data-lucide]')) });
             viewerModal.classList.remove('hidden');
             body.classList.add('no-scroll');
             startViewerTimer(id);
@@ -1222,7 +1224,9 @@
         document.getElementById('mapModal').addEventListener('click', function(e) { if (e.target === document.getElementById('mapModal')) closeMap(); });
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') { closeMap(); closeViewer(); closeRewardModal(); closeClaimPopup(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); }
         });
+        window.addEventListener('beforeprint', function(e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
     </script>
 </body>
 </html>
