@@ -951,39 +951,59 @@
             const container = document.getElementById('viewerContentContainer');
             if (activePoster.jpgUrl) {
                 container.innerHTML =
-                    `<div style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;background:#f1f5f9;">
-                        <img id="posterImg" src="${activePoster.jpgUrl}"
-                             style="max-width:100%;max-height:100%;object-fit:contain;touch-action:pinch-zoom;display:block;cursor:zoom-in;"
-                             decoding="async"
-                             onerror="this.style.display='none'; document.getElementById('imgError').style.display='flex';" />
-                        <div id="imgError" style="display:none;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;padding:2rem;text-align:center;">
-                            <p style="font-weight:800;font-size:1rem;">ไม่พบไฟล์รูปภาพ</p>
+                    `<div id="imgScrollBox" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;">
+                        <div style="min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;">
+                            <img id="posterImg" src="${activePoster.jpgUrl}"
+                                 style="width:100%;height:auto;display:block;touch-action:pan-x pan-y pinch-zoom;transition:width 0.2s ease;"
+                                 decoding="async"
+                                 onerror="this.style.display='none'; document.getElementById('imgError').style.display='flex';" />
+                            <div id="imgError" style="display:none;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;padding:2rem;text-align:center;min-height:200px;width:100%;">
+                                <p style="font-weight:800;font-size:1rem;">ไม่พบไฟล์รูปภาพ</p>
+                            </div>
+                        </div>
+                        <!-- Zoom buttons -->
+                        <div style="position:sticky;bottom:12px;right:0;float:right;margin-right:12px;display:flex;flex-direction:column;gap:8px;z-index:20;">
+                            <button id="btnZoomIn"
+                                style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:24px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">+</button>
+                            <button id="btnZoomOut"
+                                style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:28px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">−</button>
                         </div>
                      </div>`;
+
+                // Zoom logic
+                var zoomLevel = 1;
+                var img = document.getElementById('posterImg');
+                var scrollBox = document.getElementById('imgScrollBox');
+
+                function applyZoom(newZoom) {
+                    zoomLevel = Math.min(Math.max(newZoom, 1), 5);
+                    img.style.width = (zoomLevel * 100) + '%';
+                    img.style.maxWidth = 'none';
+                }
+
+                document.getElementById('btnZoomIn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    applyZoom(zoomLevel + 0.5);
+                });
+                document.getElementById('btnZoomOut').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    applyZoom(zoomLevel - 0.5);
+                });
+
+                // Double-tap to zoom
+                var lastTap = 0;
+                scrollBox.addEventListener('touchend', function(e) {
+                    if (e.target.id === 'btnZoomIn' || e.target.id === 'btnZoomOut') return;
+                    var now = Date.now();
+                    if (now - lastTap < 280) {
+                        e.preventDefault();
+                        applyZoom(zoomLevel > 1 ? 1 : 2);
+                    }
+                    lastTap = now;
+                }, { passive: false });
             } else {
                 container.innerHTML = '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์</p></div>';
             }
-
-            // Double-tap to zoom on mobile
-            (function() {
-                var lastTap = 0, zoomed = false, img = null;
-                var checkImg = setInterval(function() {
-                    img = document.getElementById('posterImg');
-                    if (!img) return;
-                    clearInterval(checkImg);
-                    img.addEventListener('touchend', function(e) {
-                        var now = Date.now();
-                        if (now - lastTap < 300) {
-                            e.preventDefault();
-                            zoomed = !zoomed;
-                            img.style.maxWidth  = zoomed ? '200%' : '100%';
-                            img.style.maxHeight = zoomed ? '200%' : '100%';
-                            img.style.cursor    = zoomed ? 'zoom-out' : 'zoom-in';
-                        }
-                        lastTap = now;
-                    }, { passive: false });
-                }, 50);
-            })();
 
             lucide.createIcons({ nodes: Array.from(viewerModal.querySelectorAll('[data-lucide]')) });
             viewerModal.classList.remove('hidden');
