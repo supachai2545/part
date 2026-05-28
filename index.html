@@ -1132,16 +1132,7 @@
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         }
 
-        function showPointsToast(pts) {
-            var existing = document.querySelector('.points-toast');
-            if (existing) existing.remove();
-            var t = document.createElement('div');
-            t.className = 'points-toast';
-            t.style.cssText = 'position:fixed;bottom:92px;right:20px;z-index:99999;background:#1e293b;color:#fbbf24;font-weight:900;font-size:15px;padding:6px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.35);pointer-events:none;white-space:nowrap;';
-            t.textContent = '+' + pts + ' PT';
-            document.body.appendChild(t);
-            setTimeout(function() { if (t.parentNode) t.remove(); }, 1700);
-        }
+        function showPointsToast(pts) { /* disabled */ }
 
         function completeReading(id) {
             viewedPosters.push(id);
