@@ -267,6 +267,7 @@
                     </div>
                     <h3 id="viewerTitle" class="font-black text-[15px] sm:text-[18px] text-gray-900 leading-snug"></h3>
                     <p id="viewerAuthor" class="text-gray-500 text-[13px] sm:text-[14px] font-semibold mt-1.5 flex items-center"><i data-lucide="user" class="w-3.5 h-3.5 mr-1.5"></i> <span id="viewerAuthorText"></span></p>
+                    <p id="viewerOrg" class="hidden text-gray-400 text-[11px] sm:text-[12px] font-semibold mt-1 flex items-center"><i data-lucide="building-2" class="w-3 h-3 mr-1.5 flex-shrink-0"></i> <span id="viewerOrgText"></span></p>
                 </div>
 
                 <div class="w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0 flex flex-wrap sm:flex-nowrap flex-row gap-2 items-center">
@@ -277,7 +278,7 @@
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center pt-[2px]">
                             <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 leading-none mb-0.5">รับแต้มภายใน</span>
-                            <span id="countdownText" class="text-[9px] sm:text-[11px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:34</span>
+                            <span id="countdownText" class="text-[9px] sm:text-[11px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:00</span>
                         </div>
                     </div>
 
@@ -324,13 +325,13 @@
 
                         <div class="flex-grow flex flex-col items-center justify-center mb-1">
                             <div id="stamp-container-4" class="w-[55px] h-[55px] min-[375px]:w-[65px] min-[375px]:h-[65px] sm:w-[110px] sm:h-[110px] rounded-full border-[2px] sm:border-[3px] border-dashed border-gray-300 flex flex-col items-center justify-center relative mb-2 sm:mb-5 transition-colors duration-500">
-                                <span id="stamp-text-4" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">300 PT</span>
+                                <span id="stamp-text-4" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">100 PT</span>
                                 <div id="stamp-4" class="stamp-mark absolute inset-[-4px] sm:inset-[-8px] rounded-full border-[2px] sm:border-4 border-rose-600 text-rose-600 flex items-center justify-center bg-rose-50/90 mix-blend-multiply" style="--rotate-angle: 18deg;">
                                     <i data-lucide="tree-deciduous" class="w-5 h-5 min-[375px]:w-6 min-[375px]:h-6 sm:w-12 sm:h-12"></i>
                                 </div>
                             </div>
                             <button id="passClaimBtn" onclick="claimReward()" class="w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-sm text-white bg-gray-400 cursor-not-allowed">
-                                รอสะสมให้ครบ 300
+                                รอสะสมให้ครบ 100
                             </button>
                         </div>
                         <div class="mt-auto pt-1 sm:pt-2 flex justify-end relative z-[60] pointer-events-auto">
@@ -344,7 +345,7 @@
 
                         <div class="flex-grow flex flex-col items-center justify-center">
                             <div id="stamp-container-5" class="w-[85px] h-[85px] min-[375px]:w-[105px] min-[375px]:h-[105px] sm:w-[170px] sm:h-[170px] rounded-full border-[3px] sm:border-[4px] border-dashed border-amber-300 flex flex-col items-center justify-center relative">
-                                <span id="stamp-text-5" class="text-[8px] sm:text-[12px] text-gray-400 absolute bottom-2 sm:bottom-4 font-bold">320 PT</span>
+                                <span id="stamp-text-5" class="text-[8px] sm:text-[12px] text-gray-400 absolute bottom-2 sm:bottom-4 font-bold">110 PT</span>
                                 <div id="stamp-5" class="stamp-mark absolute inset-[-5px] sm:inset-[-10px] rounded-full border-[4px] sm:border-[8px] border-amber-500 text-amber-500 flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/90 mix-blend-multiply relative shadow-[0_0_30px_rgba(245,158,11,0.6)]" style="--rotate-angle: -8deg;">
                                     <i data-lucide="crown" class="w-12 h-12 min-[375px]:w-16 min-[375px]:h-16 sm:w-28 sm:h-28 drop-shadow-md"></i>
                                 </div>
@@ -365,7 +366,7 @@
 
                         <div class="flex-grow flex flex-col items-center justify-center">
                             <div id="stamp-container-2" class="w-[55px] h-[55px] min-[375px]:w-[65px] min-[375px]:h-[65px] sm:w-[110px] sm:h-[110px] rounded-full border-[2px] sm:border-[3px] border-dashed border-gray-300 flex flex-col items-center justify-center relative">
-                                <span id="stamp-text-2" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">160 PT</span>
+                                <span id="stamp-text-2" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">50 PT</span>
                                 <div id="stamp-2" class="stamp-mark absolute inset-[-4px] sm:inset-[-8px] rounded-full border-[2px] sm:border-4 border-emerald-500 text-emerald-600 flex items-center justify-center bg-emerald-50/90 mix-blend-multiply" style="--rotate-angle: 10deg;">
                                     <i data-lucide="dna" class="w-5 h-5 min-[375px]:w-6 min-[375px]:h-6 sm:w-12 sm:h-12"></i>
                                 </div>
@@ -382,7 +383,7 @@
 
                         <div class="flex-grow flex flex-col items-center justify-center">
                             <div id="stamp-container-3" class="w-[55px] h-[55px] min-[375px]:w-[65px] min-[375px]:h-[65px] sm:w-[110px] sm:h-[110px] rounded-full border-[2px] sm:border-[3px] border-dashed border-gray-300 flex flex-col items-center justify-center relative">
-                                <span id="stamp-text-3" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">240 PT</span>
+                                <span id="stamp-text-3" class="text-[7px] sm:text-[11px] text-gray-400 absolute bottom-1.5 sm:bottom-2 font-bold">75 PT</span>
                                 <div id="stamp-3" class="stamp-mark absolute inset-[-4px] sm:inset-[-8px] rounded-full border-[2px] sm:border-4 border-orange-500 text-orange-600 flex items-center justify-center bg-orange-50/90 mix-blend-multiply" style="--rotate-angle: -8deg;">
                                     <i data-lucide="heart-pulse" class="w-5 h-5 min-[375px]:w-6 min-[375px]:h-6 sm:w-12 sm:h-12"></i>
                                 </div>
@@ -413,14 +414,14 @@
                             </div>
                             <div>
                                 <h4 class="text-[6px] min-[375px]:text-[7px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-wide">Reader Profile</h4>
-                                <p id="passPoints" class="text-[8px] min-[375px]:text-[9px] sm:text-xs font-black text-orange-600 leading-tight">0 / 300 PT</p>
+                                <p id="passPoints" class="text-[8px] min-[375px]:text-[9px] sm:text-xs font-black text-orange-600 leading-tight">0 / 100 PT</p>
                             </div>
                         </div>
 
                         <h4 class="text-center font-black text-slate-700 text-[8px] min-[375px]:text-[10px] sm:text-[13px] border-b-2 border-slate-200 pb-1 mb-1.5 sm:mb-2 w-full uppercase tracking-wider">กติกาสะสมคะแนน</h4>
                         <div class="text-[5.5px] min-[375px]:text-[6.5px] sm:text-[9.5px] text-gray-600 space-y-1 sm:space-y-2 leading-tight flex-grow mt-1 sm:mt-2 w-full">
-                            <p class="flex items-start"><i data-lucide="check-circle-2" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-500 mr-1 flex-shrink-0"></i> <span>ชม E-Poster 1 นาที 34 วิ รับ 20 แต้ม/ผลงาน</span></p>
-                            <p class="flex items-start"><i data-lucide="check-circle-2" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-500 mr-1 flex-shrink-0"></i> <span>ครบ 300 แต้ม มีสิทธิ์รับรางวัล (ชม 15 ผลงาน)</span></p>
+                            <p class="flex items-start"><i data-lucide="check-circle-2" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-500 mr-1 flex-shrink-0"></i> <span>ชม E-Poster 60 วิ รับ 10 แต้ม/ผลงาน</span></p>
+                            <p class="flex items-start"><i data-lucide="check-circle-2" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-500 mr-1 flex-shrink-0"></i> <span>ครบ 100 แต้ม มีสิทธิ์รับรางวัล (ชม 10 ผลงาน)</span></p>
                             <div class="border-t border-slate-200 my-1 pt-1">
                                 <span class="font-bold text-slate-700">เงื่อนไขรับรางวัล:</span>
                                 <ul class="list-disc pl-3 mt-0.5 space-y-0.5">
@@ -436,7 +437,6 @@
 
                         <div class="mt-auto pt-1 sm:pt-2 flex justify-between relative z-[60] pointer-events-auto">
                             <button onclick="turnPage(1, 'close', true)" class="text-rose-500 font-bold text-[8px] sm:text-xs hover:text-rose-700">ปิดสมุด</button>
-                            <button onclick="turnPage(2, 'open', true)" class="flex text-blue-600 font-bold text-[8px] sm:text-xs hover:text-blue-800 items-center">หน้าถัดไป <i data-lucide="arrow-right" class="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-1"></i></button>
                         </div>
                     </div>
                 </div>
@@ -591,9 +591,9 @@
         let timeElapsed   = 0;
         let badgeCollapseTimeout = null;
 
-        const REQUIRED_TIME   = 94;   // วินาที (1 นาที 34 วิ)
-        const POINTS_PER_VIEW = 20;
-        const TARGET_POINTS   = 300;
+        const REQUIRED_TIME   = 60;   // วินาที (1 นาที)
+        const POINTS_PER_VIEW = 10;
+        const TARGET_POINTS   = 100;
 
         // =============================================================
         // 🔧 INIT
@@ -646,6 +646,7 @@
                     id:     id,
                     title:  item['ชื่อผลงาน']       || '',
                     author: [item['คำนำหน้า'], item['ชื่อ'], item['นามสกุล']].filter(Boolean).join(' ').trim(),
+                    org:    item['ชื่อหน่วยงาน']    || '',
                     time:   item['เวลาการนำเสนอ']   || '',
                     screen: String(item['แสดงจอที่'] || ''),
                     pdfUrl: pdfUrl,
@@ -798,6 +799,7 @@
                         (item.id          && item.id.toLowerCase().includes(searchTerm)) ||
                         (item.title       && item.title.toLowerCase().includes(searchTerm)) ||
                         (item.author      && item.author.toLowerCase().includes(searchTerm)) ||
+                        (item.org         && item.org.toLowerCase().includes(searchTerm)) ||
                         (item.displayZone && item.displayZone.toLowerCase().includes(searchTerm));
                     return matchZone && matchBranch && matchSearch;
                 });
@@ -912,6 +914,11 @@
             document.getElementById('viewerTime').innerText        = `นำเสนอเวลา: ${activePoster.time}`;
             document.getElementById('viewerTitle').innerText       = activePoster.title;
             document.getElementById('viewerAuthorText').innerText  = activePoster.author;
+            const orgEl = document.getElementById('viewerOrg');
+            const orgText = activePoster.org || '';
+            document.getElementById('viewerOrgText').innerText = orgText;
+            orgEl.classList.toggle('hidden', !orgText);
+            orgEl.classList.toggle('flex', !!orgText);
 
             const locBadge = document.getElementById('viewerLocation');
             locBadge.innerText = activePoster.screen ? `จอที่ ${activePoster.screen}` : '';
@@ -976,9 +983,14 @@
                 var scrollBox = document.getElementById('imgScrollBox');
 
                 function applyZoom(newZoom) {
-                    zoomLevel = Math.min(Math.max(newZoom, 1), 5);
-                    img.style.width = (zoomLevel * 100) + '%';
-                    img.style.maxWidth = 'none';
+                    zoomLevel = Math.min(Math.max(newZoom, 0.5), 5);
+                    if (zoomLevel <= 1) {
+                        img.style.width = '100%';
+                        img.style.maxWidth = '';
+                    } else {
+                        img.style.width = (zoomLevel * 100) + '%';
+                        img.style.maxWidth = 'none';
+                    }
                 }
 
                 document.getElementById('btnZoomIn').addEventListener('click', function(e) {
@@ -1095,9 +1107,9 @@
         // 📕 PASSPORT
         // =============================================================
         function getLevel(pts) {
-            if (pts >= 320) return 5; if (pts >= 300) return 4;
-            if (pts >= 240) return 3; if (pts >= 160) return 2;
-            if (pts >= 80)  return 1; return 0;
+            if (pts >= 110) return 5; if (pts >= 100) return 4;
+            if (pts >= 75)  return 3; if (pts >= 50)  return 2;
+            if (pts >= 25)  return 1; return 0;
         }
 
         function toggleStamp(level, isAchieved, playSfx) {
@@ -1141,11 +1153,11 @@
 
         function updatePassportUI(instantUpdate) {
             if (instantUpdate === undefined) instantUpdate = true;
-            toggleStamp(1, instantUpdate && userPoints >= 80,  false);
-            toggleStamp(2, instantUpdate && userPoints >= 160, false);
-            toggleStamp(3, instantUpdate && userPoints >= 240, false);
-            toggleStamp(4, instantUpdate && userPoints >= 300, false);
-            toggleStamp(5, instantUpdate && userPoints >= 320, false);
+            toggleStamp(1, instantUpdate && userPoints >= 25,  false);
+            toggleStamp(2, instantUpdate && userPoints >= 50,  false);
+            toggleStamp(3, instantUpdate && userPoints >= 75,  false);
+            toggleStamp(4, instantUpdate && userPoints >= 100, false);
+            toggleStamp(5, instantUpdate && userPoints >= 110, false);
             if (instantUpdate) updatePassportUIButtons();
         }
 
