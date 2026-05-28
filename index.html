@@ -140,15 +140,13 @@
             animation: rubberStamp 0.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
         }
         @keyframes pointsToast {
-            0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
-            7%   { opacity: 1; transform: translate(-50%,-60%) scale(1.12); }
-            12%  { transform: translate(-50%,-58%) scale(0.96); }
-            17%  { transform: translate(-50%,-60%) scale(1.04); }
-            22%  { transform: translate(-50%,-60%) scale(1.0); }
-            80%  { opacity: 1; transform: translate(-50%,-60%) scale(1.0); }
-            100% { opacity: 0; transform: translate(-50%,-76%) scale(0.88); }
+            0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+            18%  { opacity: 1; transform: translateY(-10px) scale(1.06); }
+            35%  { transform: translateY(-14px) scale(1.0); }
+            75%  { opacity: 1; transform: translateY(-18px) scale(1.0); }
+            100% { opacity: 0; transform: translateY(-28px) scale(0.92); }
         }
-        .points-toast { animation: pointsToast 7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .points-toast { animation: pointsToast 1.6s ease-out both; }
         @keyframes stampBreath {
             0%, 100% { box-shadow: 0 0 0 0 rgba(148,163,184,0.4), inset 0 0 0 0 rgba(148,163,184,0.1); }
             50%       { box-shadow: 0 0 10px 3px rgba(148,163,184,0.2), inset 0 0 8px 2px rgba(148,163,184,0.08); }
@@ -1139,10 +1137,10 @@
             if (existing) existing.remove();
             var t = document.createElement('div');
             t.className = 'points-toast';
-            t.style.cssText = 'position:fixed;top:50%;left:50%;z-index:99999;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-weight:900;font-size:34px;padding:22px 44px;border-radius:28px;box-shadow:0 12px 48px rgba(217,119,6,0.55),0 0 0 4px rgba(255,255,255,0.35);pointer-events:none;white-space:nowrap;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,0.25);';
-            t.textContent = '+' + pts + ' PT ✓';
+            t.style.cssText = 'position:fixed;bottom:92px;right:20px;z-index:99999;background:#1e293b;color:#fbbf24;font-weight:900;font-size:15px;padding:6px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.35);pointer-events:none;white-space:nowrap;';
+            t.textContent = '+' + pts + ' PT';
             document.body.appendChild(t);
-            setTimeout(function() { if (t.parentNode) t.remove(); }, 7200);
+            setTimeout(function() { if (t.parentNode) t.remove(); }, 1700);
         }
 
         function completeReading(id) {
