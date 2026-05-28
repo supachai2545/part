@@ -122,21 +122,22 @@
 
         .stamp-mark {
             opacity: 0;
-            transform: scale(1.6) rotate(var(--rotate-angle)) translateY(-30px);
+            transform: rotate(var(--rotate-angle)) translateY(-45px) scaleX(1.9) scaleY(1.9);
             transition: none;
         }
         @keyframes rubberStamp {
-            0%   { opacity: 0;   transform: scale(1.6) rotate(var(--rotate-angle)) translateY(-30px); }
-            40%  { opacity: 1;   transform: scale(1.05) rotate(var(--rotate-angle)) translateY(2px); }
-            58%  { transform: scale(0.91) rotate(var(--rotate-angle)) translateY(0); }
-            72%  { transform: scale(1.04) rotate(var(--rotate-angle)) translateY(0); }
-            84%  { transform: scale(0.97) rotate(var(--rotate-angle)) translateY(0); }
-            100% { opacity: 1;   transform: scale(1) rotate(var(--rotate-angle)) translateY(0); }
+            0%   { opacity: 0;   transform: rotate(var(--rotate-angle)) translateY(-45px) scaleX(1.9)  scaleY(1.9); }
+            38%  { opacity: 0;   transform: rotate(var(--rotate-angle)) translateY(-10px) scaleX(1.3)  scaleY(1.3); }
+            54%  { opacity: 1;   transform: rotate(var(--rotate-angle)) translateY(6px)   scaleX(1.12) scaleY(0.88); }
+            68%  { opacity: 1;   transform: rotate(var(--rotate-angle)) translateY(0)     scaleX(1.04) scaleY(1.04); }
+            80%  { transform: rotate(var(--rotate-angle)) scaleX(0.97) scaleY(0.97); }
+            90%  { transform: rotate(var(--rotate-angle)) scaleX(1.01) scaleY(1.01); }
+            100% { opacity: 1;   transform: rotate(var(--rotate-angle)) scaleX(1)    scaleY(1); }
         }
         .stamp-mark.revealed {
             opacity: 1;
-            transform: scale(1) rotate(var(--rotate-angle)) translateY(0);
-            animation: rubberStamp 0.65s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+            transform: rotate(var(--rotate-angle)) scaleX(1) scaleY(1);
+            animation: rubberStamp 0.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
         }
         @keyframes pointsToast {
             0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.7); }
@@ -632,7 +633,8 @@
         let currentZone         = 'All';
         let currentBranch       = 'All';
         let activePoster        = null;
-        let _passportJustEarned = false; // flag: เปิดแบบ cinematic เมื่อได้แต้มพอดีที่ปั๊มใหม่
+        let _passportJustEarned = false;
+        let _badgeFadeTimer     = null;
         const body              = document.body;
         const viewerModal       = document.getElementById('imageViewerModal');
 
@@ -1079,6 +1081,9 @@
             lucide.createIcons({ nodes: Array.from(viewerModal.querySelectorAll('[data-lucide]')) });
             viewerModal.classList.remove('hidden');
             body.classList.add('no-scroll');
+            if (_badgeFadeTimer) { clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null; }
+            var sb = document.getElementById('scoreBadge');
+            if (sb) { sb.style.opacity = '0.1'; sb.style.pointerEvents = 'none'; }
             startViewerTimer(id);
         }
 
@@ -1088,6 +1093,9 @@
             document.getElementById('viewerContentContainer').innerHTML = '';
             activePoster = null;
             stopViewerTimer();
+            if (_badgeFadeTimer) { clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null; }
+            var sb = document.getElementById('scoreBadge');
+            if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
         }
 
         // =============================================================
@@ -1139,7 +1147,11 @@
             userPoints += POINTS_PER_VIEW;
             localStorage.setItem('posterPoints', userPoints);
             var newLevel = getLevel(userPoints);
-            _passportJustEarned = (newLevel > oldLevel); // ได้ปั๊มใหม่
+            _passportJustEarned = (newLevel > oldLevel);
+            // Show badge immediately so user sees score update
+            if (_badgeFadeTimer) { clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null; }
+            var sb = document.getElementById('scoreBadge');
+            if (sb) { sb.style.opacity = '1'; sb.style.pointerEvents = 'auto'; }
             updateScoreBadge();
             expandBadge();
             showPointsToast(POINTS_PER_VIEW);
@@ -1147,6 +1159,14 @@
             if (viewedIndicator) { viewedIndicator.classList.remove('hidden'); viewedIndicator.classList.add('flex'); }
             filterPosters(false, true);
             updatePassportUI(true);
+            // Fade badge back after 7s if user is still in the viewer
+            _badgeFadeTimer = setTimeout(function() {
+                _badgeFadeTimer = null;
+                if (activePoster) {
+                    var sb2 = document.getElementById('scoreBadge');
+                    if (sb2) { sb2.style.opacity = '0.1'; sb2.style.pointerEvents = 'none'; }
+                }
+            }, 7000);
         }
 
         // =============================================================
