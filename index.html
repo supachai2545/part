@@ -140,12 +140,15 @@
             animation: rubberStamp 0.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
         }
         @keyframes pointsToast {
-            0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.7); }
-            20%  { opacity: 1; transform: translate(-50%,-58%) scale(1.05); }
-            75%  { opacity: 1; transform: translate(-50%,-64%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%,-80%) scale(0.9); }
+            0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
+            7%   { opacity: 1; transform: translate(-50%,-60%) scale(1.12); }
+            12%  { transform: translate(-50%,-58%) scale(0.96); }
+            17%  { transform: translate(-50%,-60%) scale(1.04); }
+            22%  { transform: translate(-50%,-60%) scale(1.0); }
+            80%  { opacity: 1; transform: translate(-50%,-60%) scale(1.0); }
+            100% { opacity: 0; transform: translate(-50%,-76%) scale(0.88); }
         }
-        .points-toast { animation: pointsToast 1.6s ease-out both; }
+        .points-toast { animation: pointsToast 7s cubic-bezier(0.22, 1, 0.36, 1) both; }
         @keyframes stampBreath {
             0%, 100% { box-shadow: 0 0 0 0 rgba(148,163,184,0.4), inset 0 0 0 0 rgba(148,163,184,0.1); }
             50%       { box-shadow: 0 0 10px 3px rgba(148,163,184,0.2), inset 0 0 8px 2px rgba(148,163,184,0.08); }
@@ -1132,12 +1135,14 @@
         }
 
         function showPointsToast(pts) {
+            var existing = document.querySelector('.points-toast');
+            if (existing) existing.remove();
             var t = document.createElement('div');
             t.className = 'points-toast';
-            t.style.cssText = 'position:fixed;top:50%;left:50%;z-index:99999;background:#1e293b;color:#fbbf24;font-weight:900;font-size:22px;padding:14px 28px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.45);pointer-events:none;white-space:nowrap;';
+            t.style.cssText = 'position:fixed;top:50%;left:50%;z-index:99999;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-weight:900;font-size:34px;padding:22px 44px;border-radius:28px;box-shadow:0 12px 48px rgba(217,119,6,0.55),0 0 0 4px rgba(255,255,255,0.35);pointer-events:none;white-space:nowrap;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,0.25);';
             t.textContent = '+' + pts + ' PT ✓';
             document.body.appendChild(t);
-            setTimeout(function() { t.remove(); }, 1700);
+            setTimeout(function() { if (t.parentNode) t.remove(); }, 7200);
         }
 
         function completeReading(id) {
@@ -1339,20 +1344,9 @@
                 }
                 setTimeout(function() { updatePassportUIButtons(); }, delay);
             } else {
-                // --- NORMAL: เปิดปกธรรมดา stamp แสดงเลย ไม่ auto-flip ---
+                // --- NORMAL: เปิดปกธรรมดา stamp แสดงเลยทันที ไม่ auto-flip ไม่ animate ---
                 setTimeout(function() { turnPage(1, 'open', true); }, delay);
                 setTimeout(function() { updatePassportUIButtons(); }, delay + 600);
-                // Re-animate เฉพาะปั๊มล่าสุด 1 ดวง (ไม่ flip หน้า)
-                var latestStampId = [null, null, 2, 3, 4, 5][Math.min(level, 5)];
-                if (latestStampId) {
-                    setTimeout(function() {
-                        var m = document.getElementById('stamp-' + latestStampId);
-                        if (m) {
-                            m.classList.remove('revealed');
-                            setTimeout(function() { m.classList.add('revealed'); }, 150);
-                        }
-                    }, delay + 400);
-                }
             }
         }
 
