@@ -1440,14 +1440,7 @@
         // 🧪 TEST HELPER — ลบออกก่อน deploy จริง
         // =============================================================
         function testAddPoints() {
-            userPoints += 10;
-            localStorage.setItem('posterPoints', userPoints);
-            updateScoreBadge();
-            expandBadge();
-            updatePassportUI(true);
-            var btn = document.getElementById('testPointsBtn');
-            btn.innerText = '+10 ✓ (' + userPoints + ' PT)';
-            setTimeout(function() { btn.innerText = '+10 PT (ทดสอบ)'; }, 1200);
+            completeReading('__test_' + Date.now());
         }
         function testResetPoints() {
             userPoints = 0;
