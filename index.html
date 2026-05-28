@@ -121,11 +121,30 @@
         .spine-shadow-left { background: linear-gradient(to left, rgba(0,0,0,0.15) 0%, transparent 15%); }
 
         .stamp-mark {
-            transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
             opacity: 0;
-            transform: scale(4) rotate(-30deg);
+            transform: scale(1.6) rotate(var(--rotate-angle)) translateY(-30px);
+            transition: none;
         }
-        .stamp-mark.revealed { opacity: 1; transform: scale(1) rotate(var(--rotate-angle)); }
+        @keyframes rubberStamp {
+            0%   { opacity: 0;   transform: scale(1.6) rotate(var(--rotate-angle)) translateY(-30px); }
+            40%  { opacity: 1;   transform: scale(1.05) rotate(var(--rotate-angle)) translateY(2px); }
+            58%  { transform: scale(0.91) rotate(var(--rotate-angle)) translateY(0); }
+            72%  { transform: scale(1.04) rotate(var(--rotate-angle)) translateY(0); }
+            84%  { transform: scale(0.97) rotate(var(--rotate-angle)) translateY(0); }
+            100% { opacity: 1;   transform: scale(1) rotate(var(--rotate-angle)) translateY(0); }
+        }
+        .stamp-mark.revealed {
+            opacity: 1;
+            transform: scale(1) rotate(var(--rotate-angle)) translateY(0);
+            animation: rubberStamp 0.65s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+        }
+        @keyframes pointsToast {
+            0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.7); }
+            20%  { opacity: 1; transform: translate(-50%,-58%) scale(1.05); }
+            75%  { opacity: 1; transform: translate(-50%,-64%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%,-80%) scale(0.9); }
+        }
+        .points-toast { animation: pointsToast 1.6s ease-out both; }
         @keyframes stampBreath {
             0%, 100% { box-shadow: 0 0 0 0 rgba(148,163,184,0.4), inset 0 0 0 0 rgba(148,163,184,0.1); }
             50%       { box-shadow: 0 0 10px 3px rgba(148,163,184,0.2), inset 0 0 8px 2px rgba(148,163,184,0.08); }
@@ -323,10 +342,11 @@
                     </div>
                 </div>
             </div>
+        </div>
     </div>
 
     <!-- สมุดสะสมแต้มพาสปอร์ต -->
-    <div id="rewardModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/85 sm:p-8 backdrop-blur-md transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="rewardModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/85 sm:p-8 backdrop-blur-md transition-opacity duration-300 opacity-0">
         <div class="absolute inset-0 pointer-events-auto" onclick="closeRewardModal()"></div>
 
         <div class="perspective-container w-full h-full flex items-center justify-center pointer-events-none">
@@ -612,6 +632,7 @@
         let currentZone         = 'All';
         let currentBranch       = 'All';
         let activePoster        = null;
+        let _passportJustEarned = false; // flag: เปิดแบบ cinematic เมื่อได้แต้มพอดีที่ปั๊มใหม่
         const body              = document.body;
         const viewerModal       = document.getElementById('imageViewerModal');
 
@@ -1102,13 +1123,26 @@
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         }
 
+        function showPointsToast(pts) {
+            var t = document.createElement('div');
+            t.className = 'points-toast';
+            t.style.cssText = 'position:fixed;top:50%;left:50%;z-index:99999;background:#1e293b;color:#fbbf24;font-weight:900;font-size:22px;padding:14px 28px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.45);pointer-events:none;white-space:nowrap;';
+            t.textContent = '+' + pts + ' PT ✓';
+            document.body.appendChild(t);
+            setTimeout(function() { t.remove(); }, 1700);
+        }
+
         function completeReading(id) {
             viewedPosters.push(id);
             localStorage.setItem('viewedPosters', JSON.stringify(viewedPosters));
+            var oldLevel = getLevel(userPoints);
             userPoints += POINTS_PER_VIEW;
             localStorage.setItem('posterPoints', userPoints);
+            var newLevel = getLevel(userPoints);
+            _passportJustEarned = (newLevel > oldLevel); // ได้ปั๊มใหม่
             updateScoreBadge();
             expandBadge();
+            showPointsToast(POINTS_PER_VIEW);
             const viewedIndicator = document.getElementById('viewedIndicator');
             if (viewedIndicator) { viewedIndicator.classList.remove('hidden'); viewedIndicator.classList.add('flex'); }
             filterPosters(false, true);
@@ -1226,52 +1260,86 @@
         function openRewardModal() {
             initAudio();
             const modal = document.getElementById('rewardModal');
-            // ตั้งค่า stamp ที่ได้รับแล้วทั้งหมดโดยไม่ animate
-            updatePassportUI(true);
-            // Reset pages to closed
+            const isCinematic = _passportJustEarned;
+            _passportJustEarned = false;
+
+            // Reset pages ก่อนแสดง
             turnPage(3, 'close', false); turnPage(2, 'close', false); turnPage(1, 'close', false);
-            modal.classList.remove('hidden');
-            setTimeout(function() { modal.classList.remove('opacity-0'); }, 10);
+
+            if (isCinematic) {
+                // โหมด Cinematic: ยังไม่ set stamps — จะ animate ทีละหน้า
+                // ต้อง clear revealed ทั้งหมดก่อน แล้วค่อย animate
+                [2,3,4,5].forEach(function(n) {
+                    var m = document.getElementById('stamp-' + n);
+                    if (m) m.classList.remove('revealed');
+                });
+            } else {
+                // โหมดปกติ: set stamps ทันที (ไม่ animate)
+                updatePassportUI(true);
+            }
+
+            modal.classList.remove('hidden', 'opacity-0');
+            setTimeout(function() { modal.style.opacity = '1'; }, 10);
 
             const level = getLevel(userPoints);
             let delay = 200;
 
-            // เปิดปก (page1) เสมอ
-            setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 550;
+            if (isCinematic) {
+                // --- CINEMATIC: เปิดปก → flip หน้า → ปั๊มทีละดวง ---
+                setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 750;
 
-            // ข้ามไปหน้าที่มีปั๊มล่าสุด (ไม่มี cinematic ทีละหน้า)
-            if (level >= 3) {
-                // stamp 3 หรือ 4: ต้องเปิด page2 (stamp3 อยู่ back, stamp4 อยู่ page3.front)
-                setTimeout(function() { turnPage(2, 'open', false); }, delay); delay += 400;
+                if (level >= 2) {
+                    // stamp 2 อยู่ page2.front (หลังเปิด page1)
+                    setTimeout(function() {
+                        var m = document.getElementById('stamp-2');
+                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
+                    }, delay); delay += 750;
+                }
+                if (level >= 3) {
+                    // เปิด page2 → stamp 3 (page2.back) + stamp 4 (page3.front)
+                    setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += 750;
+                    setTimeout(function() {
+                        var m = document.getElementById('stamp-3');
+                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
+                    }, delay); delay += 700;
+                }
+                if (level >= 4) {
+                    setTimeout(function() {
+                        var m = document.getElementById('stamp-4');
+                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
+                    }, delay); delay += 700;
+                }
+                if (level >= 5) {
+                    // เปิด page3 → stamp 5 (page3.back)
+                    setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 750;
+                    setTimeout(function() {
+                        var m = document.getElementById('stamp-5');
+                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp-master'); setTimeout(function() { playSound('success'); }, 600); }, 50); }
+                    }, delay); delay += 800;
+                }
+                setTimeout(function() { updatePassportUIButtons(); }, delay);
+            } else {
+                // --- NORMAL: เปิดปกธรรมดา stamp แสดงเลย ไม่ auto-flip ---
+                setTimeout(function() { turnPage(1, 'open', true); }, delay);
+                setTimeout(function() { updatePassportUIButtons(); }, delay + 600);
+                // Re-animate เฉพาะปั๊มล่าสุด 1 ดวง (ไม่ flip หน้า)
+                var latestStampId = [null, null, 2, 3, 4, 5][Math.min(level, 5)];
+                if (latestStampId) {
+                    setTimeout(function() {
+                        var m = document.getElementById('stamp-' + latestStampId);
+                        if (m) {
+                            m.classList.remove('revealed');
+                            setTimeout(function() { m.classList.add('revealed'); }, 150);
+                        }
+                    }, delay + 400);
+                }
             }
-            if (level >= 5) {
-                // stamp 5 อยู่ page3.back
-                setTimeout(function() { turnPage(3, 'open', false); }, delay); delay += 400;
-            }
-
-            // Animate เฉพาะปั๊มล่าสุดของ level ปัจจุบัน
-            var latestStampId = [null, null, 2, 3, 4, 5][Math.min(level, 5)];
-            if (latestStampId) {
-                setTimeout(function() {
-                    var mark = document.getElementById('stamp-' + latestStampId);
-                    if (mark) {
-                        mark.classList.remove('revealed');
-                        setTimeout(function() {
-                            mark.classList.add('revealed');
-                            playSound(latestStampId === 5 ? 'stamp-master' : 'stamp');
-                            if (latestStampId === 5) setTimeout(function() { playSound('success'); }, 700);
-                        }, 200);
-                    }
-                }, delay); delay += 700;
-            }
-
-            setTimeout(function() { updatePassportUIButtons(); }, delay);
         }
 
         function closeRewardModal() {
             const modal = document.getElementById('rewardModal');
             turnPage(3, 'close', false); setTimeout(function() { turnPage(2, 'close', false); }, 100); setTimeout(function() { turnPage(1, 'close', false); }, 200);
-            setTimeout(function() { modal.classList.add('opacity-0'); setTimeout(function() { modal.classList.add('hidden'); }, 300); }, 550);
+            setTimeout(function() { modal.style.opacity = '0'; setTimeout(function() { modal.style.opacity = ''; modal.classList.add('opacity-0', 'hidden'); }, 300); }, 550);
         }
 
         function claimReward() {
