@@ -445,7 +445,7 @@
 
         const API_URL = "https://script.google.com/macros/s/AKfycbywDC1SXXFgLDT3FI98rebVOB6A7uuGmzUXlz2PwkkcDWZp5eDP3tVae6UsAbNaf1yO/exec";
 
-        fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => clientIP = data.ip).catch(() => {});
+        // [P6] ย้ายมาอยู่ใน executeSubmission แทน ไม่ fetch ก่อน user ทำอะไร
 
         window.startSystem = function() {
             const status = checkDeadline();
@@ -669,6 +669,17 @@
             reader.onerror = err => rej(err);
         });
 
+        // [P3] แปลง ArrayBuffer → base64 โดยไม่ต้องอ่านไฟล์ใหม่อีกครั้ง
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+            }
+            return btoa(binary);
+        }
+
         async function processSelectedFile(file, subId, type) {
             if (!file) return;
             if (file.size > 15 * 1024 * 1024) { showToast("ไฟล์ใหญ่เกิน! กรุณาอัปโหลดไฟล์ขนาดไม่เกิน 15 MB", "error"); return; }
@@ -685,7 +696,7 @@
                 <p class="text-[14px] font-bold text-${colorClass}-700 mb-1">กำลังตรวจสอบไฟล์...</p>`;
             emptyBox.style.pointerEvents = 'none';
 
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise(r => requestAnimationFrame(r)); // [P5] ให้ browser render spinner 1 frame แทน fixed 50ms
 
             try {
                 if (!pendingFiles[subId]) pendingFiles[subId] = {};
@@ -718,17 +729,19 @@
                 const alertBox = document.getElementById(`ratio_alert_${type}_${subId}`);
 
                 if (type === 'jpg') {
-                    const base64 = await fileToBase64(file);
+                    // [P4] cache base64 ไว้ใช้ตอน upload โดยไม่ต้องอ่านไฟล์ซ้ำ
+                    if (!file._cachedBase64) file._cachedBase64 = await fileToBase64(file);
                     const img = new Image();
-                    img.src = "data:image/jpeg;base64," + base64;
+                    img.src = "data:image/jpeg;base64," + file._cachedBase64;
                     await new Promise((resolve, reject) => {
                         img.onload = resolve;
                         img.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้ ไฟล์อาจเสียหาย'));
                     });
                     ratio = img.height / img.width;
                 } else if (type === 'pdf') {
-                    const buffer = await file.arrayBuffer();
-                    const pdf = await window.PDFLib.PDFDocument.load(buffer);
+                    // [P3] cache buffer ไว้ใช้ตอน upload โดยไม่ต้องอ่านไฟล์ซ้ำ
+                    if (!file._cachedBuffer) file._cachedBuffer = await file.arrayBuffer();
+                    const pdf = await window.PDFLib.PDFDocument.load(file._cachedBuffer);
                     const page = pdf.getPages()[0];
                     const { width, height } = page.getSize();
                     ratio = height / width;
@@ -744,7 +757,7 @@
                     alertBox.classList.add('hidden');
                     pendingFiles[subId][type].invalidDimension = false;
                 }
-                lucide.createIcons();
+                lucide.createIcons({ nodes: [alertBox] }); // [P7] scan เฉพาะ alertBox ไม่ใช่ทั้ง DOM
             } catch (e) {
                 console.error("Dimension check error:", e);
                 // [FIX 6] ตั้ง invalidDimension = true เพื่อกันไม่ให้ส่งไฟล์ที่ตรวจสอบไม่ได้
@@ -830,7 +843,7 @@
                 alertBox.classList.remove('hidden');
                 if (alertText) alertText.innerHTML = `กรุณาแนบไฟล์ <strong>PDF และ JPEG</strong> ให้ครบถ้วน (แนบแล้ว ${fullyUploadedCount} จากทั้งหมด ${requiredCount} ผลงาน)`;
             }
-            lucide.createIcons();
+            lucide.createIcons({ nodes: [submitBtn] }); // [P7] scan เฉพาะ submitBtn
         }
 
         const pdpaModal = document.getElementById('pdpaModal');
@@ -996,7 +1009,8 @@
             });
         }
 
-        async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, headerNames) {
+        // [P1] รับ headerCanvas จากภายนอก ไม่สร้างซ้ำในแต่ละฟังก์ชัน
+        async function mergeWithHeaderPDF(userPdfBuffer, headerCanvas) {
             const { PDFDocument } = window.PDFLib;
             const mergedPdf = await PDFDocument.create();
             const PAGE_WIDTH = 1275.59;
@@ -1005,7 +1019,6 @@
             const USER_HEIGHT = 2466.15;
 
             const page = mergedPdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-            const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
             const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
             const headerImage = await mergedPdf.embedJpg(headerBase64);
 
@@ -1018,15 +1031,14 @@
             return await mergedPdf.saveAsBase64();
         }
 
-        // [FIX 5] mergeWithHeaderImage: เพิ่ม reject + userImg.onerror
-        function mergeWithHeaderImage(userJpgBase64, subId, title, name, domain, headerNames) {
-            return new Promise(async (resolve, reject) => {
+        // [P1] รับ headerCanvas จากภายนอก ไม่สร้างซ้ำ + ลบ async wrapper ที่ไม่จำเป็น
+        function mergeWithHeaderImage(userJpgBase64, headerCanvas) {
+            return new Promise((resolve, reject) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = 4500;
                 canvas.height = 10000;
 
-                const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
                 ctx.drawImage(headerCanvas, 0, 0);
 
                 const userImg = new Image();
@@ -1124,12 +1136,16 @@
                 return res.fileUrl;
             };
 
-            // [FIX 10] ย้าย currentIndex ออกมานอก try เพื่อให้ catch เข้าถึงได้
+            // [P6] ดึง IP เฉพาะตอน submit จริงเท่านั้น
+            if (clientIP === "Unknown") {
+                await fetch('https://api.ipify.org?format=json')
+                    .then(r => r.json()).then(d => { clientIP = d.ip; }).catch(() => {});
+            }
+
             let currentIndex = 0;
             try {
                 for (const subId of activeSubIds) {
                     const baseProgress = currentIndex * sliceSize;
-
                     const pdfFile = pendingFiles[subId].pdf;
                     const jpgFile = pendingFiles[subId].jpg;
 
@@ -1137,25 +1153,40 @@
                     const subInfo = submissionsData.find(item => item.submissionId === subId || item.id === subId);
                     if (!subInfo) throw new Error(`ไม่พบข้อมูลผลงานรหัส "${subId}" กรุณาติดต่อเจ้าหน้าที่`);
 
-                    maxAllowedPercent = baseProgress + (sliceSize * 0.15);
-                    const userPdfBuffer = await pdfFile.arrayBuffer();
-                    const finalPdfBase64 = await mergeWithHeaderPDF(userPdfBuffer, subId, subInfo.projectTitle, subInfo.fullName, subInfo.domain, subInfo.headerNames);
-                    const userJpgBase64Original = await fileToBase64(jpgFile);
-                    const finalJpgBase64 = await mergeWithHeaderImage(userJpgBase64Original, subId, subInfo.projectTitle, subInfo.fullName, subInfo.domain, subInfo.headerNames);
-                    const origPdfBase64 = await fileToBase64(pdfFile);
-                    const origJpgBase64 = await fileToBase64(jpgFile);
-                    await reachTarget(baseProgress + (sliceSize * 0.15));
-
                     const cleanFullName = subInfo.fullName.replace(/\s+/g, ' ').trim();
-                    const mergedPdfUrl = await uploadSingleFile(subId, 'Merged_PDF', finalPdfBase64, 'application/pdf', `${subId}_${cleanFullName}.pdf`);
-                    await reachTarget(baseProgress + (sliceSize * 0.35));
 
-                    const mergedJpgUrl = await uploadSingleFile(subId, 'Merged_JPG', finalJpgBase64, 'image/jpeg', `${subId}_${cleanFullName}.jpg`);
-                    await reachTarget(baseProgress + (sliceSize * 0.55));
+                    // ── ไฟล์ 1/4: Merged PDF ───────────────────────────────
+                    // [P1] สร้าง header canvas ครั้งเดียว ใช้ร่วมกับทั้ง PDF และ JPG
+                    statusText.innerText = `กำลังสร้างส่วนหัว (${currentIndex + 1}/${totalSubmissions})...`;
+                    maxAllowedPercent = baseProgress + (sliceSize * 0.10);
+                    const headerCanvas = await generateHeaderWithText(subId, subInfo.projectTitle, subInfo.fullName, subInfo.domain, subInfo.headerNames);
 
+                    statusText.innerText = `กำลังรวมไฟล์ PDF (${currentIndex + 1}/${totalSubmissions})...`;
+                    // [P3] ใช้ cached buffer จาก validateFileDimensions ไม่อ่านไฟล์ใหม่
+                    const userPdfBuffer = pdfFile._cachedBuffer || await pdfFile.arrayBuffer();
+                    const mergedPdfBase64 = await mergeWithHeaderPDF(userPdfBuffer, headerCanvas);
+                    const mergedPdfUrl = await uploadSingleFile(subId, 'Merged_PDF', mergedPdfBase64, 'application/pdf', `${subId}_${cleanFullName}.pdf`);
+                    await reachTarget(baseProgress + (sliceSize * 0.25));
+
+                    // ── ไฟล์ 2/4: Merged JPG ──────────────────────────────
+                    statusText.innerText = `กำลังรวมไฟล์ JPEG (${currentIndex + 1}/${totalSubmissions})...`;
+                    // [P4] ใช้ cached base64 จาก validateFileDimensions ไม่อ่านไฟล์ใหม่
+                    // [P2] origJpgBase64 จะถูกใช้ซ้ำสำหรับไฟล์ต้นฉบับด้านล่างด้วย
+                    const origJpgBase64 = jpgFile._cachedBase64 || await fileToBase64(jpgFile);
+                    const mergedJpgBase64 = await mergeWithHeaderImage(origJpgBase64, headerCanvas);
+                    const mergedJpgUrl = await uploadSingleFile(subId, 'Merged_JPG', mergedJpgBase64, 'image/jpeg', `${subId}_${cleanFullName}.jpg`);
+                    await reachTarget(baseProgress + (sliceSize * 0.50));
+
+                    // ── ไฟล์ 3/4: Original PDF ────────────────────────────
+                    statusText.innerText = `กำลังอัปโหลดต้นฉบับ PDF (${currentIndex + 1}/${totalSubmissions})...`;
+                    // [P3] แปลง buffer ที่มีอยู่แล้วเป็น base64 ไม่ต้องอ่านไฟล์ใหม่
+                    const origPdfBase64 = arrayBufferToBase64(userPdfBuffer);
                     const origPdfUrl = await uploadSingleFile(subId, 'Original_PDF', origPdfBase64, 'application/pdf', `${subId}_ต้นฉบับ_${cleanFullName}.pdf`);
                     await reachTarget(baseProgress + (sliceSize * 0.75));
 
+                    // ── ไฟล์ 4/4: Original JPG ────────────────────────────
+                    statusText.innerText = `กำลังอัปโหลดต้นฉบับ JPEG (${currentIndex + 1}/${totalSubmissions})...`;
+                    // [P2] ใช้ origJpgBase64 ที่อ่านไว้แล้ว ไม่อ่านซ้ำ
                     const origJpgUrl = await uploadSingleFile(subId, 'Original_JPG', origJpgBase64, 'image/jpeg', `${subId}_ต้นฉบับ_${cleanFullName}.jpg`);
                     await reachTarget(baseProgress + (sliceSize * 0.90));
 
