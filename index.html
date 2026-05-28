@@ -280,10 +280,11 @@
     <div id="imageViewerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 sm:bg-gray-900/90 p-0 sm:p-8 modal-enter sm:backdrop-blur-xl">
         <div class="relative w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-full flex flex-col image-enter bg-white sm:rounded-[28px] overflow-hidden shadow-none sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-0 sm:border sm:border-gray-700/50">
 
-            <div id="viewerContentContainer" class="flex-grow relative bg-slate-100 flex items-center justify-center h-[62vh] sm:min-h-[70vh] w-full overflow-hidden"></div>
+            <div id="viewerContentContainer" class="flex-shrink-0 relative bg-slate-100 flex items-center justify-center h-[58vh] sm:min-h-[70vh] w-full overflow-hidden"></div>
 
-            <div class="bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 p-3 sm:p-6 flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 overflow-y-auto max-h-[38vh] sm:max-h-auto">
-                <div class="flex-1 w-full pr-0 sm:pr-4">
+            <!-- Info area: scrollable text only -->
+            <div class="bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 flex flex-col sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:gap-4 overflow-hidden">
+                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:22vh; -webkit-overflow-scrolling:touch;">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] sm:text-[12px] font-bold tracking-wider"></span>
                         <span id="viewerLocation" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
@@ -295,32 +296,33 @@
                     <p id="viewerOrg" class="hidden text-gray-400 text-[11px] sm:text-[12px] font-semibold mt-1 flex items-center"><i data-lucide="building-2" class="w-3 h-3 mr-1.5 flex-shrink-0"></i> <span id="viewerOrgText"></span></p>
                 </div>
 
-                <div class="w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0 flex flex-wrap sm:flex-nowrap flex-row gap-2 items-center">
-                    <div id="countdownTimerContainer" class="hidden items-center justify-center relative w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] bg-white rounded-full shadow-sm border border-emerald-100 flex-shrink-0" title="ดูผลงานให้ครบเวลาเพื่อรับแต้ม">
-                        <svg class="w-full h-full transform -rotate-90 absolute inset-0" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" class="text-emerald-50" />
-                            <circle id="countdownCircle" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="263.89" stroke-dashoffset="0" class="text-emerald-500 transition-all duration-1000 ease-linear" stroke-linecap="round" />
-                        </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pt-[2px]">
-                            <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 leading-none mb-0.5">รับแต้มภายใน</span>
-                            <span id="countdownText" class="text-[9px] sm:text-[11px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:00</span>
+                <!-- Action bar: always visible, never scrolls -->
+                <div class="flex-shrink-0 border-t sm:border-0 border-gray-100 bg-white/90 sm:bg-transparent px-3 py-2 sm:p-0 flex flex-row sm:flex-col gap-2 items-center justify-between sm:justify-start w-full sm:w-auto">
+                    <div class="flex items-center gap-2">
+                        <div id="countdownTimerContainer" class="hidden items-center justify-center relative w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] bg-white rounded-full shadow-sm border border-emerald-100 flex-shrink-0" title="ดูผลงานให้ครบเวลาเพื่อรับแต้ม">
+                            <svg class="w-full h-full transform -rotate-90 absolute inset-0" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" class="text-emerald-50" />
+                                <circle id="countdownCircle" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="263.89" stroke-dashoffset="0" class="text-emerald-500 transition-all duration-1000 ease-linear" stroke-linecap="round" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pt-[2px]">
+                                <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 leading-none mb-0.5">รับแต้มใน</span>
+                                <span id="countdownText" class="text-[9px] sm:text-[11px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:00</span>
+                            </div>
+                        </div>
+                        <div id="viewedIndicator" class="hidden items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-3 py-2 rounded-xl shadow-sm text-[12px] sm:text-sm">
+                            <i data-lucide="check" class="w-4 h-4 mr-1 font-black"></i> <span>รับแต้มแล้ว</span>
                         </div>
                     </div>
-
-                    <div id="viewedIndicator" class="hidden items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-[14px] shadow-sm text-[12px] sm:text-sm">
-                        <i data-lucide="check" class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 font-black"></i> <span>รับแต้มแล้ว</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openMap()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-3 py-2 rounded-xl transition-all flex items-center shadow-sm text-sm">
+                            <i data-lucide="map" class="w-4 h-4 sm:mr-1.5"></i><span class="hidden sm:inline">แผนที่</span>
+                        </button>
+                        <button onclick="closeViewer()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-xl transition-all shadow-md text-sm">
+                            <i data-lucide="x" class="w-4 h-4 sm:mr-1.5 inline-block"></i><span class="hidden sm:inline">ปิด</span><span class="sm:hidden">ปิด</span>
+                        </button>
                     </div>
-
-                    <button onclick="openMap()" class="flex-1 sm:flex-none bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-[14px] transition-all flex items-center justify-center shadow-sm text-sm">
-                        <i data-lucide="map" class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2"></i> แผนที่
-                    </button>
-
-                    <button onclick="closeViewer()" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-[14px] transition-all shadow-md mt-1 sm:mt-0 text-sm">
-                        ปิดหน้าต่าง
-                    </button>
                 </div>
             </div>
-        </div>
     </div>
 
     <!-- สมุดสะสมแต้มพาสปอร์ต -->
@@ -480,13 +482,20 @@
             <div class="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-inner">
                 <i data-lucide="check-circle" class="w-6 h-6 sm:w-8 sm:h-8"></i>
             </div>
-            <h3 class="text-lg sm:text-xl font-black text-emerald-600 mb-2">ยินดีด้วย! 🎉</h3>
+            <h3 class="text-lg sm:text-xl font-black text-emerald-600 mb-1">ยินดีด้วย! คุณครบเกณฑ์แล้ว</h3>
             <p class="text-[11px] sm:text-[13px] font-bold text-gray-700 mb-3 leading-relaxed">
-                กรุณาแคปหน้าจอนี้ และนำไปแสดงต่อเจ้าหน้าที่ ณ ห้องจัดแสดง E-POSTER เพื่อรับรางวัล
+                คุณสะสมครบ <span class="text-emerald-600">100 แต้ม</span> แล้ว! นำหน้าจอนี้ไปแสดงที่จุดรับรางวัล
             </p>
-            <div class="bg-rose-50 border border-rose-200 rounded-lg p-2.5 mb-4">
-                <p class="text-[9px] sm:text-[11px] font-bold text-rose-600 leading-tight">
-                    โปรดแสดงหน้าจอนี้ต่อเจ้าหน้าที่เพื่อยืนยันสิทธิ์รับรางวัล โดยสามารถรับรางวัลได้ เฉพาะวันที่ 25 มิถุนายน 2569 เท่านั้น ไม่สามารถรับก่อนหรือหลังวันดังกล่าวได้
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-left">
+                <p class="text-[10px] sm:text-[12px] font-black text-blue-700 mb-1 flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ติดต่อรับรางวัลได้ที่
+                </p>
+                <p class="text-[12px] sm:text-[14px] font-black text-blue-900">จุด Check-in</p>
+                <p class="text-[9px] sm:text-[11px] text-blue-600 font-bold mt-0.5">เฉพาะวันที่ 25 มิถุนายน 2569 เท่านั้น</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
+                <p class="text-[9px] sm:text-[10px] font-bold text-amber-700 leading-tight">
+                    💡 กดปุ่ม "แสดงหลักฐาน" ในสมุดได้ตลอด เพื่อเปิดหน้าจอนี้แสดงต่อเจ้าหน้าที่
                 </p>
             </div>
             <button onclick="closeClaimPopup()" class="w-full bg-gray-800 text-white font-black px-4 py-2 sm:py-2.5 rounded-lg hover:bg-gray-900 transition-all shadow-md text-xs sm:text-sm">ตกลง</button>
@@ -1165,9 +1174,9 @@
             document.getElementById('passPoints').innerText = `${userPoints} / ${TARGET_POINTS} PT`;
             const btn = document.getElementById('passClaimBtn');
             if (isClaimed) {
-                btn.className = "w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-sm text-white bg-gradient-to-r from-amber-500 to-yellow-500 cursor-default";
-                btn.innerHTML = '<i data-lucide="check-circle" class="w-3 h-3 sm:w-3.5 sm:h-3.5 inline-block mr-1"></i> รับรางวัลแล้ว';
-                btn.onclick   = null;
+                btn.className = "w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-sm text-white bg-gradient-to-r from-amber-500 to-yellow-500 cursor-pointer";
+                btn.innerHTML = '<i data-lucide="badge-check" class="w-3 h-3 sm:w-3.5 sm:h-3.5 inline-block mr-1"></i> แสดงหลักฐานสิทธิ์';
+                btn.onclick   = openClaimPopup;
             } else if (userPoints >= TARGET_POINTS) {
                 btn.className = "w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-lg text-white bg-gradient-to-r from-rose-500 to-orange-600 hover:scale-105 animate-pulse cursor-pointer";
                 btn.innerHTML = '<i data-lucide="gift" class="w-3 h-3 sm:w-3.5 sm:h-3.5 inline-block mr-1"></i> แลกรับรางวัล!';
@@ -1217,21 +1226,45 @@
         function openRewardModal() {
             initAudio();
             const modal = document.getElementById('rewardModal');
-            updatePassportUI(false);
+            // ตั้งค่า stamp ที่ได้รับแล้วทั้งหมดโดยไม่ animate
+            updatePassportUI(true);
+            // Reset pages to closed
             turnPage(3, 'close', false); turnPage(2, 'close', false); turnPage(1, 'close', false);
             modal.classList.remove('hidden');
             setTimeout(function() { modal.classList.remove('opacity-0'); }, 10);
+
             const level = getLevel(userPoints);
-            let delay   = 150;
-            setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 800;
-            if (level >= 1) { setTimeout(function() { toggleStamp(1, true, true); }, delay); delay += 600; }
-            if (level >= 2) { setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += 800; setTimeout(function() { toggleStamp(2, true, true); }, delay); delay += 600; }
-            if (level >= 3) { setTimeout(function() { toggleStamp(3, true, true); }, delay); delay += 600; }
-            if (level >= 4) { setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 800; setTimeout(function() { toggleStamp(4, true, true); }, delay); delay += 600; }
-            if (level >= 5) {
-                setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 800;
-                setTimeout(function() { toggleStamp(5, true, true); setTimeout(function() { playSound('success'); }, 800); }, delay); delay += 800;
+            let delay = 200;
+
+            // เปิดปก (page1) เสมอ
+            setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 550;
+
+            // ข้ามไปหน้าที่มีปั๊มล่าสุด (ไม่มี cinematic ทีละหน้า)
+            if (level >= 3) {
+                // stamp 3 หรือ 4: ต้องเปิด page2 (stamp3 อยู่ back, stamp4 อยู่ page3.front)
+                setTimeout(function() { turnPage(2, 'open', false); }, delay); delay += 400;
             }
+            if (level >= 5) {
+                // stamp 5 อยู่ page3.back
+                setTimeout(function() { turnPage(3, 'open', false); }, delay); delay += 400;
+            }
+
+            // Animate เฉพาะปั๊มล่าสุดของ level ปัจจุบัน
+            var latestStampId = [null, null, 2, 3, 4, 5][Math.min(level, 5)];
+            if (latestStampId) {
+                setTimeout(function() {
+                    var mark = document.getElementById('stamp-' + latestStampId);
+                    if (mark) {
+                        mark.classList.remove('revealed');
+                        setTimeout(function() {
+                            mark.classList.add('revealed');
+                            playSound(latestStampId === 5 ? 'stamp-master' : 'stamp');
+                            if (latestStampId === 5) setTimeout(function() { playSound('success'); }, 700);
+                        }, 200);
+                    }
+                }, delay); delay += 700;
+            }
+
             setTimeout(function() { updatePassportUIButtons(); }, delay);
         }
 
@@ -1242,9 +1275,11 @@
         }
 
         function claimReward() {
-            if (userPoints >= TARGET_POINTS && localStorage.getItem('posterRewardClaimed') !== 'true') {
-                localStorage.setItem('posterRewardClaimed', 'true');
-                updatePassportUIButtons();
+            if (userPoints >= TARGET_POINTS) {
+                if (localStorage.getItem('posterRewardClaimed') !== 'true') {
+                    localStorage.setItem('posterRewardClaimed', 'true');
+                    updatePassportUIButtons();
+                }
                 openClaimPopup();
             }
         }
