@@ -174,42 +174,32 @@
         .stamp-5.revealed { animation: stampGlow5 1.5s ease-in-out infinite; }
 
         .floorplan-container {
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 5 / 3;
             background-color: #f1f5f9;
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
             background-size: 20px 20px;
-            border: 10px solid #1e293b;
+            border: 8px solid #1e293b;
             border-radius: 12px;
             position: relative;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.05), 0 20px 40px -10px rgba(0,0,0,0.2);
         }
 
         .kiosk-unit-pro {
-            width: 3.5%; height: 1.2%; background: #1e293b; position: absolute; border-radius: 1px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 3.8%; height: 10%;
+            background: #1e293b; position: absolute; border-radius: 1px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .kiosk-unit-pro::after {
-            content: ''; position: absolute; top: 20%; left: 10%; width: 80%; height: 60%;
-            background: #0ea5e9; opacity: 0.6; border-radius: 0.2px;
+            content: ''; position: absolute; top: 8%; left: 10%; width: 80%; height: 84%;
+            background: #0ea5e9; opacity: 0.6; border-radius: 0.5px;
         }
 
         .kiosk-unit-pro.active-target {
-            background: #15803d; box-shadow: 0 0 15px #22c55e, 0 0 0 3px rgba(34, 197, 94, 0.3);
-            transform: scale(1.6); z-index: 40;
+            background: #15803d; box-shadow: 0 0 14px #22c55e, 0 0 0 2px rgba(34,197,94,0.4);
+            transform: scale(1.7); z-index: 40;
         }
         .kiosk-unit-pro.active-target::after { background: #4ade80; opacity: 1; }
-
-        .entrance-point {
-            position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
-            display: flex; flex-direction: column; align-items: center; color: #166534;
-        }
-
-        .main-walkway-path {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 42%; height: 100%; background: rgba(226, 232, 240, 0.35);
-            border-left: 2px dashed #94a3b8; border-right: 2px dashed #94a3b8;
-            pointer-events: none; display: flex; align-items: center; justify-content: center;
-        }
 
         #mapPin { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); z-index: 50; }
         #mapPin i { color: #ef4444; fill: #ef4444; }
@@ -541,16 +531,32 @@
             </div>
 
             <div class="relative w-full p-4 sm:p-14 bg-slate-200 overflow-auto flex items-center justify-center h-full min-h-[50vh]">
-                <div class="floorplan-container w-[120%] sm:w-full min-w-[300px] max-w-[480px]">
-                    <div class="main-walkway-path"><span class="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.6em] rotate-90 sm:rotate-0">Main Walkway</span></div>
-                    <div id="kiosks-left" class="absolute top-0 left-0 w-full h-full"></div>
-                    <div id="kiosks-right" class="absolute top-0 left-0 w-full h-full"></div>
-                    <div class="entrance-point">
-                        <i data-lucide="chevron-up" class="w-6 h-6 sm:w-8 sm:h-8 animate-bounce text-emerald-600"></i>
-                        <span class="bg-emerald-600 text-white px-3 sm:px-5 py-0.5 sm:py-1 rounded-full font-black text-[9px] sm:text-[11px] uppercase tracking-wider shadow-lg border border-white">ทางเข้า</span>
+                <div class="floorplan-container w-full min-w-[280px] max-w-[600px]">
+                    <!-- Top waiting area -->
+                    <div style="position:absolute;left:8%;right:8%;top:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                        <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
                     </div>
-                    <div id="mapPin" class="absolute w-6 h-6 -ml-3 -mt-6 transition-all duration-700" style="left: 0%; top: 0%; opacity: 0;">
-                        <i data-lucide="map-pin" class="w-5 h-5 sm:w-6 sm:h-6 text-rose-600 fill-rose-500"></i>
+                    <!-- Bottom waiting area -->
+                    <div style="position:absolute;left:8%;right:8%;bottom:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                        <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
+                    </div>
+                    <!-- Check-in (left wall, lower half) -->
+                    <div style="position:absolute;left:0;top:57%;width:7%;height:25%;background:rgba(251,191,36,0.2);border-right:2px solid #f59e0b;border-radius:0 3px 3px 0;display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:5.5px;font-weight:900;color:#92400e;writing-mode:vertical-lr;letter-spacing:0.05em;line-height:1.4;">Check-in</span>
+                    </div>
+                    <!-- Entrance (left wall, upper-middle) -->
+                    <div style="position:absolute;left:0;top:37%;transform:translateY(-50%);">
+                        <span style="display:block;background:#16a34a;color:#fff;font-size:5.5px;font-weight:900;padding:2px 4px 2px 2px;border-radius:0 3px 3px 0;letter-spacing:0.04em;line-height:1.6;">ทางเข้า ›</span>
+                    </div>
+                    <!-- IT Desk (right wall, top) -->
+                    <div style="position:absolute;right:0;top:4%;width:7%;height:15%;background:rgba(147,197,253,0.25);border-left:2px solid #60a5fa;border-radius:3px 0 0 3px;display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:5.5px;font-weight:900;color:#1d4ed8;writing-mode:vertical-lr;letter-spacing:0.05em;">โต๊ะ IT</span>
+                    </div>
+                    <!-- Kiosk screens — filled by drawKiosksOnMap() -->
+                    <div id="kiosks-grid" class="absolute inset-0"></div>
+                    <!-- Map pin -->
+                    <div id="mapPin" class="absolute w-5 h-5 -ml-2.5 -mt-5 transition-all duration-700" style="left:0%;top:0%;opacity:0;">
+                        <i data-lucide="map-pin" class="w-5 h-5 text-rose-600 fill-rose-500"></i>
                         <div class="absolute inset-0 bg-rose-500 rounded-full animate-ping opacity-40"></div>
                     </div>
                 </div>
@@ -1373,19 +1379,20 @@
         // 🗺️ MAP
         // =============================================================
         function drawKiosksOnMap() {
-            const leftContainer  = document.getElementById('kiosks-left');
-            const rightContainer = document.getElementById('kiosks-right');
-            for (let i = 1; i <= 12; i++) {
+            const grid = document.getElementById('kiosks-grid');
+            grid.innerHTML = '';
+            // 6 columns left→right, 4 rows bottom→top per column
+            // Screen 1 = col 1 bottom (near Check-in), screen 4 = col 1 top, screen 5 = col 2 bottom …
+            const colLefts = [8.5, 24, 39.5, 55, 70.5, 86];   // % left edge per column (col 1..6)
+            const rowTops  = [70, 53.5, 37, 20.5];              // % top edge per row index (0=bottom/screen1, 3=top/screen4)
+            for (let s = 1; s <= 24; s++) {
+                const col          = Math.floor((s - 1) / 4);   // 0–5
+                const rowFromBot   = (s - 1) % 4;               // 0=bottom … 3=top
                 const k = document.createElement('div');
-                k.id = `map-screen-${i}`; k.className = 'kiosk-unit-pro';
-                k.style.left = '4%'; k.style.top = `${5 + (i - 1) * 7.5}%`;
-                leftContainer.appendChild(k);
-            }
-            for (let i = 13; i <= 24; i++) {
-                const k = document.createElement('div');
-                k.id = `map-screen-${i}`; k.className = 'kiosk-unit-pro';
-                k.style.right = '4%'; k.style.top = `${5 + (i - 13) * 7.5}%`;
-                rightContainer.appendChild(k);
+                k.id = `map-screen-${s}`; k.className = 'kiosk-unit-pro';
+                k.style.left = colLefts[col] + '%';
+                k.style.top  = rowTops[rowFromBot] + '%';
+                grid.appendChild(k);
             }
         }
 
@@ -1405,8 +1412,8 @@
                     const containerRect = document.querySelector('.floorplan-container').getBoundingClientRect();
                     const posX = ((rect.left + rect.width / 2) - containerRect.left) / containerRect.width * 100;
                     const posY = ((rect.top  + rect.height / 2) - containerRect.top)  / containerRect.height * 100;
-                    pin.style.left = screenNo <= 12 ? `${posX + 4}%` : `${posX - 4}%`;
-                    pin.style.top  = `${posY - 1}%`;
+                    pin.style.left = `${posX}%`;
+                    pin.style.top  = `${posY}%`;
                 });
             }
             lucide.createIcons();
