@@ -536,15 +536,15 @@
 
             <div class="relative w-full p-4 sm:p-14 bg-slate-200 overflow-auto flex items-center justify-center h-full min-h-[50vh]">
                 <div class="floorplan-container w-full min-w-[280px] max-w-[600px]">
-                    <!-- Top waiting area -->
-                    <div style="position:absolute;left:8%;right:8%;top:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                    <!-- Top waiting area — gap on right for IT desk -->
+                    <div style="position:absolute;left:8%;right:12%;top:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
                         <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
                     </div>
-                    <!-- Bottom waiting area -->
-                    <div style="position:absolute;left:8%;right:8%;bottom:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                    <!-- Bottom waiting area — gap on left for Check-in -->
+                    <div style="position:absolute;left:12%;right:8%;bottom:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
                         <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
                     </div>
-                    <!-- Check-in (left wall, flush — aligned with bottom waiting area) -->
+                    <!-- Check-in (left wall, bottom — no overlap with waiting area) -->
                     <div style="position:absolute;left:0;bottom:4%;width:10%;height:13%;background:rgba(251,191,36,0.4);border:2px solid #f59e0b;border-radius:0 3px 3px 0;display:flex;align-items:center;justify-content:center;z-index:5;">
                         <span style="font-size:6px;font-weight:900;color:#92400e;text-align:center;line-height:1.4;">Check<br>-in</span>
                     </div>
@@ -554,7 +554,7 @@
                             <span style="font-size:9px;font-weight:900;letter-spacing:0.05em;">▶ ทางเข้า</span>
                         </div>
                     </div>
-                    <!-- IT Desk (right wall, flush — aligned with top waiting area) -->
+                    <!-- IT Desk (right wall, top — no overlap with waiting area) -->
                     <div style="position:absolute;right:0;top:4%;width:10%;height:13%;background:rgba(147,197,253,0.4);border:2px solid #60a5fa;border-radius:3px 0 0 3px;display:flex;align-items:center;justify-content:center;z-index:5;">
                         <span style="font-size:6px;font-weight:900;color:#1d4ed8;text-align:center;line-height:1.4;">โต๊ะ<br>IT</span>
                     </div>
