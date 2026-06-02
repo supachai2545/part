@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบอัปโหลดโปสเตอร์วิชาการ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        const HEADER_IMG_BASE64_RND = ""; // ใส่ Base64 รูปส่วนหัวกลุ่ม R&D
+        const HEADER_IMG_BASE64_R2R = ""; // ใส่ Base64 รูปส่วนหัวกลุ่ม R2R
+    </script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .slide-up { animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        .spin-slow { animation: spinSlow 2s linear infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+        }
+
+        .progress-bar {
+            transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        .toast-enter {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        /* Toast container */
+        #toastContainer {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: 320px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- ===================== LANDING SCREEN ===================== -->
+    <div id="landingScreen" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-lg fade-in">
+            <!-- Logo / Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-3xl shadow-lg mb-4">
+                    <i data-lucide="file-up" class="w-10 h-10 text-white"></i>
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight">
+                    ระบบอัปโหลดโปสเตอร์
+                </h1>
+                <p class="text-slate-500 mt-2 text-sm sm:text-base font-medium">
+                    ประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34
+                </p>
+            </div>
+
+            <!-- Card -->
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100">
+                <!-- Info boxes -->
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start gap-3 bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-blue-800 text-[14px]">ขนาดไฟล์ที่รองรับ</p>
+                            <p class="text-blue-700 text-[12px] mt-0.5">PDF หรือ PNG/JPG ขนาดมาตรฐาน A0 แนวตั้ง (841×1189 mm)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 bg-amber-50 rounded-2xl p-4 border border-amber-100">
+                        <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-amber-800 text-[14px]">กำหนดส่งผลงาน</p>
+                            <p class="text-amber-700 text-[12px] mt-0.5">ภายในวันที่ 4 มิถุนายน 2569 เวลา 23:59 น.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start Button -->
+                <div class="flex justify-center">
+                    <button id="startSystemBtn"
+                        onclick="startSystem()"
+                        class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-4 rounded-full font-bold text-[16px] sm:text-[17px] inline-flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-200 w-full sm:w-[350px]">
+                        <i id="startSystemIcon" data-lucide="search" class="w-5 h-5"></i>
+                        <span id="startSystemText">ค้นหาและส่งผลงาน</span>
+                    </button>
+                </div>
+            </div>
+
+            <p class="text-center text-slate-400 text-xs mt-4">
+                หากมีปัญหาการใช้งาน กรุณาติดต่อเจ้าหน้าที่
+            </p>
+        </div>
+    </div>
+
+    <!-- ===================== TEMPLATE SCREEN ===================== -->
+    <div id="templateScreen" class="hidden min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-2xl fade-in">
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100">
+                <div class="flex items-center gap-3 mb-6">
+                    <button onclick="hideTemplateScreen()" class="w-9 h-9 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors">
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">แม่แบบโปสเตอร์</h2>
+                        <p class="text-slate-500 text-[12px]">เลือกดาวน์โหลดแม่แบบที่ต้องการ</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <!-- R&D Template -->
+                    <div class="border-2 border-blue-200 hover:border-blue-400 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md group"
+                         onclick="openTemplateConfirm('rnd')">
+                        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-blue-200 transition-colors">
+                            <i data-lucide="flask-conical" class="w-6 h-6 text-blue-600"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-[15px]">กลุ่ม R&amp;D</h3>
+                        <p class="text-slate-500 text-[12px] mt-1">แม่แบบสำหรับงานวิจัยและพัฒนา</p>
+                        <div class="mt-3 inline-flex items-center gap-1.5 text-blue-600 text-[12px] font-semibold">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            ดาวน์โหลดแม่แบบ
+                        </div>
+                    </div>
+                    <!-- R2R Template -->
+                    <div class="border-2 border-green-200 hover:border-green-400 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md group"
+                         onclick="openTemplateConfirm('r2r')">
+                        <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-green-200 transition-colors">
+                            <i data-lucide="clipboard-list" class="w-6 h-6 text-green-600"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-[15px]">กลุ่ม R2R</h3>
+                        <p class="text-slate-500 text-[12px] mt-1">แม่แบบสำหรับงาน Routine to Research</p>
+                        <div class="mt-3 inline-flex items-center gap-1.5 text-green-600 text-[12px] font-semibold">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            ดาวน์โหลดแม่แบบ
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button onclick="hideTemplateScreen()"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-full font-semibold text-[14px] transition-colors">
+                        กลับหน้าหลัก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL: templateConfirmModal ===================== -->
+    <div id="templateConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full slide-up">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="download" class="w-7 h-7 text-amber-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">ยืนยันการดาวน์โหลด</h3>
+                <p id="templateConfirmDesc" class="text-slate-500 text-[13px] mt-1">คุณต้องการดาวน์โหลดแม่แบบโปสเตอร์ใช่หรือไม่?</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeTemplateConfirm()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors text-[14px]">ยกเลิก</button>
+                <button id="templateConfirmBtn" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-[14px]">ดาวน์โหลด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL: instructionModal ===================== -->
+    <div id="instructionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full slide-up max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="book-open" class="w-7 h-7 text-blue-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">คำแนะนำการใช้งาน</h3>
+                <p class="text-slate-500 text-[13px] mt-1">กรุณาอ่านก่อนดำเนินการ</p>
+            </div>
+
+            <div class="space-y-3 mb-6 text-[13px] text-slate-700">
+                <div class="flex items-start gap-2.5 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span class="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">1</span>
+                    <p>กรอก <strong>รหัสผลงาน</strong> ของท่านเพื่อค้นหาข้อมูล</p>
+                </div>
+                <div class="flex items-start gap-2.5 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span class="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">2</span>
+                    <p>ตรวจสอบข้อมูลผลงานให้ถูกต้อง จากนั้นอัปโหลดไฟล์โปสเตอร์ <strong>PDF หรือ รูปภาพ (PNG/JPG)</strong></p>
+                </div>
+                <div class="flex items-start gap-2.5 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span class="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">3</span>
+                    <p>ระบบจะสร้างโปสเตอร์พร้อมหัวกระดาษอัตโนมัติ และส่งเข้าระบบ</p>
+                </div>
+                <div class="flex items-start gap-2.5 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                    <p class="text-amber-700">ไฟล์ต้องมีขนาด <strong>ไม่เกิน 50 MB</strong> และเป็นรูปแบบ PDF, PNG หรือ JPG เท่านั้น</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('instructionModal').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors text-[14px]">
+                    ยกเลิก
+                </button>
+                <button onclick="proceedToMainScreen()"
+                    class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-[14px]">
+                    เข้าใจแล้ว ดำเนินการต่อ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL: warningModal ===================== -->
+    <div id="warningModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full slide-up">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="alert-triangle" class="w-7 h-7 text-amber-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">คำเตือน</h3>
+                <p id="warningModalText" class="text-slate-600 text-[13px] mt-2 leading-relaxed"></p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeWarningModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors text-[14px]">ยกเลิก</button>
+                <button id="warningProceedBtn" onclick="proceedToPdpa()" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors text-[14px]">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL: pdpaModal ===================== -->
+    <div id="pdpaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full slide-up max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="shield-check" class="w-7 h-7 text-purple-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">นโยบายคุ้มครองข้อมูลส่วนบุคคล</h3>
+                <p class="text-slate-500 text-[12px] mt-1">PDPA Consent</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-4 mb-5 text-[12px] text-slate-600 leading-relaxed max-h-48 overflow-y-auto border border-slate-200">
+                <p class="font-bold text-slate-700 mb-2">การเก็บรวบรวมและใช้ข้อมูลส่วนบุคคล</p>
+                <p class="mb-2">ระบบนี้จะเก็บรวบรวมข้อมูลของท่าน ได้แก่ ชื่อ-นามสกุล รหัสผลงาน หน่วยงาน และไฟล์โปสเตอร์ เพื่อวัตถุประสงค์ในการจัดการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
+                <p class="mb-2">ข้อมูลของท่านจะถูกเก็บรักษาอย่างปลอดภัยและจะไม่ถูกเปิดเผยต่อบุคคลภายนอก ยกเว้นกรณีที่จำเป็นตามกฎหมาย</p>
+                <p>ท่านมีสิทธิ์ในการเข้าถึง แก้ไข หรือขอลบข้อมูลส่วนบุคคลของท่านได้ตลอดเวลา</p>
+            </div>
+
+            <div class="flex items-start gap-3 mb-5">
+                <input type="checkbox" id="pdpaCheckbox" class="mt-1 w-4 h-4 accent-purple-600 shrink-0 cursor-pointer">
+                <label for="pdpaCheckbox" class="text-[13px] text-slate-700 cursor-pointer leading-relaxed">
+                    ข้าพเจ้ารับทราบและยินยอมให้จัดเก็บข้อมูลส่วนบุคคลตามนโยบายข้างต้น
+                </label>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('pdpaModal').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors text-[14px]">
+                    ยกเลิก
+                </button>
+                <button id="pdpaConfirmBtn" onclick="executeSubmission()" disabled
+                    class="flex-1 py-3 bg-gray-300 text-gray-500 font-bold rounded-xl text-[14px] cursor-not-allowed transition-colors">
+                    ยืนยันส่งผลงาน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MAIN SCREEN ===================== -->
+    <div id="mainScreen" class="hidden min-h-screen p-4 py-8">
+        <div class="max-w-2xl mx-auto fade-in">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-6">
+                <button onclick="resetApp()" class="w-9 h-9 bg-white hover:bg-slate-100 rounded-full flex items-center justify-center transition-colors shadow-sm border border-slate-200">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">อัปโหลดโปสเตอร์</h1>
+                    <p class="text-slate-500 text-[12px]">กรอกรหัสผลงานเพื่อเริ่มต้น</p>
+                </div>
+            </div>
+
+            <!-- Search Form -->
+            <div class="bg-white rounded-3xl shadow-lg p-5 sm:p-6 mb-4 border border-slate-100">
+                <label class="block text-[13px] font-bold text-slate-700 mb-2">รหัสผลงาน</label>
+                <div class="flex gap-2">
+                    <input type="text" id="searchCode"
+                        placeholder="เช่น P1-001, RP1-001"
+                        class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[14px] font-semibold text-slate-800 uppercase tracking-wider focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                        oninput="this.value=this.value.toUpperCase()"
+                        onkeydown="if(event.key==='Enter') searchWork()">
+                    <button onclick="searchWork()"
+                        class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-3 rounded-2xl font-bold text-[14px] flex items-center gap-2 transition-all shadow-md shadow-blue-200">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        ค้นหา
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Area -->
+            <div id="resultArea"></div>
+        </div>
+    </div>
+
+    <!-- ===================== PROGRESS OVERLAY ===================== -->
+    <div id="progressOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm p-4">
+        <div class="w-full max-w-sm text-center">
+            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i data-lucide="loader-2" class="w-10 h-10 text-blue-600 spin-slow"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2" id="progressTitle">กำลังประมวลผล...</h3>
+            <p class="text-slate-500 text-[13px] mb-5" id="progressDesc">กรุณารอสักครู่</p>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="progressBar" class="progress-bar h-2 bg-blue-600 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-slate-400 text-[12px] mt-2" id="progressPercent">0%</p>
+        </div>
+    </div>
+
+    <!-- ===================== SUCCESS SCREEN ===================== -->
+    <div id="successScreen" class="hidden min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md text-center fade-in">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i data-lucide="check-circle-2" class="w-12 h-12 text-green-600"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-slate-800 mb-2">ส่งผลงานสำเร็จ!</h2>
+            <p id="successMessage" class="text-slate-600 text-[14px] mb-8 leading-relaxed"></p>
+            <div id="successDetails" class="bg-white rounded-2xl shadow-md p-4 text-left mb-6 border border-slate-100 text-[13px] space-y-2"></div>
+            <button onclick="resetApp()"
+                class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-8 py-3.5 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-blue-200">
+                ส่งผลงานอื่น / กลับหน้าหลัก
+            </button>
+        </div>
+    </div>
+
+    <!-- ===================== JAVASCRIPT ===================== -->
+    <script>
+        lucide.createIcons();
+
+        // ─── showToast ───────────────────────────────────────────────────────
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const colors = {
+                info:    'bg-blue-600 text-white',
+                success: 'bg-green-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                error:   'bg-red-600 text-white',
+            };
+            const icons = {
+                info:    'info',
+                success: 'check-circle',
+                warning: 'alert-triangle',
+                error:   'x-circle',
+            };
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} rounded-2xl px-4 py-3 shadow-lg flex items-center gap-3 toast-enter text-[13px] font-semibold max-w-xs`;
+            toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ─── Constants ───────────────────────────────────────────────────────
+        const OPENING_TIME      = "2026-05-20T00:00:00";
+        const CLOSING_TIME      = "2026-06-04T23:59:59";
+        const REVISION_DEADLINE = "2026-06-07T23:59:59";
+
+        // ─── Google Apps Script Web App URL ──────────────────────────────────
+        const GAS_URL = ""; // ใส่ URL ของ Google Apps Script Web App
+
+        // ─── State ───────────────────────────────────────────────────────────
+        let currentWork       = null;
+        let selectedFile      = null;
+        let selectedFileType  = null; // 'pdf' | 'image'
+
+        // ─── checkDeadline ───────────────────────────────────────────────────
+        function checkDeadline() {
+            const now = new Date();
+            const openTime = new Date(OPENING_TIME);
+            const closeTime = new Date(CLOSING_TIME);
+            const revisionTime = new Date(REVISION_DEADLINE);
+
+            if (now < openTime) {
+                const btn = document.getElementById('startSystemBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.className = "bg-gray-200 text-gray-500 px-4 py-4 rounded-full font-bold text-[16px] sm:text-[17px] inline-flex items-center justify-center cursor-not-allowed border border-gray-300 w-full sm:w-[350px]";
+                    document.getElementById('startSystemText').innerText = "ระบบยังไม่เปิดรับผลงาน";
+                    document.getElementById('startSystemIcon').setAttribute('data-lucide', 'lock');
+                    lucide.createIcons();
+                }
+                return "not_open";
+            }
+            if (now > closeTime) {
+                const btn = document.getElementById('startSystemBtn');
+                if (btn) {
+                    document.getElementById('startSystemText').innerText = "เข้าดูสถานะผลงาน";
+                }
+            }
+            if (now > revisionTime) return "revision_closed";
+            if (now > closeTime) return "closed";
+            return "open";
+        }
+
+        // ─── DOMContentLoaded ─────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            checkDeadline();
+            lucide.createIcons();
+        });
+
+        // ─── startSystem ─────────────────────────────────────────────────────
+        window.startSystem = function() {
+            const status = checkDeadline();
+            if (status === "not_open") {
+                showToast("ระบบยังไม่เปิดรับผลงานในขณะนี้", "warning");
+                return;
+            }
+            document.getElementById('instructionModal').classList.remove('hidden');
+        }
+
+        // ─── showTemplateScreen / hideTemplateScreen ──────────────────────────
+        window.showTemplateScreen = function() {
+            document.getElementById('landingScreen').classList.add('hidden');
+            document.getElementById('templateScreen').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        window.hideTemplateScreen = function() {
+            document.getElementById('templateScreen').classList.add('hidden');
+            document.getElementById('landingScreen').classList.remove('hidden');
+        }
+
+        // ─── openTemplateConfirm / closeTemplateConfirm ───────────────────────
+        window.openTemplateConfirm = function(type) {
+            const desc = type === 'r2r'
+                ? 'ดาวน์โหลดแม่แบบโปสเตอร์สำหรับกลุ่ม R2R'
+                : 'ดาวน์โหลดแม่แบบโปสเตอร์สำหรับกลุ่ม R&D';
+            document.getElementById('templateConfirmDesc').innerText = desc;
+            document.getElementById('templateConfirmBtn').onclick = () => {
+                closeTemplateConfirm();
+                showToast('กำลังดาวน์โหลดแม่แบบ...', 'info');
+                // placeholder: trigger actual download here
+            };
+            document.getElementById('templateConfirmModal').classList.remove('hidden');
+        }
+
+        window.closeTemplateConfirm = function() {
+            document.getElementById('templateConfirmModal').classList.add('hidden');
+        }
+
+        // ─── proceedToMainScreen ──────────────────────────────────────────────
+        window.proceedToMainScreen = function() {
+            document.getElementById('instructionModal').classList.add('hidden');
+            document.getElementById('landingScreen').classList.add('hidden');
+            document.getElementById('mainScreen').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // ─── Search Form Logic ────────────────────────────────────────────────
+        window.searchWork = async function() {
+            const code = document.getElementById('searchCode').value.trim().toUpperCase();
+            if (!code) {
+                showToast('กรุณากรอกรหัสผลงาน', 'warning');
+                return;
+            }
+
+            const resultArea = document.getElementById('resultArea');
+            resultArea.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-lg p-6 border border-slate-100 flex items-center gap-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <i data-lucide="loader-2" class="w-5 h-5 text-blue-600 spin-slow"></i>
+                    </div>
+                    <p class="text-slate-600 font-semibold text-[14px]">กำลังค้นหา "${code}"...</p>
+                </div>`;
+            lucide.createIcons();
+
+            try {
+                if (!GAS_URL) {
+                    // Demo mode: ถ้าไม่มี GAS_URL ให้แสดงข้อความว่ายังไม่ได้ตั้งค่า
+                    setTimeout(() => {
+                        handleSearchResult(null, code);
+                    }, 800);
+                    return;
+                }
+                const resp = await fetch(`${GAS_URL}?action=search&code=${encodeURIComponent(code)}`);
+                const json = await resp.json();
+                handleSearchResult(json, code);
+            } catch (err) {
+                console.error(err);
+                resultArea.innerHTML = `
+                    <div class="bg-red-50 rounded-3xl p-5 border border-red-200 text-center">
+                        <i data-lucide="wifi-off" class="w-8 h-8 text-red-400 mx-auto mb-2"></i>
+                        <p class="text-red-700 font-bold text-[14px]">เชื่อมต่อระบบไม่ได้</p>
+                        <p class="text-red-500 text-[12px] mt-1">กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง</p>
+                    </div>`;
+                lucide.createIcons();
+            }
+        }
+
+        // ─── handleSearchResult ───────────────────────────────────────────────
+        function handleSearchResult(json, code) {
+            const resultArea = document.getElementById('resultArea');
+
+            if (!json || !json.found) {
+                resultArea.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-lg p-6 border border-slate-100 text-center">
+                        <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="search-x" class="w-7 h-7 text-slate-400"></i>
+                        </div>
+                        <p class="text-slate-700 font-bold text-[15px]">ไม่พบรหัสผลงาน "${code}"</p>
+                        <p class="text-slate-500 text-[13px] mt-1">กรุณาตรวจสอบรหัสผลงานและลองอีกครั้ง</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            currentWork = json.data;
+            renderSubmissions(currentWork);
+        }
+
+        // ─── renderSubmissions ────────────────────────────────────────────────
+        function renderSubmissions(work) {
+            const resultArea = document.getElementById('resultArea');
+            if (!work) { resultArea.innerHTML = ''; return; }
+
+            const isRejected = work.status === 'rejected';
+            const hasEdited  = work.has_edited === true;
+            const hasFile    = !!work.file_url;
+            const domain     = work.domain || work.code || '';
+
+            const statusMap = {
+                pending:  { label: 'รอตรวจสอบ',    color: 'bg-amber-100 text-amber-700',  icon: 'clock' },
+                approved: { label: 'ผ่านการตรวจสอบ', color: 'bg-green-100 text-green-700',  icon: 'check-circle' },
+                rejected: { label: 'ต้องแก้ไข',      color: 'bg-red-100 text-red-700',     icon: 'alert-circle' },
+                draft:    { label: 'แบบร่าง',        color: 'bg-slate-100 text-slate-600',  icon: 'file' },
+            };
+            const st = statusMap[work.status] || statusMap.draft;
+
+            let html = `
+                <div class="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden fade-in">
+                    <!-- Work Info Header -->
+                    <div class="p-5 sm:p-6 border-b border-slate-100">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">รหัสผลงาน</span>
+                                <h2 class="text-2xl font-extrabold text-slate-800 mt-0.5">${work.code || '-'}</h2>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 ${st.color} px-3 py-1.5 rounded-full text-[12px] font-bold shrink-0">
+                                <i data-lucide="${st.icon}" class="w-3.5 h-3.5"></i>
+                                ${st.label}
+                            </span>
+                        </div>
+                        <div class="space-y-1.5 text-[13px]">
+                            <div class="flex gap-2">
+                                <span class="text-slate-400 shrink-0 w-20">ชื่อผลงาน</span>
+                                <span class="font-semibold text-slate-700">${work.title || '-'}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="text-slate-400 shrink-0 w-20">ผู้นำเสนอ</span>
+                                <span class="font-semibold text-slate-700">${work.presenter || '-'}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="text-slate-400 shrink-0 w-20">หน่วยงาน</span>
+                                <span class="font-semibold text-slate-700">${work.organization || '-'}</span>
+                            </div>
+                        </div>
+                        ${isRejected && work.reject_reason ? `
+                        <div class="mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+                            <p class="text-red-700 text-[12px] font-semibold flex items-start gap-1.5">
+                                <i data-lucide="message-square-warning" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                                <span><strong>เหตุผลที่ต้องแก้ไข:</strong> ${work.reject_reason}</span>
+                            </p>
+                        </div>` : ''}
+                    </div>
+                    <!-- Upload Section -->
+                    <div class="p-5 sm:p-6">`;
+
+            if (hasFile && !isRejected) {
+                // Already submitted and not rejected — show status
+                html += `
+                    <div class="bg-green-50 rounded-2xl p-4 border border-green-200 flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                            <i data-lucide="file-check-2" class="w-5 h-5 text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-green-700 text-[14px]">ส่งผลงานแล้ว</p>
+                            <p class="text-[12px] text-green-600 mt-0.5">ระบบได้รับไฟล์ของท่านแล้ว กรุณารอการตรวจสอบ</p>
+                        </div>
+                    </div>
+                    <a href="${work.file_url}" target="_blank"
+                        class="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-2xl text-[13px] font-semibold transition-colors">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                        ดูไฟล์ที่ส่งแล้ว
+                    </a>`;
+                html += `</div></div>`;
+            } else {
+                const nowCheck = new Date();
+                const isAfterClosing = nowCheck > new Date(CLOSING_TIME);
+                const isAfterRevision = nowCheck > new Date(REVISION_DEADLINE);
+                const canUpload = !isAfterRevision && (!isAfterClosing || (isRejected && !hasEdited));
+
+                if (canUpload) {
+                    // Upload grid
+                    html += `
+                    <p class="text-[13px] font-bold text-slate-700 mb-3">
+                        ${isRejected ? 'อัปโหลดไฟล์ที่แก้ไขแล้ว' : 'อัปโหลดไฟล์โปสเตอร์'}
+                    </p>
+
+                    <!-- Drop Zone -->
+                    <div id="dropZone"
+                        class="border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl p-6 text-center transition-all cursor-pointer mb-4"
+                        onclick="document.getElementById('fileInput').click()"
+                        ondragover="handleDragOver(event)"
+                        ondragleave="handleDragLeave(event)"
+                        ondrop="handleDrop(event)">
+                        <input type="file" id="fileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg"
+                               onchange="handleFileSelect(event)">
+                        <div id="dropZoneContent">
+                            <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <i data-lucide="upload-cloud" class="w-6 h-6 text-slate-400"></i>
+                            </div>
+                            <p class="text-slate-600 font-semibold text-[14px]">คลิกหรือลากไฟล์มาวางที่นี่</p>
+                            <p class="text-slate-400 text-[12px] mt-1">PDF, PNG, JPG — ไม่เกิน 50 MB</p>
+                        </div>
+                    </div>
+
+                    <!-- File Preview -->
+                    <div id="filePreviewArea" class="hidden mb-4">
+                        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                                <i id="filePreviewIcon" data-lucide="file" class="w-5 h-5 text-blue-600"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p id="filePreviewName" class="font-bold text-slate-700 text-[13px] truncate"></p>
+                                <p id="filePreviewSize" class="text-slate-400 text-[11px] mt-0.5"></p>
+                            </div>
+                            <button onclick="removeSelectedFile()" class="w-7 h-7 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center shrink-0 transition-colors">
+                                <i data-lucide="x" class="w-3.5 h-3.5 text-red-500"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image preview -->
+                    <div id="imagePreviewContainer" class="hidden mb-4 rounded-2xl overflow-hidden border border-slate-200">
+                        <img id="imagePreviewEl" src="" alt="preview" class="w-full object-contain max-h-64">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button id="submitBtn" onclick="showWarningModal()" disabled
+                        class="w-full py-3.5 bg-gray-200 text-gray-400 rounded-2xl font-bold text-[14px] transition-all cursor-not-allowed">
+                        <span class="flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            ส่งผลงาน
+                        </span>
+                    </button>`;
+                    html += `</div></div>`;
+                } else if (isAfterRevision) {
+                    html += `
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center">
+                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                            <i data-lucide="lock" class="w-5 h-5 text-gray-400"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-600 text-[14px]">ระบบปิดรับไฟล์ทั้งหมดแล้ว</p>
+                            <p class="text-[12px] text-gray-400 mt-0.5">ขออภัยในความไม่สะดวก — สามารถดูสถานะได้เท่านั้น</p>
+                        </div>
+                    </div></div></div>`;
+                } else {
+                    html += `
+                    <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 flex items-center">
+                        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                            <i data-lucide="calendar-x" class="w-5 h-5 text-amber-500"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-amber-700 text-[14px]">หมดเขตส่งผลงานแล้ว</p>
+                            <p class="text-[12px] text-amber-600 mt-0.5">ปิดรับผลงานตั้งแต่วันที่ 4 มิถุนายน 2569 — ไม่สามารถอัปโหลดได้</p>
+                        </div>
+                    </div></div></div>`;
+                }
+            }
+
+            document.getElementById('resultArea').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        // ─── File Handling ────────────────────────────────────────────────────
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) processSelectedFile(file);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            document.getElementById('dropZone').classList.add('drag-over');
+        }
+
+        function handleDragLeave(event) {
+            document.getElementById('dropZone').classList.remove('drag-over');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            document.getElementById('dropZone').classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            if (file) processSelectedFile(file);
+        }
+
+        // ─── fileToBase64 ─────────────────────────────────────────────────────
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload  = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ─── processSelectedFile ──────────────────────────────────────────────
+        async function processSelectedFile(file) {
+            const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
+            if (file.size > MAX_SIZE) {
+                showToast('ไฟล์มีขนาดเกิน 50 MB กรุณาเลือกไฟล์ที่มีขนาดเล็กกว่า', 'error');
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['pdf', 'png', 'jpg', 'jpeg'].includes(ext)) {
+                showToast('รองรับเฉพาะไฟล์ PDF, PNG และ JPG เท่านั้น', 'error');
+                return;
+            }
+
+            selectedFile     = file;
+            selectedFileType = ext === 'pdf' ? 'pdf' : 'image';
+
+            // Show preview info
+            const previewArea = document.getElementById('filePreviewArea');
+            const previewName = document.getElementById('filePreviewName');
+            const previewSize = document.getElementById('filePreviewSize');
+            const previewIcon = document.getElementById('filePreviewIcon');
+
+            previewName.textContent = file.name;
+            previewSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            previewIcon.setAttribute('data-lucide', ext === 'pdf' ? 'file-text' : 'image');
+            previewArea.classList.remove('hidden');
+            lucide.createIcons();
+
+            if (selectedFileType === 'image') {
+                previewLocalFile(file);
+                await validateFileDimensions(file);
+            }
+
+            checkGlobalFormValidity();
+        }
+
+        // ─── validateFileDimensions ───────────────────────────────────────────
+        async function validateFileDimensions(file) {
+            return new Promise(resolve => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    // A0 at 150 DPI ≈ 4961 × 7016; at 72 DPI ≈ 2384 × 3370
+                    // Accept wide range — just warn if landscape
+                    if (img.width > img.height) {
+                        showToast('รูปภาพดูเหมือนเป็นแนวนอน — ควรใช้แนวตั้ง (Portrait)', 'warning');
+                    }
+                    resolve({ width: img.width, height: img.height });
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+                img.src = url;
+            });
+        }
+
+        // ─── previewLocalFile ─────────────────────────────────────────────────
+        function previewLocalFile(file) {
+            const container = document.getElementById('imagePreviewContainer');
+            const imgEl     = document.getElementById('imagePreviewEl');
+            const url       = URL.createObjectURL(file);
+            imgEl.onload    = () => URL.revokeObjectURL(url);
+            imgEl.src       = url;
+            container.classList.remove('hidden');
+        }
+
+        // ─── showWarningModal / closeWarningModal / proceedToPdpa ─────────────
+        window.showWarningModal = function() {
+            if (!selectedFile) {
+                showToast('กรุณาเลือกไฟล์โปสเตอร์ก่อน', 'warning');
+                return;
+            }
+            document.getElementById('warningModalText').innerText =
+                'ระบบจะสร้างโปสเตอร์พร้อมหัวกระดาษและส่งเข้าระบบ — ยืนยันการส่งผลงานหรือไม่?';
+            document.getElementById('warningModal').classList.remove('hidden');
+        }
+
+        window.closeWarningModal = function() {
+            document.getElementById('warningModal').classList.add('hidden');
+        }
+
+        window.proceedToPdpa = function() {
+            closeWarningModal();
+            document.getElementById('pdpaCheckbox').checked = false;
+            document.getElementById('pdpaConfirmBtn').disabled = true;
+            document.getElementById('pdpaConfirmBtn').className =
+                'flex-1 py-3 bg-gray-300 text-gray-500 font-bold rounded-xl text-[14px] cursor-not-allowed transition-colors';
+            document.getElementById('pdpaModal').classList.remove('hidden');
+        }
+
+        // ─── PDPA Checkbox ────────────────────────────────────────────────────
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'pdpaCheckbox') {
+                const btn = document.getElementById('pdpaConfirmBtn');
+                if (e.target.checked) {
+                    btn.disabled = false;
+                    btn.className = 'flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-[14px] transition-colors cursor-pointer';
+                } else {
+                    btn.disabled = true;
+                    btn.className = 'flex-1 py-3 bg-gray-300 text-gray-500 font-bold rounded-xl text-[14px] cursor-not-allowed transition-colors';
+                }
+            }
+        });
+
+        // ─── removeSelectedFile ───────────────────────────────────────────────
+        window.removeSelectedFile = function() {
+            selectedFile     = null;
+            selectedFileType = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreviewArea').classList.add('hidden');
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            checkGlobalFormValidity();
+        }
+
+        // ─── checkGlobalFormValidity ──────────────────────────────────────────
+        function checkGlobalFormValidity() {
+            const btn = document.getElementById('submitBtn');
+            if (!btn) return;
+            if (selectedFile && currentWork) {
+                btn.disabled  = false;
+                btn.className = 'w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-2xl font-bold text-[14px] transition-all shadow-md shadow-blue-200 cursor-pointer';
+            } else {
+                btn.disabled  = true;
+                btn.className = 'w-full py-3.5 bg-gray-200 text-gray-400 rounded-2xl font-bold text-[14px] transition-all cursor-not-allowed';
+            }
+        }
+
+        // ─── generateHeaderWithText ───────────────────────────────────────────
+        async function generateHeaderWithText(work) {
+            const canvas  = document.createElement('canvas');
+            canvas.width  = 4500;
+            canvas.height = 1300;
+            const ctx     = canvas.getContext('2d');
+
+            const domain = work.domain || work.code || '';
+
+            // ─── tokenizeFormattedText (FIX 8: correct regex) ────────────────
+            function tokenizeFormattedText(text) {
+                const tokens = [];
+                // Split on <em>...</em> tags
+                const regex = /(<em>.*?<\/em>)/g;
+                const parts = text.split(regex);
+                parts.forEach(part => {
+                    if (part.startsWith('<em>') && part.endsWith('</em>')) {
+                        tokens.push({ text: part.slice(4, -5), italic: true });
+                    } else if (part) {
+                        tokens.push({ text: part, italic: false });
+                    }
+                });
+                return tokens;
+            }
+
+            // ─── drawDynamicWrappedText ───────────────────────────────────────
+            function drawDynamicWrappedText(ctx, rawText, x, y, maxWidth, lineHeight, baseFontSize, fontFamily, color, align) {
+                const tokens  = tokenizeFormattedText(rawText);
+                ctx.fillStyle = color;
+                ctx.textAlign = align || 'left';
+
+                // Flatten tokens into words keeping track of italic
+                const words = [];
+                tokens.forEach(tok => {
+                    tok.text.split(' ').forEach((w, i) => {
+                        if (w) words.push({ word: (i === 0 ? '' : '') + w, italic: tok.italic });
+                    });
+                });
+
+                let fontSize    = baseFontSize;
+                let lines       = [];
+                let fitsInOneTry = false;
+
+                // Binary search for fitting font size
+                let lo = 20, hi = baseFontSize;
+                while (lo <= hi) {
+                    const mid = Math.floor((lo + hi) / 2);
+                    ctx.font = `${mid}px "${fontFamily}"`;
+                    const testLines = buildLines(words, ctx, maxWidth, mid, fontFamily);
+                    if (testLines.length * lineHeight <= lineHeight * 6) {
+                        fontSize = mid; lines = testLines; lo = mid + 1;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+
+                lines.forEach((lineTokens, li) => {
+                    let curX = (align === 'center') ? x : x;
+                    if (align === 'center') {
+                        // measure full line width
+                        let totalW = 0;
+                        lineTokens.forEach(t => {
+                            ctx.font = `${t.italic ? 'italic ' : ''}${fontSize}px "${fontFamily}"`;
+                            totalW += ctx.measureText(t.text + (t.space ? ' ' : '')).width;
+                        });
+                        curX = x - totalW / 2;
+                    }
+                    lineTokens.forEach(t => {
+                        ctx.font = `${t.italic ? 'italic ' : ''}${fontSize}px "${fontFamily}"`;
+                        ctx.fillText(t.text + (t.space ? ' ' : ''), curX, y + li * lineHeight);
+                        curX += ctx.measureText(t.text + (t.space ? ' ' : '')).width;
+                    });
+                });
+
+                return lines.length;
+            }
+
+            function buildLines(words, ctx, maxWidth, fontSize, fontFamily) {
+                const lines = [];
+                let curLine = [];
+                let curW    = 0;
+                words.forEach((item, idx) => {
+                    const isLast = idx === words.length - 1;
+                    ctx.font = `${item.italic ? 'italic ' : ''}${fontSize}px "${fontFamily}"`;
+                    const wordW = ctx.measureText(item.word + ' ').width;
+                    if (curW + wordW > maxWidth && curLine.length > 0) {
+                        lines.push(curLine);
+                        curLine = [{ text: item.word, italic: item.italic, space: !isLast }];
+                        curW    = wordW;
+                    } else {
+                        curLine.push({ text: item.word, italic: item.italic, space: !isLast });
+                        curW += wordW;
+                    }
+                });
+                if (curLine.length) lines.push(curLine);
+                return lines;
+            }
+
+            function drawText() {
+                // Title area
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'left';
+
+                const titleX    = 320;
+                const titleY    = 200;
+                const maxTitleW = 3800;
+
+                // Draw work code
+                ctx.font      = `bold 90px "Sarabun"`;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(work.code || '', titleX, titleY);
+
+                // Draw title
+                drawDynamicWrappedText(
+                    ctx,
+                    work.title || 'ชื่อผลงาน',
+                    titleX,
+                    titleY + 120,
+                    maxTitleW,
+                    160,
+                    130,
+                    'Sarabun',
+                    '#ffffff',
+                    'left'
+                );
+
+                // Draw presenter
+                ctx.font      = `500 75px "Sarabun"`;
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillText(work.presenter || '', titleX, canvas.height - 180);
+
+                // Draw organization
+                ctx.font      = `400 65px "Sarabun"`;
+                ctx.fillStyle = 'rgba(255,255,255,0.70)';
+                ctx.fillText(work.organization || '', titleX, canvas.height - 100);
+            }
+
+            // FIX 7: declarations before hImg
+            const isR2R = domain && domain.toUpperCase().includes('R2R');
+            let isFallbackMode = false;
+            const hImg = new Image();
+            hImg.onload = async () => { ctx.drawImage(hImg, 0, 0, 4500, 1300); await document.fonts.ready; drawText(); };
+            hImg.onerror = async () => { isFallbackMode = true; ctx.fillStyle = isR2R ? "#166534" : "#1e3a8a"; ctx.fillRect(0, 0, 4500, 1300); await document.fonts.ready; drawText(); };
+            hImg.src = isR2R ? HEADER_IMG_BASE64_R2R : HEADER_IMG_BASE64_RND;
+
+            // Wait for image load/error to finish
+            await new Promise(resolve => {
+                const checkDone = setInterval(() => {
+                    if (hImg.complete) {
+                        clearInterval(checkDone);
+                        setTimeout(resolve, 200); // give drawText() time
+                    }
+                }, 50);
+            });
+
+            return canvas;
+        }
+
+        // ─── mergeWithHeaderPDF ───────────────────────────────────────────────
+        async function mergeWithHeaderPDF(headerCanvas, userPdfBytes) {
+            const { PDFDocument } = PDFLib;
+
+            const PAGE_WIDTH  = 595.28;  // A4 width in pt (will be used as A0 equivalent)
+            const HEADER_HEIGHT = 120;   // pt for header strip
+            const USER_HEIGHT = 841.89 - HEADER_HEIGHT; // remaining page height
+
+            // Convert header canvas to PNG bytes
+            const headerDataUrl  = headerCanvas.toDataURL('image/png');
+            const headerBase64   = headerDataUrl.split(',')[1];
+            const headerBytes    = Uint8Array.from(atob(headerBase64), c => c.charCodeAt(0));
+
+            // Load user PDF
+            const userDoc   = await PDFDocument.load(userPdfBytes);
+            const outDoc    = await PDFDocument.create();
+            const userPages = userDoc.getPages();
+
+            for (let i = 0; i < userPages.length; i++) {
+                const page = outDoc.addPage([PAGE_WIDTH, 841.89]);
+
+                // Draw header image at top
+                const headerImg   = await outDoc.embedPng(headerBytes);
+                page.drawImage(headerImg, {
+                    x: 0,
+                    y: 841.89 - HEADER_HEIGHT,
+                    width:  PAGE_WIDTH,
+                    height: HEADER_HEIGHT,
+                });
+
+                // Embed user page
+                const [userEmbed] = await outDoc.embedPages([userPages[i]]);
+
+                // FIX 6: use xScale/yScale to prevent white border
+                const userPage = userDoc.getPages()[i];
+                const { width: origW, height: origH } = userPage.getSize();
+                page.drawPage(userEmbed, { x: 0, y: 0, xScale: PAGE_WIDTH / origW, yScale: USER_HEIGHT / origH });
+            }
+
+            return await outDoc.save();
+        }
+
+        // ─── mergeWithHeaderImage ─────────────────────────────────────────────
+        async function mergeWithHeaderImage(headerCanvas, imageFile) {
+            const { PDFDocument } = PDFLib;
+
+            // Load image onto a temp canvas to get dimensions
+            const imgDataUrl = await fileToBase64(imageFile);
+            const img        = new Image();
+            await new Promise((resolve, reject) => {
+                img.onload  = resolve;
+                img.onerror = reject;
+                img.src     = imgDataUrl;
+            });
+
+            const PAGE_W      = 595.28;
+            const PAGE_H      = 841.89;
+            const HEADER_H    = 120;
+            const CONTENT_H   = PAGE_H - HEADER_H;
+
+            const outDoc = await PDFDocument.create();
+            const page   = outDoc.addPage([PAGE_W, PAGE_H]);
+
+            // Header
+            const headerDataUrl = headerCanvas.toDataURL('image/png');
+            const headerBase64  = headerDataUrl.split(',')[1];
+            const headerBytes   = Uint8Array.from(atob(headerBase64), c => c.charCodeAt(0));
+            const headerImg     = await outDoc.embedPng(headerBytes);
+            page.drawImage(headerImg, { x: 0, y: PAGE_H - HEADER_H, width: PAGE_W, height: HEADER_H });
+
+            // User image
+            const imgBase64 = imgDataUrl.split(',')[1];
+            const imgBytes  = Uint8Array.from(atob(imgBase64), c => c.charCodeAt(0));
+            const ext       = imageFile.name.split('.').pop().toLowerCase();
+            const embeddedImg = ext === 'png'
+                ? await outDoc.embedPng(imgBytes)
+                : await outDoc.embedJpg(imgBytes);
+
+            // Scale image to fit content area
+            const scaleW = PAGE_W   / img.width;
+            const scaleH = CONTENT_H / img.height;
+            const scale  = Math.min(scaleW, scaleH);
+            const dW     = img.width  * scale;
+            const dH     = img.height * scale;
+            const dX     = (PAGE_W - dW) / 2;
+            const dY     = 0;
+
+            page.drawImage(embeddedImg, { x: dX, y: dY, width: dW, height: dH });
+
+            return await outDoc.save();
+        }
+
+        // ─── executeSubmission ────────────────────────────────────────────────
+        window.executeSubmission = async function() {
+            document.getElementById('pdpaModal').classList.add('hidden');
+
+            if (!selectedFile || !currentWork) {
+                showToast('ข้อมูลไม่ครบถ้วน กรุณาลองใหม่', 'error');
+                return;
+            }
+
+            // Show progress
+            const overlay = document.getElementById('progressOverlay');
+            overlay.classList.remove('hidden');
+
+            function setProgress(pct, title, desc) {
+                document.getElementById('progressBar').style.width    = pct + '%';
+                document.getElementById('progressPercent').innerText  = pct + '%';
+                document.getElementById('progressTitle').innerText    = title;
+                document.getElementById('progressDesc').innerText     = desc;
+            }
+
+            try {
+                setProgress(10, 'กำลังสร้างหัวกระดาษ...', 'กรุณารอสักครู่');
+                const headerCanvas = await generateHeaderWithText(currentWork);
+
+                setProgress(35, 'กำลังรวมไฟล์...', 'ประมวลผลเอกสาร PDF');
+                let finalPdfBytes;
+                if (selectedFileType === 'pdf') {
+                    const arrayBuf    = await selectedFile.arrayBuffer();
+                    finalPdfBytes     = await mergeWithHeaderPDF(headerCanvas, arrayBuf);
+                } else {
+                    finalPdfBytes     = await mergeWithHeaderImage(headerCanvas, selectedFile);
+                }
+
+                setProgress(65, 'กำลังอัปโหลด...', 'ส่งไฟล์ไปยังเซิร์ฟเวอร์');
+
+                // Convert to base64 for GAS
+                const pdfBase64 = btoa(
+                    String.fromCharCode(...new Uint8Array(finalPdfBytes))
+                );
+
+                if (!GAS_URL) {
+                    // Demo: simulate success
+                    await new Promise(r => setTimeout(r, 800));
+                    setProgress(100, 'เสร็จสิ้น!', 'ส่งผลงานสำเร็จ');
+                    setTimeout(() => showSuccess(), 500);
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('action', 'upload');
+                formData.append('code', currentWork.code || '');
+                formData.append('pdfBase64', pdfBase64);
+                formData.append('fileName', `${currentWork.code}_poster.pdf`);
+
+                const resp = await fetch(GAS_URL, { method: 'POST', body: formData });
+                const json = await resp.json();
+
+                if (json.success) {
+                    setProgress(100, 'เสร็จสิ้น!', 'ส่งผลงานสำเร็จ');
+                    setTimeout(() => showSuccess(json), 500);
+                } else {
+                    throw new Error(json.message || 'เกิดข้อผิดพลาด');
+                }
+
+            } catch (err) {
+                console.error(err);
+                overlay.classList.add('hidden');
+                showToast('เกิดข้อผิดพลาด: ' + (err.message || err), 'error');
+            }
+        }
+
+        function showSuccess(json) {
+            document.getElementById('progressOverlay').classList.add('hidden');
+            document.getElementById('mainScreen').classList.add('hidden');
+            const screen = document.getElementById('successScreen');
+            screen.classList.remove('hidden');
+
+            document.getElementById('successMessage').innerText =
+                'ระบบได้รับผลงานของท่านแล้ว ขอบคุณที่ส่งผลงาน';
+
+            const details = document.getElementById('successDetails');
+            details.innerHTML = `
+                <div class="flex justify-between">
+                    <span class="text-slate-400">รหัสผลงาน</span>
+                    <span class="font-bold text-slate-700">${currentWork.code || '-'}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">ชื่อผลงาน</span>
+                    <span class="font-semibold text-slate-700 text-right max-w-[60%]">${currentWork.title || '-'}</span>
+                </div>
+                ${json && json.fileUrl ? `<div class="flex justify-between items-center pt-1 border-t border-slate-100">
+                    <span class="text-slate-400">ไฟล์ที่ส่ง</span>
+                    <a href="${json.fileUrl}" target="_blank" class="text-blue-600 font-semibold text-[12px] flex items-center gap-1">
+                        <i data-lucide="external-link" class="w-3 h-3"></i> ดูไฟล์
+                    </a>
+                </div>` : ''}
+            `;
+            lucide.createIcons();
+        }
+
+        // ─── resetProgress / resetApp ─────────────────────────────────────────
+        function resetProgress() {
+            document.getElementById('progressBar').style.width   = '0%';
+            document.getElementById('progressPercent').innerText = '0%';
+            document.getElementById('progressTitle').innerText   = 'กำลังประมวลผล...';
+            document.getElementById('progressDesc').innerText    = 'กรุณารอสักครู่';
+        }
+
+        window.resetApp = function() {
+            currentWork      = null;
+            selectedFile     = null;
+            selectedFileType = null;
+
+            document.getElementById('mainScreen').classList.add('hidden');
+            document.getElementById('successScreen').classList.add('hidden');
+            document.getElementById('templateScreen').classList.add('hidden');
+            document.getElementById('progressOverlay').classList.add('hidden');
+            document.getElementById('landingScreen').classList.remove('hidden');
+
+            const searchCode = document.getElementById('searchCode');
+            if (searchCode) searchCode.value = '';
+            const resultArea = document.getElementById('resultArea');
+            if (resultArea) resultArea.innerHTML = '';
+
+            resetProgress();
+            checkDeadline();
+            lucide.createIcons();
+        }
+
+        // ─── pageshow (handle back button cache) ─────────────────────────────
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                resetProgress();
+                document.getElementById('progressOverlay').classList.add('hidden');
+            }
+            checkDeadline();
+            lucide.createIcons();
+        });
+
+    </script>
+</body>
+</html>
