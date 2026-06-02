@@ -879,6 +879,15 @@ const isTimeLocked = (isRejected && !hasEdited && isPastRevision) || (!isRejecte
                             </div>
                         </div></div></div>`;
                     }
+                } else if (isTimeLocked) {
+                    html += `
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                            <i data-lucide="lock" class="w-10 h-10 text-gray-300 mx-auto mb-3 block"></i>
+                            <p class="font-bold text-gray-600 text-[15px] mb-1">ปิดรับผลงานแล้ว</p>
+                            <p class="text-[13px] text-gray-500">หมดระยะเวลาส่งผลงาน ไม่สามารถอัปโหลดไฟล์ได้อีก</p>
+                            <p class="text-[12px] text-gray-400 mt-2">หากมีข้อสงสัย กรุณาติดต่อเจ้าหน้าที่ 02-951-0000 ต่อ 99051</p>
+                        </div>
+                    </div></div>`;
                 } else {
                     html += `
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1350,7 +1359,10 @@ if (isTimeLocked && !isUploaded && !isApproved && !hasEdited) lockedCount++;
             const userDoc = await PDFDocument.load(userPdfBuffer);
             const [userEmbed] = await mergedPdf.embedPdf(userDoc);
 
-            page.drawPage(userEmbed, { x: 0, y: 0, width: PAGE_WIDTH, height: USER_HEIGHT });
+            // 🌟 แก้ขอบขวา-ล่าง: scale เต็มกรอบพอดีจากขนาดจริงของไฟล์ (กันช่องว่างจาก PDF ที่ไม่ใช่ 45x87 เป๊ะ)
+            const xScale = PAGE_WIDTH / userEmbed.width;
+            const yScale = USER_HEIGHT / userEmbed.height;
+            page.drawPage(userEmbed, { x: 0, y: 0, xScale: xScale, yScale: yScale });
             page.drawImage(headerImage, { x: 0, y: USER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT });
 
             return await mergedPdf.saveAsBase64();
