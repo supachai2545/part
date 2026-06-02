@@ -1441,33 +1441,7 @@
         window.addEventListener('beforeprint', function(e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
 
         // =============================================================
-        // 🧪 TEST HELPER — ลบออกก่อน deploy จริง
-        // =============================================================
-        function testAddPoints() {
-            completeReading('__test_' + Date.now());
-        }
-        function testResetPoints() {
-            userPoints = 0;
-            localStorage.setItem('posterPoints', 0);
-            localStorage.removeItem('viewedPosters');
-            localStorage.removeItem('posterRewardClaimed');
-            viewedPosters = [];
-            updateScoreBadge();
-            updatePassportUI(false);
-            document.getElementById('testPointsBtn').innerText = '+10 PT (ทดสอบ)';
-        }
     </script>
 
-    <!-- TEST PANEL — ลบออกก่อนใช้งานจริง -->
-    <div style="position:fixed;bottom:16px;left:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;">
-        <button id="testPointsBtn" onclick="testAddPoints()"
-            style="background:#1e293b;color:#fbbf24;font-weight:900;font-size:11px;padding:7px 14px;border-radius:20px;border:2px solid #fbbf24;box-shadow:0 4px 12px rgba(0,0,0,0.4);cursor:pointer;-webkit-tap-highlight-color:transparent;">
-            +10 PT (ทดสอบ)
-        </button>
-        <button onclick="testResetPoints()"
-            style="background:#1e293b;color:#f87171;font-weight:900;font-size:11px;padding:7px 14px;border-radius:20px;border:2px solid #f87171;box-shadow:0 4px 12px rgba(0,0,0,0.4);cursor:pointer;-webkit-tap-highlight-color:transparent;">
-            รีเซ็ต
-        </button>
-    </div>
 </body>
 </html>
