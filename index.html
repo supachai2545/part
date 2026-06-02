@@ -1032,7 +1032,12 @@
                     : "text-gray-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-gray-50 px-2.5 py-0.5 rounded-md border border-gray-100";
 
             if (typeof gtag === 'function') {
-                gtag('event', 'view_poster', { 'poster_id': activePoster.id, 'poster_title': activePoster.title });
+                gtag('event', 'view_poster', {
+                    'poster_id':    activePoster.id,
+                    'poster_title': activePoster.title,
+                    'zone':         activePoster.calcZone    || 'ไม่ระบุ',
+                    'branch':       activePoster.displayZone || 'ไม่ระบุ'
+                });
             }
 
             const viewedIndicator         = document.getElementById('viewedIndicator');
