@@ -1359,10 +1359,16 @@ if (isTimeLocked && !isUploaded && !isApproved && !hasEdited) lockedCount++;
             const userDoc = await PDFDocument.load(userPdfBuffer);
             const [userEmbed] = await mergedPdf.embedPdf(userDoc);
 
-            // 🌟 แก้ขอบขวา-ล่าง: scale เต็มกรอบพอดีจากขนาดจริงของไฟล์ (กันช่องว่างจาก PDF ที่ไม่ใช่ 45x87 เป๊ะ)
+            // 🌟 แก้ขอบขาวขวา-ล่าง: ใช้ cover (เติมเต็มกรอบ) — scale ด้วยอัตราที่มากกว่า
+            // เพื่อให้เนื้อหาเต็มพื้นที่ 45x87 เสมอ ไม่เหลือขอบขาว แล้วจัดกึ่งกลาง
             const xScale = PAGE_WIDTH / userEmbed.width;
             const yScale = USER_HEIGHT / userEmbed.height;
-            page.drawPage(userEmbed, { x: 0, y: 0, xScale: xScale, yScale: yScale });
+            const scale = Math.max(xScale, yScale);
+            const drawW = userEmbed.width * scale;
+            const drawH = userEmbed.height * scale;
+            const offsetX = (PAGE_WIDTH - drawW) / 2;       // จัดกึ่งกลางแนวนอน
+            const offsetY = USER_HEIGHT - drawH;            // ชิดด้านบน (ใต้ส่วนหัว) ให้เต็มลงล่าง
+            page.drawPage(userEmbed, { x: offsetX, y: offsetY, xScale: scale, yScale: scale });
             page.drawImage(headerImage, { x: 0, y: USER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT });
 
             return await mergedPdf.saveAsBase64();
