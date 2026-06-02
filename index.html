@@ -2,10 +2,16 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="ระบบสืบค้นและชม E-Poster ผลงานวิชาการในงานประชุมวิชาการกรมวิทยาศาสตร์การแพทย์">
+    <meta property="og:title" content="E-Poster กรมวิทยาศาสตร์การแพทย์">
+    <meta property="og:description" content="ค้นหาและชม E-Poster ผลงานวิชาการ พร้อมระบบ E-Passport สะสมคะแนน">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>🔬</text></svg>">
     <title>ระบบสืบค้นโปสเตอร์ออนไลน์</title>
 
     <!-- Google tag (gtag.js) -->
@@ -17,10 +23,29 @@
       gtag('config', 'G-DHK7XEPV5Y');
     </script>
 
+    <!-- Preconnect เพื่อลด latency -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://xerrcodpzwlshidwnzim.supabase.co">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CDN failure guard -->
+    <script>
+      window.addEventListener('load', function() {
+        if (typeof tailwind === 'undefined' || typeof lucide === 'undefined' || !window.supabase) {
+          document.body.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f1f5f9;font-family:sans-serif;text-align:center;padding:2rem;gap:1rem;">'
+            + '<div style="font-size:3rem;">⚠️</div>'
+            + '<p style="font-weight:900;font-size:1.2rem;color:#1e293b;">โหลดระบบไม่สำเร็จ</p>'
+            + '<p style="color:#64748b;font-size:0.9rem;">กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วกด Refresh</p>'
+            + '<button onclick="location.reload()" style="margin-top:1rem;background:#1e293b;color:#fff;padding:10px 28px;border-radius:999px;border:none;font-weight:700;font-size:1rem;cursor:pointer;">🔄 Refresh</button>'
+            + '</div>';
+        }
+      });
+    </script>
 
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; color: #1e293b; overflow-x: hidden; }
