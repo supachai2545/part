@@ -993,7 +993,7 @@
                 if (rows.length > 0) {
                     console.log('[DB Columns]', Object.keys(rows[0]));
                     console.log('[DB Sample Check-in values]',
-                        rows.slice(0, 5).map(r => ({ id: r['รหัสผลงาน'], ci: r['Check-in'], ra: r['รับประกาศ'] }))
+                        rows.slice(0, 5).map(r => ({ id: r['รหัสผลงาน'], ci: r['Checkin'], ra: r['รับประกาศ'] }))
                     );
                 } else {
                     // rows = 0 อาจเป็น RLS หรือตารางยังว่าง
@@ -1004,10 +1004,10 @@
 
                 // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────────
                 const checkinData = rows
-                    .filter(r => r['Check-in'] === 'Y' && r['รับประกาศ'] !== 'Y')
+                    .filter(r => r['Checkin'] === 'Y' && r['รับประกาศ'] !== 'Y')
                     .sort((a, b) => {
-                        const ta = a['เวลา Check-in'] ? new Date(a['เวลา Check-in']).getTime() : 0;
-                        const tb = b['เวลา Check-in'] ? new Date(b['เวลา Check-in']).getTime() : 0;
+                        const ta = a['เวลาCheckin'] ? new Date(a['เวลาCheckin']).getTime() : 0;
+                        const tb = b['เวลาCheckin'] ? new Date(b['เวลาCheckin']).getTime() : 0;
                         return tb - ta;
                     });
 
@@ -1135,13 +1135,13 @@
 
             const heroItem    = data[0];
             const listItems   = data.slice(1);
-            const uniqueKey   = heroItem['QR CODE'] ?? heroItem['รหัสผลงาน'];
+            const uniqueKey   = heroItem['QRCODE'] ?? heroItem['รหัสผลงาน'];
             const fullName    = [heroItem['ชื่อ'], heroItem['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
             const startTime   = heroItem['เวลาการนำเสนอ'] || "";
             const endTime     = heroItem['หมดการนำเสนอ']   || "";
             const heroLive    = isLive(startTime, endTime);
             const heroExpired = isExpired(endTime);
-            const recordTime  = isCheckinSec ? heroItem['เวลา Check-in'] : heroItem['เวลารับประกาศ'];
+            const recordTime  = isCheckinSec ? heroItem['เวลาCheckin'] : heroItem['เวลารับประกาศ'];
 
             // ripple เมื่อ hero เปลี่ยน
             let rippleClass = "";
@@ -1245,7 +1245,7 @@
                 const iEnd     = item['หมดการนำเสนอ']   || "";
                 const iLive    = isCheckinSec && isLive(iStart, iEnd);
                 const iExp     = isExpired(iEnd);
-                const iRecord  = isCheckinSec ? item['เวลา Check-in'] : item['เวลารับประกาศ'];
+                const iRecord  = isCheckinSec ? item['เวลาCheckin'] : item['เวลารับประกาศ'];
 
                 listHtml += `
                     <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-start gap-4
@@ -1773,14 +1773,14 @@
                 const codeNum = Number(code);          // สำหรับ match กับ QR CODE bigint
                 const data = rows.find(r => {
                     const byCode = String(r['รหัสผลงาน'] || '').toUpperCase() === codeUp;
-                    const byQR   = !isNaN(codeNum) && Number(r['QR CODE']) === codeNum;
+                    const byQR   = !isNaN(codeNum) && Number(r['QRCODE']) === codeNum;
                     return byCode || byQR;
                 }) || null;
 
                 if (!data) {
                     console.warn('[SCAN] ไม่พบ:', code,
                         '| ตัวอย่าง DB:', rows.slice(0, 3).map(r =>
-                            ({ รหัส: r['รหัสผลงาน'], qr: r['QR CODE'] })));
+                            ({ รหัส: r['รหัสผลงาน'], qr: r['QRCODE'] })));
                     setScanFeedback(`ไม่พบข้อมูลรหัส: ${code}`, "rose");
                     playErrorTone();
                     return;
@@ -1790,13 +1790,13 @@
 
                 const fullName = [data['ชื่อ'], data['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
 
-                if (data['Check-in'] !== 'Y') {
+                if (data['Checkin'] !== 'Y') {
                     autoDeterminedAction = "ENTRY";
 
                     // ── หาผลงานอื่นของคนเดียวกันที่ยังไม่เช็คอิน ──────────────
                     const siblings = (cachedAllData || []).filter(r =>
-                        r['QR CODE'] !== data['QR CODE'] &&
-                        r['Check-in'] !== 'Y' &&
+                        r['QRCODE'] !== data['QRCODE'] &&
+                        r['Checkin'] !== 'Y' &&
                         [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') === fullName
                     );
                     currentScannedItems = [data, ...siblings];
@@ -1826,8 +1826,8 @@
 
                     // ── หาผลงานอื่นของคนเดียวกันที่ยังไม่รับประกาศ ─────────────
                     const rewardSiblings = (cachedAllData || []).filter(r =>
-                        r['QR CODE'] !== data['QR CODE'] &&
-                        r['Check-in'] === 'Y' &&
+                        r['QRCODE'] !== data['QRCODE'] &&
+                        r['Checkin'] === 'Y' &&
                         r['รับประกาศ'] !== 'Y' &&
                         [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') === fullName
                     );
@@ -1928,7 +1928,7 @@
                 const nowISO = new Date().toISOString();
                 let updatePayload = {};
                 if (autoDeterminedAction === "ENTRY") {
-                    updatePayload = { "Check-in": "Y", "เวลา Check-in": nowISO };
+                    updatePayload = { "Checkin": "Y", "เวลาCheckin": nowISO };
                 } else if (autoDeterminedAction === "REWARD") {
                     updatePayload = { "รับประกาศ": "Y", "เวลารับประกาศ": nowISO };
                 }
@@ -1939,7 +1939,7 @@
                     const { error } = await supabaseClient
                         .from('eposter_works')
                         .update(updatePayload)
-                        .eq('QR CODE', item['QR CODE'])
+                        .eq('QRCODE', item['QRCODE'])
                         .select();
                     if (error) throw error;
                 }
@@ -1980,7 +1980,7 @@
             const rows    = cachedAllData;
             const now     = getSyncedTime();
             const total   = rows.length;
-            const checkedIn = rows.filter(r => r['Check-in'] === 'Y').length;
+            const checkedIn = rows.filter(r => r['Checkin'] === 'Y').length;
             const rewarded  = rows.filter(r => r['รับประกาศ'] === 'Y').length;
 
             // ─── Top grid ──────────────────────────────────────────────────
@@ -2013,7 +2013,7 @@
                 const b = getBranchFromCode(r['รหัสผลงาน']);
                 if (!branchMap[b]) branchMap[b] = { total:0, checkin:0, reward:0 };
                 branchMap[b].total++;
-                if (r['Check-in'] === 'Y') branchMap[b].checkin++;
+                if (r['Checkin'] === 'Y') branchMap[b].checkin++;
                 if (r['รับประกาศ'] === 'Y') branchMap[b].reward++;
             });
             const branchHtml = BRANCH_ORDER.map(bName => {
@@ -2085,7 +2085,7 @@
 
             // ─── ⚠️ ยังไม่เช็คอิน + ใกล้เวลา ──────────────────────────────
             const urgentList = rows
-                .filter(r => r['Check-in'] !== 'Y')
+                .filter(r => r['Checkin'] !== 'Y')
                 .map(r => {
                     const start = parseTime(r['เวลาการนำเสนอ'] || '');
                     if (!start) return null;
@@ -2127,7 +2127,7 @@
 
             // ─── 🏆 เช็คอินแล้ว แต่ยังไม่รับประกาศ (พ้นเวลานำเสนอแล้ว) ─────
             const noRewardList = rows.filter(r => {
-                if (r['Check-in'] !== 'Y')   return false;
+                if (r['Checkin'] !== 'Y')   return false;
                 if (r['รับประกาศ'] === 'Y') return false;
                 const end = parseTime(r['หมดการนำเสนอ'] || '');
                 return end && now > end;
@@ -2181,7 +2181,7 @@
             const rows = cachedAllData;
             if (!rows || rows.length === 0) { alert('ยังไม่มีข้อมูล'); return; }
             const headers = ['รหัสผลงาน','ชื่อ','นามสกุล','สาขา','ด้านของบทคัดย่อ','ชื่อผลงาน',
-                             'จอที่','เวลาการนำเสนอ','หมดการนำเสนอ','Check-in','เวลา Check-in','รับประกาศ','เวลารับประกาศ'];
+                             'จอที่','เวลาการนำเสนอ','หมดการนำเสนอ','Checkin','เวลาCheckin','รับประกาศ','เวลารับประกาศ'];
             const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
             const csvLines = [
                 headers.map(escape).join(','),
@@ -2294,7 +2294,7 @@
             if (!rows) return null;
             return rows.find(r =>
                 String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase() ||
-                (!isNaN(Number(code)) && Number(r['QR CODE']) === Number(code))
+                (!isNaN(Number(code)) && Number(r['QRCODE']) === Number(code))
             ) || null;
         }
 
@@ -2354,7 +2354,7 @@
             const start      = parseTime(r['เวลาการนำเสนอ'] || '');
             const end        = parseTime(r['หมดการนำเสนอ']   || '');
             const code       = r['รหัสผลงาน'] || '';
-            const isCheckedIn = r['Check-in']    === 'Y';
+            const isCheckedIn = r['Checkin']    === 'Y';
             const isRewarded  = r['รับประกาศ'] === 'Y';
 
             // 1. เช็คอินแล้ว
@@ -2434,7 +2434,7 @@
             if (r['รับประกาศ'] === 'Y') {
                 icon='🏆'; title='รับใบประกาศเรียบร้อยแล้ว';
                 cardCls='border-amber-300 bg-amber-50/80'; stepsDone=3;
-            } else if (r['Check-in'] === 'Y') {
+            } else if (r['Checkin'] === 'Y') {
                 if (end && now > end) {
                     icon='✅'; title='นำเสนอเสร็จสิ้น';
                     subtitle='กรุณารอรับใบประกาศจากเจ้าหน้าที่';
