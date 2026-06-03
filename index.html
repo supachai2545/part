@@ -728,8 +728,9 @@
         // =============================================================
         var RAW_SUPABASE_URL = 'https://jdujdpqihtknelmpqxhy.supabase.co/rest/v1/';
         var SUPABASE_KEY     = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
-        // เลือกเฉพาะ column ที่ใช้จริง → payload น้อยลง ~70%
-        var DASHBOARD_SELECT = 'รหัสผลงาน,ชื่อ,นามสกุล,เวลาการนำเสนอ,หมดการนำเสนอ,จอที่,ด้านของบทคัดย่อ,สาขา,ชื่อผลงาน,Check-in,รับประกาศ,เวลา Check-in,เวลารับประกาศ,QR CODE';
+        // หมายเหตุ: PostgREST ไม่รองรับ column ที่มี space/hyphen ใน select string
+        // จึงต้องใช้ select('*') และ filter client-side เหมือนเดิม
+        var DASHBOARD_SELECT = '*';
 
         // ─── [FIX 1] PIN เป็น SHA-256 Hash แทนตัวอักษรตรงๆ ─────────────────
         // เปลี่ยน PIN ผ่านฟังก์ชัน hashPin() แล้วคัดลอกค่ามาใส่ด้านล่าง
@@ -2204,8 +2205,7 @@
         var notifSent     = {};   // keyed by CODE_checkin / CODE_30 / CODE_15 / CODE_ended / CODE_reward
         var TRACK_LS_KEY  = 'eq_tracking_codes_v2';
         var MAX_TRACK     = 3;
-        // เลือกเฉพาะ columns ที่ใช้จริง → payload เล็ก ดึงเร็วขึ้น
-        var TRACK_SELECT  = 'รหัสผลงาน,ชื่อ,นามสกุล,เวลาการนำเสนอ,หมดการนำเสนอ,จอที่,ด้านของบทคัดย่อ,สาขา,ชื่อผลงาน,Check-in,รับประกาศ,เวลา Check-in,เวลารับประกาศ,QR CODE';
+        var TRACK_SELECT  = '*';
 
         function getTrackedCodes() {
             try { return JSON.parse(localStorage.getItem(TRACK_LS_KEY)) || []; }
