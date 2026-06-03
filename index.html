@@ -805,7 +805,8 @@
         var lastRewardId       = null;
         var isInitialLoad      = true;
         var html5QrCode        = null;
-        var currentScannedItem = null;
+        var currentScannedItem  = null;
+        var currentScannedItems = [];   // สำหรับกรณีคนเดียวมีหลายผลงาน
         var autoDeterminedAction = "ENTRY";
         var isStopping         = false;
 
@@ -1247,12 +1248,14 @@
                     </div>`;
             });
             listContainer.innerHTML = listHtml;
-            // reset scroll position + state when new data arrives
+            // reset scroll + invalidate cache เมื่อ data เปลี่ยน
             if (section === 'checkin') {
+                cachedScrollMax.checkin = -1;
                 cScrollPos = 0; listContainer.scrollTop = 0;
                 scrollState.checkin = 'scrolling';
                 clearTimeout(scrollPauseTimer.checkin);
             } else {
+                cachedScrollMax.reward = -1;
                 rScrollPos = 0; listContainer.scrollTop = 0;
                 scrollState.reward = 'scrolling';
                 clearTimeout(scrollPauseTimer.reward);
@@ -1305,16 +1308,23 @@
         var scrollState      = { checkin: 'scrolling', reward: 'scrolling' };
         var scrollPauseTimer = { checkin: null, reward: null };
 
+        // ── cache scrollMax เพื่อไม่ให้ reflow ทุก frame ──────────────────
+        var cachedScrollMax = { checkin: -1, reward: -1 };
+
         // ── หาจุดหยุดสูงสุด: หยุดก่อน expired card แรก ─────────────────────
-        function getScrollMax(listEl) {
+        function getScrollMax(listEl, sec) {
+            if (cachedScrollMax[sec] >= 0) return cachedScrollMax[sec];
             const expired = listEl.querySelectorAll('.expired-card');
+            let max;
             if (expired.length > 0) {
-                // หยุดที่ top ของ expired card แรก ลบ margin เล็กน้อย
                 const boundary = expired[0].offsetTop - 24;
                 const fullMax  = listEl.scrollHeight - listEl.clientHeight;
-                return Math.max(0, Math.min(boundary, fullMax));
+                max = Math.max(0, Math.min(boundary, fullMax));
+            } else {
+                max = listEl.scrollHeight - listEl.clientHeight;
             }
-            return listEl.scrollHeight - listEl.clientHeight;
+            cachedScrollMax[sec] = max;
+            return max;
         }
 
         // ── Smooth return-to-top ด้วย easing ────────────────────────────────
@@ -1353,7 +1363,7 @@
             const paused   = sec === 'checkin' ? isPausedCheckin   : isPausedReward;
             if (hovering || paused || scrollState[sec] !== 'scrolling') return;
 
-            const maxPos = getScrollMax(listEl);
+            const maxPos = getScrollMax(listEl, sec);
             if (maxPos <= 0) return;
 
             let pos = (sec === 'checkin' ? cScrollPos : rScrollPos) + scrollSpeed;
@@ -1735,20 +1745,41 @@
                     return;
                 }
 
-                currentScannedItem = data;
+                currentScannedItem  = data;
 
                 const fullName = [data['ชื่อ'], data['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
 
                 if (data['Check-in'] !== 'Y') {
                     autoDeterminedAction = "ENTRY";
-                    showScanSuccess(data['รหัสผลงาน'], fullName, "✅ เช็คอินเข้ารายงานตัว");
-                    setTimeout(() => showConfirmModal(
-                        "เช็คอินเข้ารายงานตัว",
-                        "ลงเวลาเพื่อขึ้นแสดงผลหน้าจอหลัก",
-                        "user-check",
-                        "bg-blue-100 text-blue-600",
-                        "bg-blue-600 hover:bg-blue-700"
-                    ), 600);
+
+                    // ── หาผลงานอื่นของคนเดียวกันที่ยังไม่เช็คอิน ──────────────
+                    const siblings = (cachedAllData || []).filter(r =>
+                        r['QR CODE'] !== data['QR CODE'] &&
+                        r['Check-in'] !== 'Y' &&
+                        [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') === fullName
+                    );
+                    currentScannedItems = [data, ...siblings];
+
+                    if (siblings.length > 0) {
+                        const allCodes = currentScannedItems.map(r => r['รหัสผลงาน']).join(', ');
+                        showScanSuccess(allCodes, fullName, `✅ พบ ${currentScannedItems.length} ผลงาน — เช็คอินทั้งหมด`);
+                        setTimeout(() => showConfirmModal(
+                            `เช็คอิน ${currentScannedItems.length} ผลงาน`,
+                            `รหัส: ${allCodes}`,
+                            "user-check",
+                            "bg-blue-100 text-blue-600",
+                            "bg-blue-600 hover:bg-blue-700"
+                        ), 600);
+                    } else {
+                        showScanSuccess(data['รหัสผลงาน'], fullName, "✅ เช็คอินเข้ารายงานตัว");
+                        setTimeout(() => showConfirmModal(
+                            "เช็คอินเข้ารายงานตัว",
+                            "ลงเวลาเพื่อขึ้นแสดงผลหน้าจอหลัก",
+                            "user-check",
+                            "bg-blue-100 text-blue-600",
+                            "bg-blue-600 hover:bg-blue-700"
+                        ), 600);
+                    }
                 } else if (data['รับประกาศ'] !== 'Y') {
                     autoDeterminedAction = "REWARD";
                     showScanSuccess(data['รหัสผลงาน'], fullName, "🏆 รับใบประกาศ");
@@ -1828,24 +1859,25 @@
 
         async function executeDatabaseUpdate() {
             try {
-                const nowISO      = new Date().toISOString();
+                const nowISO = new Date().toISOString();
                 let updatePayload = {};
-
                 if (autoDeterminedAction === "ENTRY") {
                     updatePayload = { "Check-in": "Y", "เวลา Check-in": nowISO };
                 } else if (autoDeterminedAction === "REWARD") {
                     updatePayload = { "รับประกาศ": "Y", "เวลารับประกาศ": nowISO };
                 }
 
-                // ใช้ "QR CODE" (bigint, ASCII) เป็น identifier แทน id
-                // เพราะ schema ไม่มีคอลัมน์ id และ Thai column ใน .eq() ทำให้ PostgREST พัง
-                const { error } = await supabaseClient
-                    .from('eposter_works')
-                    .update(updatePayload)
-                    .eq('QR CODE', currentScannedItem['QR CODE'])
-                    .select();
-
-                if (error) throw error;
+                // update ทุก item (รองรับคนเดียวหลายผลงาน)
+                const items = currentScannedItems.length > 0 ? currentScannedItems : [currentScannedItem];
+                for (const item of items) {
+                    const { error } = await supabaseClient
+                        .from('eposter_works')
+                        .update(updatePayload)
+                        .eq('QR CODE', item['QR CODE'])
+                        .select();
+                    if (error) throw error;
+                }
+                currentScannedItems = [];
 
                 closeConfirmModal(false);
                 document.getElementById('successModal').classList.remove('hidden');
