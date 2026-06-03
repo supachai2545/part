@@ -674,85 +674,72 @@
         </div>
     </div>
 
-    <!-- ================= STATS DASHBOARD MODAL ================= -->
-    <div id="statsModal" class="hidden fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 backdrop-blur-sm p-0">
-        <div id="statsCard" class="stats-modal-enter bg-white w-full max-w-2xl rounded-t-[2rem] shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <!-- ================= STATS FULL PAGE ================= -->
+    <div id="statsPage" class="hidden fixed inset-0 z-[200] flex flex-col font-['Sarabun']"
+         style="background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)">
 
-            <!-- Header -->
-            <div class="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800">สรุปภาพรวม</h3>
-                        <p class="text-[10px] text-slate-400 font-medium">ข้อมูล ณ ขณะนี้</p>
-                    </div>
-                </div>
-                <button onclick="closeStatsDashboard()"
-                        class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all active:scale-90">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
+        <!-- Header -->
+        <header class="bg-white/90 backdrop-blur-md border-b border-slate-100 py-3 px-4 flex items-center gap-3 shrink-0 sticky top-0 z-10 shadow-sm">
+            <button onclick="closeStatsDashboard()"
+                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all active:scale-90 shrink-0">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <div class="flex-1 min-w-0">
+                <h1 class="text-base font-extrabold text-slate-800 leading-tight">สรุปภาพรวม</h1>
+                <p class="text-[10px] text-slate-400 font-medium">ข้อมูล ณ ขณะนี้</p>
             </div>
+            <button onclick="exportStatsCSV()"
+                    class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all shrink-0">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                Export CSV
+            </button>
+        </header>
 
-            <!-- Tab bar -->
-            <div class="flex shrink-0 px-6 border-b border-slate-100 gap-1">
-                <button id="statsTabBtn_overview" onclick="switchStatsTab('overview')"
-                        class="flex-1 py-2.5 text-sm font-bold text-indigo-600 border-b-2 border-indigo-500 transition-all">
-                    ภาพรวม
-                </button>
-                <button id="statsTabBtn_followup" onclick="switchStatsTab('followup')"
-                        class="flex-1 py-2.5 text-sm font-semibold text-slate-400 border-b-2 border-transparent transition-all flex items-center justify-center gap-1.5">
-                    ติดตามยังไม่เช็คอิน
-                    <span id="statsFollowupBadge" class="text-[10px] bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5 font-bold hidden"></span>
-                </button>
+        <!-- Tab bar -->
+        <div class="flex shrink-0 bg-white border-b border-slate-100">
+            <button id="statsTabBtn_overview" onclick="switchStatsTab('overview')"
+                    class="flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-500 transition-all">
+                ภาพรวม
+            </button>
+            <button id="statsTabBtn_followup" onclick="switchStatsTab('followup')"
+                    class="flex-1 py-3 text-sm font-semibold text-slate-400 border-b-2 border-transparent transition-all flex items-center justify-center gap-1.5">
+                ติดตามยังไม่เช็คอิน
+                <span id="statsFollowupBadge" class="text-[10px] bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5 font-bold hidden"></span>
+            </button>
+        </div>
+
+        <!-- ── Tab 1: ภาพรวม ── -->
+        <div id="statsTab_overview" class="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+            <div class="grid grid-cols-3 gap-3" id="statsTopGrid"></div>
+            <div id="statsLiveSection"></div>
+            <div>
+                <h4 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    แยกตามสาขา
+                </h4>
+                <div id="statsBranchList" class="space-y-3"></div>
             </div>
+            <div id="statsAlertSection" class="space-y-5 pb-6"></div>
+        </div>
 
-            <!-- ── Tab 1: ภาพรวม ── -->
-            <div id="statsTab_overview" class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-                <div class="grid grid-cols-3 gap-3" id="statsTopGrid"></div>
-                <div id="statsLiveSection"></div>
+        <!-- ── Tab 2: ติดตามยังไม่เช็คอิน ── -->
+        <div id="statsTab_followup" class="hidden flex-1 overflow-hidden flex flex-col">
+            <!-- Search + filters -->
+            <div class="px-4 pt-4 pb-3 space-y-3 border-b border-slate-100 shrink-0 bg-white/80 backdrop-blur-md">
+                <input id="followupSearch" type="search" placeholder="ค้นหารหัสผลงาน หรือชื่อ-นามสกุล..."
+                       oninput="renderFollowUpList()"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                 <div>
-                    <h4 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
-                        <i data-lucide="layers" class="w-4 h-4"></i>
-                        แยกตามสาขา
-                    </h4>
-                    <div id="statsBranchList" class="space-y-3"></div>
+                    <p class="text-[11px] font-semibold text-slate-400 mb-1.5">สาขา</p>
+                    <div id="followupBranchFilters" class="flex flex-wrap gap-2"></div>
                 </div>
-                <div id="statsAlertSection" class="space-y-5"></div>
-            </div>
-
-            <!-- ── Tab 2: ติดตามยังไม่เช็คอิน ── -->
-            <div id="statsTab_followup" class="hidden flex-1 overflow-hidden flex flex-col">
-                <!-- Search + filters (fixed) -->
-                <div class="px-5 pt-4 pb-3 space-y-3 border-b border-slate-100 shrink-0 bg-white">
-                    <input id="followupSearch" type="search" placeholder="ค้นหารหัสผลงาน หรือชื่อ-นามสกุล..."
-                           oninput="renderFollowUpList()"
-                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50">
-                    <div>
-                        <p class="text-[11px] font-semibold text-slate-400 mb-1.5">สาขา</p>
-                        <div id="followupBranchFilters" class="flex flex-wrap gap-2"></div>
-                    </div>
-                    <div>
-                        <p class="text-[11px] font-semibold text-slate-400 mb-1.5">ด้านของบทคัดย่อ</p>
-                        <div id="followupSideFilters" class="flex flex-wrap gap-2"></div>
-                    </div>
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-400 mb-1.5">ด้านของบทคัดย่อ</p>
+                    <div id="followupSideFilters" class="flex flex-wrap gap-2"></div>
                 </div>
-                <!-- Scrollable list -->
-                <div id="followupList" class="flex-1 overflow-y-auto px-5 py-4 space-y-3"></div>
             </div>
-
-            <!-- Footer -->
-            <div class="shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
-                <button onclick="exportStatsCSV()"
-                        class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <i data-lucide="download" class="w-4 h-4"></i> Export CSV
-                </button>
-                <button onclick="closeStatsDashboard()"
-                        class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95">
-                    ปิด
-                </button>
-            </div>
+            <!-- Scrollable list -->
+            <div id="followupList" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-6"></div>
         </div>
     </div>
 
@@ -2230,11 +2217,11 @@
 
             lucide.createIcons();
             switchStatsTab('overview');
-            document.getElementById('statsModal').classList.remove('hidden');
+            document.getElementById('statsPage').classList.remove('hidden');
         }
 
         function closeStatsDashboard() {
-            document.getElementById('statsModal').classList.add('hidden');
+            document.getElementById('statsPage').classList.add('hidden');
         }
 
         // ─── Stats tab / followup state ───────────────────────────────────
@@ -2246,10 +2233,10 @@
             const isOverview = tab === 'overview';
             document.getElementById('statsTab_overview').classList.toggle('hidden', !isOverview);
             document.getElementById('statsTab_followup').classList.toggle('hidden', isOverview);
-            const activeClass   = 'flex-1 py-2.5 text-sm font-bold text-indigo-600 border-b-2 border-indigo-500 transition-all';
-            const inactiveClass = 'flex-1 py-2.5 text-sm font-semibold text-slate-400 border-b-2 border-transparent transition-all flex items-center justify-center gap-1.5';
-            document.getElementById('statsTabBtn_overview').className = isOverview ? activeClass : inactiveClass;
-            document.getElementById('statsTabBtn_followup').className = isOverview ? inactiveClass : activeClass + ' flex items-center justify-center gap-1.5';
+            const activeBase   = 'flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-500 transition-all';
+            const inactiveBase = 'flex-1 py-3 text-sm font-semibold text-slate-400 border-b-2 border-transparent transition-all flex items-center justify-center gap-1.5';
+            document.getElementById('statsTabBtn_overview').className = isOverview ? activeBase : inactiveBase;
+            document.getElementById('statsTabBtn_followup').className = isOverview ? inactiveBase : activeBase + ' flex items-center justify-center gap-1.5';
         }
 
         function buildFollowupFilters() {
