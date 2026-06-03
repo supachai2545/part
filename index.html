@@ -2251,8 +2251,11 @@
         }
 
         function buildFollowupFilters() {
-            // Populate branch <select>
-            const branches = [...new Set(statsFollowupRawData.map(r => getBranchFromCode(r['รหัสผลงาน'])))];
+            // ใช้ข้อมูลทั้งหมด (cachedAllData) เพื่อให้ option ครบ ไม่ขึ้นกับ 60-min window
+            const allRows = cachedAllData || [];
+
+            // สาขา — ดึงจากรหัสผลงานทั้งหมด
+            const branches = [...new Set(allRows.map(r => getBranchFromCode(r['รหัสผลงาน'])))];
             branches.sort((a, b) => {
                 const ia = BRANCH_ORDER.indexOf(a), ib = BRANCH_ORDER.indexOf(b);
                 return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
@@ -2260,17 +2263,17 @@
             const branchSel = document.getElementById('followupBranchSelect');
             if (branchSel) {
                 const prev = branchSel.value;
-                branchSel.innerHTML = `<option value="">ทั้งหมด</option>` +
+                branchSel.innerHTML = `<option value="">ทุกสาขา</option>` +
                     branches.map(b => `<option value="${b}">${b}</option>`).join('');
                 if (branches.includes(prev)) branchSel.value = prev;
             }
 
-            // Populate side <select>
-            const sides = [...new Set(statsFollowupRawData.map(r => r['ด้านของบทคัดย่อ']).filter(Boolean))].sort();
+            // ด้านของบทคัดย่อ — ดึงจากข้อมูลทั้งหมด
+            const sides = [...new Set(allRows.map(r => r['ด้านของบทคัดย่อ']).filter(Boolean))].sort();
             const sideSel = document.getElementById('followupSideSelect');
             if (sideSel) {
                 const prev = sideSel.value;
-                sideSel.innerHTML = `<option value="">ทั้งหมด</option>` +
+                sideSel.innerHTML = `<option value="">ทุกด้าน</option>` +
                     sides.map(s => `<option value="${s}">${s}</option>`).join('');
                 if (sides.includes(prev)) sideSel.value = prev;
             }
