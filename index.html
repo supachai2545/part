@@ -2048,10 +2048,13 @@
         // =============================================================
         // 📱 TRACKING PAGE — มือถือสแกน QR แล้วติดตามสถานะ (สูงสุด 3 ผลงาน)
         // =============================================================
-        var trackingTimer = null;
+        var trackingTimer         = null;
+        var trackRealtimeChannel  = null;
         var notifSent     = {};   // keyed by CODE_checkin / CODE_30 / CODE_15 / CODE_ended / CODE_reward
         var TRACK_LS_KEY  = 'eq_tracking_codes_v2';
         var MAX_TRACK     = 3;
+        // เลือกเฉพาะ columns ที่ใช้จริง → payload เล็ก ดึงเร็วขึ้น
+        var TRACK_SELECT  = 'รหัสผลงาน,ชื่อ,นามสกุล,เวลาการนำเสนอ,หมดการนำเสนอ,จอที่,ด้านของบทคัดย่อ,สาขา,ชื่อผลงาน,Check-in,รับประกาศ,เวลา Check-in,เวลารับประกาศ,QR CODE';
 
         function getTrackedCodes() {
             try { return JSON.parse(localStorage.getItem(TRACK_LS_KEY)) || []; }
@@ -2136,7 +2139,7 @@
         }
 
         async function fetchTrackRow(code) {
-            const { data: rows } = await supabaseClient.from('eposter_works').select('*');
+            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
             if (!rows) return null;
             return rows.find(r =>
                 String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase() ||
@@ -2145,7 +2148,7 @@
         }
 
         async function fetchAllTrackedRows() {
-            const { data: rows } = await supabaseClient.from('eposter_works').select('*');
+            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
             if (!rows) return [];
             const codes = getTrackedCodes();
             return codes.map(code =>
@@ -2167,15 +2170,26 @@
             startTrackingPolling();
         }
 
+        async function refreshTrackingCards() {
+            const results = await fetchAllTrackedRows();
+            if (results.length > 0) {
+                renderAllTrackingCards(results);
+                results.forEach(r => checkAndNotify(r));
+            }
+        }
+
         function startTrackingPolling() {
+            // ── Realtime: อัปเดตทันทีเมื่อ DB เปลี่ยน ──────────────
+            if (trackRealtimeChannel) supabaseClient.removeChannel(trackRealtimeChannel);
+            trackRealtimeChannel = supabaseClient
+                .channel('track_live_' + Date.now())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'eposter_works' },
+                    () => refreshTrackingCards())
+                .subscribe();
+
+            // ── Polling 5s เป็น fallback กรณี Realtime ไม่ทำงาน ────
             clearInterval(trackingTimer);
-            trackingTimer = setInterval(async () => {
-                const results = await fetchAllTrackedRows();
-                if (results.length > 0) {
-                    renderAllTrackingCards(results);
-                    results.forEach(r => checkAndNotify(r));
-                }
-            }, 10000);
+            trackingTimer = setInterval(refreshTrackingCards, 5000);
         }
 
         function checkAndNotify(r) {
