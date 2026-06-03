@@ -529,51 +529,70 @@
     </div>
 
     <!-- ================= TRACKING PAGE (mobile — ?track=1) ================= -->
-    <div id="trackingPage" class="hidden fixed inset-0 z-[200] flex flex-col overflow-y-auto">
+    <div id="trackingPage" class="hidden fixed inset-0 z-[200] flex flex-col overflow-y-auto font-['Sarabun']"
+         style="background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)">
 
-        <!-- Header -->
-        <div class="shrink-0 px-5 pt-10 pb-5 flex items-center gap-3"
-             style="background: linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)">
-            <div class="flex-1">
-                <p class="text-indigo-200 text-[11px] font-semibold tracking-widest uppercase mb-0.5">Smart E-Queue</p>
-                <h1 class="text-white text-xl font-extrabold">ติดตามผลงานของคุณ</h1>
-            </div>
-            <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                <i data-lucide="search" class="w-5 h-5 text-white"></i>
-            </div>
-        </div>
-
-        <!-- Search box -->
-        <div id="trackSearchBox" class="px-5 py-6">
-            <div class="bg-white rounded-[1.5rem] p-5 shadow-lg border border-slate-100">
-                <p class="text-sm font-semibold text-slate-600 mb-1">กรอกรหัสผลงานของคุณ</p>
-                <p class="text-xs text-slate-400 mb-4">เช่น P1-1, P2-5, RP1-3</p>
-                <div class="flex gap-2">
-                    <input id="trackCodeInput" type="text"
-                           class="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold
-                                  uppercase tracking-wider text-slate-700 focus:outline-none
-                                  focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100
-                                  placeholder:text-slate-300 placeholder:normal-case placeholder:font-normal"
-                           placeholder="รหัสผลงาน" maxlength="10" autocomplete="off">
-                    <button onclick="doTrackSearch()"
-                            class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold
-                                   active:scale-95 transition-all shrink-0 shadow-md">
-                        ค้นหา
-                    </button>
+        <!-- Header (เหมือนหน้าหลัก) -->
+        <header class="bg-white/85 backdrop-blur-md border-b border-white/50 py-3 px-4 flex justify-between items-center shrink-0 sticky top-0 z-10 shadow-sm">
+            <div class="flex items-center gap-3">
+                <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png" class="h-9 w-auto object-contain">
+                <div>
+                    <h1 class="text-base font-extrabold text-slate-800 leading-tight">Smart E-Queue</h1>
+                    <p class="text-[10px] text-slate-400 font-medium">ติดตามผลงานของคุณ</p>
                 </div>
-                <p id="trackError" class="text-rose-500 text-xs font-semibold mt-2 hidden">ไม่พบรหัสนี้ กรุณาตรวจสอบอีกครั้ง</p>
+            </div>
+            <button onclick="showTrackCodePopup()"
+                    class="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-100 active:scale-95 transition-all">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                เปลี่ยนรหัส
+            </button>
+        </header>
+
+        <!-- Status card area -->
+        <div class="flex-1 p-4">
+            <div id="trackResult" class="hidden"><!-- injected --></div>
+            <div id="trackEmpty" class="h-60 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <i data-lucide="search" class="w-12 h-12 opacity-30"></i>
+                <p class="text-sm font-medium">กำลังโหลด...</p>
             </div>
         </div>
 
-        <!-- Result card -->
-        <div id="trackResult" class="hidden px-5 pb-8">
-            <!-- injected by JS -->
+        <div class="pb-8 text-center px-4">
+            <p class="text-[11px] text-slate-400">อัปเดตอัตโนมัติทุก 10 วินาที</p>
+            <p class="text-[10px] text-slate-300 mt-0.5">งานประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
         </div>
+    </div>
 
-        <!-- Footer note -->
-        <div class="mt-auto px-5 pb-8 text-center">
-            <p class="text-xs text-slate-400">ข้อมูลอัปเดตอัตโนมัติทุก 10 วินาที</p>
-            <p class="text-[11px] text-slate-300 mt-1">งานประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
+    <!-- ================= TRACKING CODE POPUP ================= -->
+    <div id="trackCodeModal" class="hidden fixed inset-0 z-[250] flex items-end justify-center bg-slate-900/50 backdrop-blur-sm p-0">
+        <div class="bg-white w-full max-w-md rounded-t-[2rem] p-6 shadow-2xl animate-[slideInUp_0.35s_cubic-bezier(0.16,1,0.3,1)]">
+            <div class="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5"></div>
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">ระบุผลงานของคุณ</h3>
+                    <p class="text-xs text-slate-400">กรอกรหัสผลงาน เช่น P1-1, RP2-3</p>
+                </div>
+            </div>
+            <input id="trackCodeInput" type="text"
+                   class="w-full border-2 border-slate-200 rounded-2xl px-5 py-4 text-xl font-extrabold
+                          uppercase tracking-widest text-center text-slate-700 focus:outline-none
+                          focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all
+                          placeholder:text-slate-300 placeholder:normal-case placeholder:text-base placeholder:font-normal placeholder:tracking-normal"
+                   placeholder="รหัสผลงาน" maxlength="10" autocomplete="off" inputmode="text">
+            <p id="trackError" class="text-rose-500 text-xs font-semibold text-center mt-2 hidden">ไม่พบรหัสนี้ กรุณาตรวจสอบอีกครั้ง</p>
+            <div class="flex gap-3 mt-5">
+                <button onclick="closeTrackCodePopup()"
+                        class="flex-1 py-3.5 bg-slate-100 text-slate-600 font-semibold rounded-xl active:scale-95 transition-all">
+                    ยกเลิก
+                </button>
+                <button onclick="doTrackSearch()"
+                        class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md active:scale-95 transition-all">
+                    ติดตาม
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1963,39 +1982,58 @@
         // =============================================================
         // 📱 TRACKING PAGE — มือถือสแกน QR แล้วติดตามสถานะ
         // =============================================================
-        var trackingCode    = null;
-        var trackingTimer   = null;
+        var trackingCode  = null;
+        var trackingTimer = null;
+        var notifSent     = {};   // กัน spam แจ้งเตือน { '30min': bool, '15min': bool }
+        var TRACK_LS_KEY  = 'eq_tracking_code';
 
         function initTrackingPage() {
             // สร้าง QR ที่มุมจอ → ชี้ไปหน้า tracking
             const trackUrl = window.location.href.split('?')[0] + '?track=1';
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(trackUrl)}&bgcolor=ffffff&color=1e293b&margin=4`;
-            const qrImg = document.getElementById('mobileQrCode');
-            if (qrImg) qrImg.src = qrApiUrl;
+            const qrImg    = document.getElementById('mobileQrCode');
+            if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(trackUrl)}&bgcolor=ffffff&color=1e293b&margin=4`;
 
-            // ตรวจว่าเป็น tracking mode หรือเปล่า
-            if (new URLSearchParams(window.location.search).get('track') === '1') {
-                // ซ่อนหน้าหลักทั้งหมด
-                document.querySelector('header').classList.add('hidden');
-                document.querySelector('main').classList.add('hidden');
-                const qrWidget = document.querySelector('.fixed.bottom-6.left-6');
-                if (qrWidget) qrWidget.classList.add('hidden');
+            if (new URLSearchParams(window.location.search).get('track') !== '1') return;
 
-                // แสดง tracking page
-                document.getElementById('trackingPage').classList.remove('hidden');
-                lucide.createIcons();
+            // ── ซ่อนหน้าหลัก แสดงหน้า tracking ──
+            document.querySelector('body > header')?.classList.add('hidden');
+            document.querySelector('main')?.classList.add('hidden');
+            document.querySelector('.fixed.bottom-6.left-6')?.classList.add('hidden');
+            const tp = document.getElementById('trackingPage');
+            tp.classList.remove('hidden');
+            lucide.createIcons();
 
-                // Focus input
-                setTimeout(() => {
-                    const inp = document.getElementById('trackCodeInput');
-                    if (inp) inp.focus();
-                }, 400);
-
-                // Enter key
-                document.getElementById('trackCodeInput').addEventListener('keypress', e => {
-                    if (e.key === 'Enter') doTrackSearch();
-                });
+            // ── ขอสิทธิ์ notification ──
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
             }
+
+            // ── โหลด code ที่จำไว้จาก localStorage ──
+            const saved = localStorage.getItem(TRACK_LS_KEY);
+            if (saved) {
+                trackingCode = saved;
+                loadTrackingData(saved);
+            } else {
+                showTrackCodePopup();
+            }
+
+            // Enter key
+            document.getElementById('trackCodeInput').addEventListener('keypress', e => {
+                if (e.key === 'Enter') doTrackSearch();
+            });
+        }
+
+        function showTrackCodePopup() {
+            document.getElementById('trackError').classList.add('hidden');
+            const saved = localStorage.getItem(TRACK_LS_KEY);
+            if (saved) document.getElementById('trackCodeInput').value = saved;
+            document.getElementById('trackCodeModal').classList.remove('hidden');
+            lucide.createIcons();
+            setTimeout(() => document.getElementById('trackCodeInput').focus(), 300);
+        }
+
+        function closeTrackCodePopup() {
+            document.getElementById('trackCodeModal').classList.add('hidden');
         }
 
         async function doTrackSearch() {
@@ -2004,166 +2042,223 @@
             if (!code) return;
 
             document.getElementById('trackError').classList.add('hidden');
-            document.getElementById('trackResult').classList.add('hidden');
+            inp.disabled = true;
 
-            // fetch ข้อมูล
-            const { data: rows } = await supabaseClient.from('eposter_works').select('*');
-            if (!rows || rows.length === 0) {
-                document.getElementById('trackError').classList.remove('hidden');
-                return;
-            }
-
-            const found = rows.find(r =>
-                String(r['รหัสผลงาน'] || '').toUpperCase() === code ||
-                (!isNaN(Number(code)) && Number(r['QR CODE']) === Number(code))
-            );
+            const found = await fetchTrackRow(code);
+            inp.disabled = false;
 
             if (!found) {
                 document.getElementById('trackError').classList.remove('hidden');
                 return;
             }
 
+            // จำรหัสใน localStorage
+            localStorage.setItem(TRACK_LS_KEY, found['รหัสผลงาน'] || code);
             trackingCode = found['รหัสผลงาน'] || code;
-            renderTrackingResult(found);
+            notifSent    = {};
 
-            // polling ทุก 10 วินาที
+            closeTrackCodePopup();
+            renderTrackingResult(found);
+            startTrackingPolling();
+        }
+
+        async function fetchTrackRow(code) {
+            const { data: rows } = await supabaseClient.from('eposter_works').select('*');
+            if (!rows) return null;
+            return rows.find(r =>
+                String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase() ||
+                (!isNaN(Number(code)) && Number(r['QR CODE']) === Number(code))
+            ) || null;
+        }
+
+        async function loadTrackingData(code) {
+            document.getElementById('trackEmpty').innerHTML =
+                '<div class="text-sm text-slate-400 animate-pulse">กำลังโหลดข้อมูล...</div>';
+            const found = await fetchTrackRow(code);
+            if (!found) {
+                // code หายไป ล้าง localStorage แล้วให้กรอกใหม่
+                localStorage.removeItem(TRACK_LS_KEY);
+                showTrackCodePopup();
+                return;
+            }
+            renderTrackingResult(found);
+            startTrackingPolling();
+        }
+
+        function startTrackingPolling() {
             clearInterval(trackingTimer);
             trackingTimer = setInterval(async () => {
-                const { data: fresh } = await supabaseClient.from('eposter_works').select('*');
-                if (!fresh) return;
-                const updated = fresh.find(r =>
-                    String(r['รหัสผลงาน'] || '').toUpperCase() === trackingCode.toUpperCase()
-                );
-                if (updated) renderTrackingResult(updated);
+                if (!trackingCode) return;
+                const updated = await fetchTrackRow(trackingCode);
+                if (updated) {
+                    renderTrackingResult(updated);
+                    checkAndNotify(updated);
+                }
             }, 10000);
         }
 
-        function renderTrackingResult(r) {
-            const name      = [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
-            const startStr  = r['เวลาการนำเสนอ'] || '';
-            const endStr    = r['หมดการนำเสนอ']   || '';
-            const now       = getSyncedTime();
-            const start     = parseTime(startStr);
-            const end       = parseTime(endStr);
+        function checkAndNotify(r) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            const now   = getSyncedTime();
+            const start = parseTime(r['เวลาการนำเสนอ'] || '');
+            if (!start || r['Check-in'] === 'Y') return;
+            const diffMin = Math.round((start - now) / 60000);
 
-            // ─── คำนวณสถานะ ────────────────────────────────────────
-            let statusIcon, statusText, statusBg, statusClass = '', timeText = '';
+            if (diffMin <= 15 && diffMin > 0 && !notifSent['15min']) {
+                notifSent['15min'] = true;
+                new Notification('🔴 ใกล้เวลานำเสนอมากแล้ว!', {
+                    body: `${r['รหัสผลงาน']} — อีก ${diffMin} นาที กรุณารีบมาเช็คอิน`,
+                    icon: 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png'
+                });
+            } else if (diffMin <= 30 && diffMin > 15 && !notifSent['30min']) {
+                notifSent['30min'] = true;
+                new Notification('⏰ เตรียมตัวนำเสนอได้เลย', {
+                    body: `${r['รหัสผลงาน']} — อีก ${diffMin} นาที ถึงเวลานำเสนอ`,
+                    icon: 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png'
+                });
+            }
+        }
+
+        function renderTrackingResult(r) {
+            const name     = [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+            const startStr = r['เวลาการนำเสนอ'] || '';
+            const endStr   = r['หมดการนำเสนอ']   || '';
+            const now      = getSyncedTime();
+            const start    = parseTime(startStr);
+            const end      = parseTime(endStr);
+
+            let icon, title, subtitle = '', cardCls = '', stepsDone = 0;
 
             if (r['รับประกาศ'] === 'Y') {
-                statusIcon = '🏆'; statusText = 'รับใบประกาศเรียบร้อยแล้ว';
-                statusBg = 'bg-amber-50 border-amber-200';
+                icon = '🏆'; title = 'รับใบประกาศเรียบร้อยแล้ว';
+                cardCls = 'border-amber-300 bg-amber-50'; stepsDone = 3;
             } else if (r['Check-in'] === 'Y') {
                 if (end && now > end) {
-                    statusIcon = '✅'; statusText = 'นำเสนอเสร็จสิ้น — รอรับใบประกาศ';
-                    statusBg = 'bg-emerald-50 border-emerald-200';
+                    icon = '✅'; title = 'นำเสนอเสร็จสิ้น';
+                    subtitle = 'กรุณารอรับใบประกาศจากเจ้าหน้าที่';
+                    cardCls = 'border-emerald-300 bg-emerald-50'; stepsDone = 2;
                 } else if (start && end && now >= start && now < end) {
-                    statusIcon = '🔴'; statusText = 'กำลังนำเสนออยู่';
-                    statusBg = 'bg-rose-50 border-rose-200'; statusClass = 'status-card-live';
+                    icon = '🔴'; title = 'กำลังนำเสนออยู่!';
                     const left = Math.round((end - now) / 60000);
-                    timeText = `เหลือเวลาอีก ${left} นาที`;
+                    subtitle = `เหลือเวลาอีก ${left} นาที`;
+                    cardCls = 'border-rose-300 bg-rose-50 status-card-live'; stepsDone = 2;
                 } else {
-                    statusIcon = '✅'; statusText = 'เช็คอินเรียบร้อยแล้ว — รอนำเสนอ';
-                    statusBg = 'bg-blue-50 border-blue-200';
-                    if (start && now < start) {
-                        const diff = Math.round((start - now) / 60000);
-                        timeText = diff > 0 ? `เริ่มใน ${diff} นาที` : 'เริ่มในอีกไม่กี่วินาที';
-                    }
+                    icon = '✅'; title = 'เช็คอินเรียบร้อยแล้ว';
+                    subtitle = start && now < start
+                        ? `เริ่มนำเสนอใน ${Math.max(1, Math.round((start - now)/60000))} นาที`
+                        : 'รอถึงเวลานำเสนอ';
+                    cardCls = 'border-blue-300 bg-blue-50'; stepsDone = 1;
                 }
             } else {
-                // ยังไม่เช็คอิน
-                if (start && now < start) {
+                if (start) {
                     const diff = Math.round((start - now) / 60000);
-                    if (diff <= 15) {
-                        statusIcon = '🔴'; statusText = 'ยังไม่เช็คอิน — ใกล้เวลานำเสนอมากแล้ว!';
-                        statusBg = 'bg-rose-50 border-rose-200';
-                    } else if (diff <= 30) {
-                        statusIcon = '🟠'; statusText = 'ยังไม่เช็คอิน — กรุณามาเช็คอิน';
-                        statusBg = 'bg-orange-50 border-orange-200';
+                    if (diff <= 15 && diff >= 0) {
+                        icon = '🔴'; title = 'ยังไม่เช็คอิน!';
+                        subtitle = `อีก ${diff} นาที ถึงเวลา — รีบมาด่วน!`;
+                        cardCls = 'border-rose-400 bg-rose-50';
+                    } else if (diff <= 30 && diff > 15) {
+                        icon = '🟠'; title = 'กรุณามาเช็คอิน';
+                        subtitle = `อีก ${diff} นาที ถึงเวลานำเสนอ`;
+                        cardCls = 'border-orange-300 bg-orange-50';
                     } else {
-                        statusIcon = '⏳'; statusText = 'รอเช็คอินเข้างาน';
-                        statusBg = 'bg-slate-50 border-slate-200';
+                        icon = '⏳'; title = 'รอเช็คอินเข้างาน';
+                        subtitle = diff > 0 ? `เริ่มนำเสนอใน ${diff} นาที` : '';
+                        cardCls = 'border-slate-200 bg-white';
                     }
-                    timeText = `เริ่มนำเสนอใน ${Math.round((start-now)/60000)} นาที`;
                 } else {
-                    statusIcon = '⏳'; statusText = 'รอเช็คอินเข้างาน';
-                    statusBg = 'bg-slate-50 border-slate-200';
+                    icon = '⏳'; title = 'รอเช็คอินเข้างาน';
+                    cardCls = 'border-slate-200 bg-white';
                 }
             }
 
+            // Step progress
+            const steps = [
+                { label: 'เช็คอิน', done: stepsDone >= 1 },
+                { label: 'นำเสนอ', done: stepsDone >= 2 },
+                { label: 'รับประกาศ', done: stepsDone >= 3 },
+            ];
+            const stepHtml = steps.map((s, i) => `
+                <div class="flex flex-col items-center gap-1 flex-1">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                                ${s.done ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}">
+                        ${s.done ? '✓' : i+1}
+                    </div>
+                    <span class="text-[10px] font-semibold ${s.done ? 'text-indigo-600' : 'text-slate-400'}">${s.label}</span>
+                </div>
+                ${i < 2 ? `<div class="flex-1 h-0.5 mt-4 ${stepsDone > i ? 'bg-indigo-400' : 'bg-slate-200'}"></div>` : ''}
+            `).join('');
+
+            document.getElementById('trackEmpty').classList.add('hidden');
             document.getElementById('trackResult').innerHTML = `
-                <div class="bg-white rounded-[1.5rem] shadow-lg border border-slate-100 overflow-hidden">
-                    <!-- ชื่อ + รหัส -->
-                    <div class="bg-indigo-600 px-5 py-4">
-                        <span class="text-indigo-200 text-[11px] font-bold tracking-widest">${r['รหัสผลงาน'] || '-'}</span>
-                        <h2 class="text-white text-lg font-extrabold leading-snug mt-0.5">${name}</h2>
+                <!-- Hero card (เหมือน dashboard หลัก) -->
+                <div class="highlight-card rounded-[1.5rem] p-5 mb-4 border-2 ${cardCls} transition-all">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-slate-800 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider">
+                            ${r['รหัสผลงาน'] || '-'}
+                        </span>
+                        <span class="text-3xl">${icon}</span>
                     </div>
+                    <h2 class="text-xl font-extrabold text-slate-800 leading-snug mb-1">${name}</h2>
+                    <p class="text-sm font-bold text-indigo-700 mb-0.5">
+                        จอที่ ${r['จอที่'] || '-'} · ${startStr || '-'}${endStr ? '–'+endStr : ''} น.
+                    </p>
+                    <p class="text-xs text-slate-500 line-clamp-2 mb-4">${r['ชื่อผลงาน'] || ''}</p>
 
-                    <!-- ข้อมูลการนำเสนอ -->
-                    <div class="px-5 py-4 space-y-2 border-b border-slate-100">
-                        <div class="flex items-center gap-2 text-sm">
-                            <i data-lucide="monitor" class="w-4 h-4 text-indigo-400 shrink-0"></i>
-                            <span class="text-slate-600">จอที่ <span class="font-bold text-slate-800">${r['จอที่'] || '-'}</span></span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm">
-                            <i data-lucide="clock" class="w-4 h-4 text-indigo-400 shrink-0"></i>
-                            <span class="text-slate-600">เวลา <span class="font-bold text-slate-800">${startStr || '-'}${endStr ? ' – ' + endStr : ''} น.</span></span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm">
-                            <i data-lucide="tag" class="w-4 h-4 text-indigo-400 shrink-0"></i>
-                            <span class="text-slate-600 line-clamp-1">${r['สาขา'] || '-'}</span>
-                        </div>
-                    </div>
-
-                    <!-- สถานะ -->
-                    <div class="${statusBg} ${statusClass} border-t px-5 py-4">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">${statusIcon}</span>
-                            <div>
-                                <p class="font-bold text-slate-800 text-sm">${statusText}</p>
-                                ${timeText ? `<p class="text-xs font-semibold text-indigo-600 mt-0.5">${timeText}</p>` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ชื่อผลงาน -->
-                    <div class="px-5 py-3 bg-slate-50 rounded-b-[1.5rem]">
-                        <p class="text-[11px] text-slate-400 mb-0.5">ชื่อผลงาน</p>
-                        <p class="text-xs font-semibold text-slate-600 leading-relaxed">${r['ชื่อผลงาน'] || '-'}</p>
+                    <!-- Status badge -->
+                    <div class="bg-white/80 rounded-xl px-4 py-3 border border-white/90">
+                        <p class="font-bold text-slate-800 text-sm">${title}</p>
+                        ${subtitle ? `<p class="text-xs text-indigo-600 font-semibold mt-0.5">${subtitle}</p>` : ''}
                     </div>
                 </div>
 
-                <!-- ค้นหาใหม่ -->
-                <button onclick="resetTrackSearch()"
-                        class="w-full mt-4 py-3 bg-white border border-slate-200 text-slate-600 font-semibold
-                               rounded-xl text-sm active:scale-95 transition-all shadow-sm">
-                    ค้นหารหัสอื่น
-                </button>`;
+                <!-- Step progress -->
+                <div class="glass-panel rounded-2xl p-4 mb-4">
+                    <p class="text-xs font-bold text-slate-500 mb-3">ความคืบหน้า</p>
+                    <div class="flex items-center">${stepHtml}</div>
+                </div>
 
+                <!-- แจ้งเตือน / เปลี่ยนรหัส -->
+                <div class="flex gap-2">
+                    <button onclick="requestTrackNotif()"
+                            class="flex-1 flex items-center justify-center gap-2 py-3 bg-white border border-slate-200
+                                   text-slate-600 font-semibold rounded-xl text-sm active:scale-95 transition-all shadow-sm">
+                        <i data-lucide="bell" class="w-4 h-4"></i>
+                        แจ้งเตือน
+                    </button>
+                    <button onclick="showTrackCodePopup()"
+                            class="flex-1 flex items-center justify-center gap-2 py-3 bg-white border border-slate-200
+                                   text-slate-600 font-semibold rounded-xl text-sm active:scale-95 transition-all shadow-sm">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        เปลี่ยนรหัส
+                    </button>
+                </div>`;
             document.getElementById('trackResult').classList.remove('hidden');
             lucide.createIcons();
-
-            // เลื่อนลงมาดู result
-            document.getElementById('trackResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function resetTrackSearch() {
-            clearInterval(trackingTimer);
-            trackingCode = null;
-            document.getElementById('trackResult').classList.add('hidden');
-            document.getElementById('trackCodeInput').value = '';
-            document.getElementById('trackError').classList.add('hidden');
-            document.getElementById('trackCodeInput').focus();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        function requestTrackNotif() {
+            if (!('Notification' in window)) {
+                alert('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+                return;
+            }
+            Notification.requestPermission().then(p => {
+                if (p === 'granted') {
+                    new Notification('✅ เปิดการแจ้งเตือนสำเร็จ', {
+                        body: 'คุณจะได้รับแจ้งเตือนเมื่อใกล้เวลานำเสนอ',
+                        icon: 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png'
+                    });
+                } else {
+                    alert('กรุณาอนุญาตการแจ้งเตือนในการตั้งค่าเบราว์เซอร์');
+                }
+            });
         }
 
         // =============================================================
         // 🚀 INIT
         // =============================================================
         window.addEventListener('DOMContentLoaded', async () => {
-            // Sync เวลาก่อน แล้วค่อยโหลดข้อมูล เพื่อให้ LIVE badge ถูกต้อง
             await syncServerTime();
 
-            // ตรวจ tracking mode ก่อน — ถ้าเป็น mobile tracking ไม่ต้อง load dashboard
             initTrackingPage();
             if (new URLSearchParams(window.location.search).get('track') === '1') return;
 
