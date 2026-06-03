@@ -2290,16 +2290,20 @@
                 }
             }
 
-            const steps = ['เช็คอิน','นำเสนอ','รับประกาศ'];
-            const stepHtml = steps.map((s,i) => `
-                <div class="flex flex-col items-center gap-1 flex-1">
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold
-                                ${stepsDone>i?'bg-indigo-600 text-white':'bg-slate-100 text-slate-400'}">
-                        ${stepsDone>i?'✓':i+1}
+            const stepDefs = [
+                { label:'เช็คอิน',    icon:'clipboard-check', on:'bg-blue-500 text-white',  lbl:'text-blue-600'  },
+                { label:'นำเสนอ',     icon:'monitor',          on:'bg-rose-500 text-white',  lbl:'text-rose-600'  },
+                { label:'รับประกาศ',  icon:'award',            on:'bg-amber-500 text-white', lbl:'text-amber-600' },
+            ];
+            const stepHtml = stepDefs.map((sd,i) => `
+                <div class="flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-11 h-11 rounded-full flex items-center justify-center transition-all shadow-sm
+                                ${stepsDone>i ? sd.on : 'bg-slate-100 text-slate-300'}">
+                        <i data-lucide="${sd.icon}" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[9px] font-semibold ${stepsDone>i?'text-indigo-600':'text-slate-400'}">${s}</span>
+                    <span class="text-[9px] font-bold ${stepsDone>i ? sd.lbl : 'text-slate-400'}">${sd.label}</span>
                 </div>
-                ${i<2?`<div class="flex-1 h-0.5 mt-3.5 ${stepsDone>i?'bg-indigo-400':'bg-slate-200'}"></div>`:''}
+                ${i<2?`<div class="flex-1 h-0.5 mb-5 ${stepsDone>i+1?'bg-blue-300':'bg-slate-200'}"></div>`:''}
             `).join('');
 
             return `
