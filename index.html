@@ -2040,7 +2040,7 @@
         // 📱 TRACKING PAGE — มือถือสแกน QR แล้วติดตามสถานะ (สูงสุด 3 ผลงาน)
         // =============================================================
         var trackingTimer = null;
-        var notifSent     = {};   // { 'CODE_30min': bool, 'CODE_15min': bool }
+        var notifSent     = {};   // keyed by CODE_checkin / CODE_30 / CODE_15 / CODE_ended / CODE_reward
         var TRACK_LS_KEY  = 'eq_tracking_codes_v2';
         var MAX_TRACK     = 3;
 
@@ -2171,23 +2171,58 @@
 
         function checkAndNotify(r) {
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
-            const now   = getSyncedTime();
-            const start = parseTime(r['เวลาการนำเสนอ'] || '');
-            const code  = r['รหัสผลงาน'] || '';
-            if (!start || r['Check-in'] === 'Y') return;
-            const diffMin = Math.round((start - now) / 60000);
+            const ICON = 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png';
+            const now        = getSyncedTime();
+            const start      = parseTime(r['เวลาการนำเสนอ'] || '');
+            const end        = parseTime(r['หมดการนำเสนอ']   || '');
+            const code       = r['รหัสผลงาน'] || '';
+            const isCheckedIn = r['Check-in']    === 'Y';
+            const isRewarded  = r['รับประกาศ'] === 'Y';
 
-            if (diffMin <= 15 && diffMin > 0 && !notifSent[code+'_15']) {
-                notifSent[code+'_15'] = true;
-                new Notification('🔴 ใกล้เวลานำเสนอมากแล้ว!', {
-                    body: `${code} — อีก ${diffMin} นาที กรุณารีบมาเช็คอิน`,
-                    icon: 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png'
+            // 1. เช็คอินแล้ว
+            if (isCheckedIn && !notifSent[code+'_checkin']) {
+                notifSent[code+'_checkin'] = true;
+                new Notification('✅ เช็คอินสำเร็จแล้ว!', {
+                    body: `ผลงาน ${code} — เช็คอินเข้ารายงานตัวเรียบร้อยแล้ว`,
+                    icon: ICON
                 });
-            } else if (diffMin <= 30 && diffMin > 15 && !notifSent[code+'_30']) {
-                notifSent[code+'_30'] = true;
-                new Notification('⏰ เตรียมตัวนำเสนอได้เลย', {
-                    body: `${code} — อีก ${diffMin} นาที ถึงเวลานำเสนอ`,
-                    icon: 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png'
+            }
+
+            // 2–3. นับถอยหลังก่อนนำเสนอ (ยังไม่รับประกาศ)
+            if (start && !isRewarded) {
+                const diffMin = Math.round((start - now) / 60000);
+
+                if (diffMin <= 30 && diffMin > 15 && !notifSent[code+'_30']) {
+                    notifSent[code+'_30'] = true;
+                    new Notification('⏰ เตรียมตัวนำเสนอได้เลย', {
+                        body: `ผลงาน ${code} — อีก ${diffMin} นาที ถึงเวลานำเสนอ`,
+                        icon: ICON
+                    });
+                }
+                if (diffMin <= 15 && diffMin > 0 && !notifSent[code+'_15']) {
+                    notifSent[code+'_15'] = true;
+                    new Notification('🔴 เตรียมพร้อมนำเสนอ!', {
+                        body: `ผลงาน ${code} — อีก ${diffMin} นาที กรุณาไปรอ ณ จุดรอนำเสนอ ห้อง 205`,
+                        icon: ICON
+                    });
+                }
+            }
+
+            // 4. หมดเวลานำเสนอ → ไปรับรางวัล
+            if (end && isCheckedIn && !isRewarded && now > end && !notifSent[code+'_ended']) {
+                notifSent[code+'_ended'] = true;
+                new Notification('🏆 เวลานำเสนอสิ้นสุดแล้ว', {
+                    body: `ผลงาน ${code} — กรุณาไปรับรางวัลจากเจ้าหน้าที่`,
+                    icon: ICON
+                });
+            }
+
+            // 5. สแกนรับรางวัลเสร็จแล้ว
+            if (isRewarded && !notifSent[code+'_reward']) {
+                notifSent[code+'_reward'] = true;
+                new Notification('🎉 ขอบคุณที่ร่วมนำเสนอผลงาน!', {
+                    body: `ผลงาน ${code} — ขอให้เดินทางโดยสวัสดิภาพ แล้วเจอกันในการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 35`,
+                    icon: ICON
                 });
             }
         }
