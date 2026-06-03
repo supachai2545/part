@@ -1782,14 +1782,36 @@
                     }
                 } else if (data['รับประกาศ'] !== 'Y') {
                     autoDeterminedAction = "REWARD";
-                    showScanSuccess(data['รหัสผลงาน'], fullName, "🏆 รับใบประกาศ");
-                    setTimeout(() => showConfirmModal(
-                        "ยืนยันนำเสนอเสร็จสิ้น",
-                        "เปลี่ยนสถานะเป็นผู้แสดงผลสำเร็จแล้วเพื่อรับใบประกาศ",
-                        "award",
-                        "bg-amber-100 text-amber-600",
-                        "bg-amber-500 hover:bg-amber-600"
-                    ), 600);
+
+                    // ── หาผลงานอื่นของคนเดียวกันที่ยังไม่รับประกาศ ─────────────
+                    const rewardSiblings = (cachedAllData || []).filter(r =>
+                        r['QR CODE'] !== data['QR CODE'] &&
+                        r['Check-in'] === 'Y' &&
+                        r['รับประกาศ'] !== 'Y' &&
+                        [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') === fullName
+                    );
+                    currentScannedItems = [data, ...rewardSiblings];
+
+                    if (rewardSiblings.length > 0) {
+                        const allCodes = currentScannedItems.map(r => r['รหัสผลงาน']).join(', ');
+                        showScanSuccess(allCodes, fullName, `🏆 รับประกาศ ${currentScannedItems.length} ผลงาน`);
+                        setTimeout(() => showConfirmModal(
+                            `รับใบประกาศ ${currentScannedItems.length} ผลงาน`,
+                            `รหัส: ${allCodes}`,
+                            "award",
+                            "bg-amber-100 text-amber-600",
+                            "bg-amber-500 hover:bg-amber-600"
+                        ), 600);
+                    } else {
+                        showScanSuccess(data['รหัสผลงาน'], fullName, "🏆 รับใบประกาศ");
+                        setTimeout(() => showConfirmModal(
+                            "ยืนยันนำเสนอเสร็จสิ้น",
+                            "เปลี่ยนสถานะเป็นผู้แสดงผลสำเร็จแล้วเพื่อรับใบประกาศ",
+                            "award",
+                            "bg-amber-100 text-amber-600",
+                            "bg-amber-500 hover:bg-amber-600"
+                        ), 600);
+                    }
                 } else {
                     setScanFeedback(`สิทธิ์ ${code} ทำรายการเสร็จสิ้นครบถ้วนแล้ว`, "slate");
                     showError(
@@ -1836,7 +1858,10 @@
 
         function closeConfirmModal(resetFeedback = true) {
             document.getElementById('confirmModal').classList.add('hidden');
-            if (resetFeedback) setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+            if (resetFeedback) {
+                currentScannedItems = [];
+                setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+            }
         }
 
         // =============================================================
@@ -1902,6 +1927,7 @@
         }
 
         function closeErrorModal() {
+            currentScannedItems = [];
             document.getElementById('errorModal').classList.add('hidden');
             setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
         }
