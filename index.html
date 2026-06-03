@@ -725,18 +725,33 @@
         <!-- ── Tab 2: ติดตามยังไม่เช็คอิน ── -->
         <div id="statsTab_followup" class="hidden flex-1 overflow-hidden flex flex-col">
             <!-- Search + filters -->
-            <div class="px-4 pt-4 pb-3 space-y-3 border-b border-slate-100 shrink-0 bg-white/80 backdrop-blur-md">
-                <input id="followupSearch" type="search" placeholder="ค้นหารหัสผลงาน หรือชื่อ-นามสกุล..."
-                       oninput="renderFollowUpList()"
-                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                <div>
-                    <p class="text-[11px] font-semibold text-slate-400 mb-1.5">สาขา</p>
-                    <div id="followupBranchFilters" class="flex flex-wrap gap-2"></div>
+            <div class="px-4 pt-4 pb-3 space-y-2.5 border-b border-slate-100 shrink-0 bg-white/90 backdrop-blur-md">
+                <!-- Search -->
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                    <input id="followupSearch" type="search" placeholder="ค้นหารหัสผลงาน หรือชื่อ-นามสกุล..."
+                           oninput="renderFollowUpList()"
+                           class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                 </div>
-                <div>
-                    <p class="text-[11px] font-semibold text-slate-400 mb-1.5">ด้านของบทคัดย่อ</p>
-                    <div id="followupSideFilters" class="flex flex-wrap gap-2"></div>
+                <!-- Dropdowns row -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-semibold text-slate-400 mb-1 block">สาขา</label>
+                        <select id="followupBranchSelect" onchange="renderFollowUpList()"
+                                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700 font-medium appearance-none cursor-pointer">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-slate-400 mb-1 block">ด้านของบทคัดย่อ</label>
+                        <select id="followupSideSelect" onchange="renderFollowUpList()"
+                                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700 font-medium appearance-none cursor-pointer">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
                 </div>
+                <!-- Result count -->
+                <p id="followupCount" class="text-[11px] text-slate-400 font-medium px-0.5"></p>
             </div>
             <!-- Scrollable list -->
             <div id="followupList" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-6"></div>
@@ -2187,8 +2202,6 @@
             document.getElementById('statsAlertSection').innerHTML = urgentHtml + noRewardHtml;
 
             // ─── init followup tab ──────────────────────────────────────────
-            statsActiveBranchFilter = null;
-            statsActiveSideFilter   = null;
             statsFollowupRawData = rows
                 .filter(r => {
                     if (r['Checkin'] === 'Y') return false;
@@ -2225,9 +2238,7 @@
         }
 
         // ─── Stats tab / followup state ───────────────────────────────────
-        var statsFollowupRawData    = [];
-        var statsActiveBranchFilter = null;
-        var statsActiveSideFilter   = null;
+        var statsFollowupRawData = [];
 
         function switchStatsTab(tab) {
             const isOverview = tab === 'overview';
@@ -2240,39 +2251,39 @@
         }
 
         function buildFollowupFilters() {
+            // Populate branch <select>
             const branches = [...new Set(statsFollowupRawData.map(r => getBranchFromCode(r['รหัสผลงาน'])))];
             branches.sort((a, b) => {
                 const ia = BRANCH_ORDER.indexOf(a), ib = BRANCH_ORDER.indexOf(b);
                 return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
             });
-            const branchEl = document.getElementById('followupBranchFilters');
-            if (branchEl) {
-                branchEl.innerHTML = [`<button class="filter-chip ${!statsActiveBranchFilter ? 'active-chip' : ''}" onclick="setFollowupFilter('branch',null)">ทั้งหมด</button>`,
-                    ...branches.map(b => `<button class="filter-chip ${statsActiveBranchFilter===b?'active-chip':''}" onclick="setFollowupFilter('branch','${b.replace(/'/g,'\\\'')}')">${b}</button>`)
-                ].join('');
+            const branchSel = document.getElementById('followupBranchSelect');
+            if (branchSel) {
+                const prev = branchSel.value;
+                branchSel.innerHTML = `<option value="">ทั้งหมด</option>` +
+                    branches.map(b => `<option value="${b}">${b}</option>`).join('');
+                if (branches.includes(prev)) branchSel.value = prev;
             }
-            const sides = [...new Set(statsFollowupRawData.map(r => r['ด้านของบทคัดย่อ']).filter(Boolean))].sort();
-            const sideEl = document.getElementById('followupSideFilters');
-            if (sideEl) {
-                sideEl.innerHTML = [`<button class="filter-chip ${!statsActiveSideFilter ? 'active-chip' : ''}" onclick="setFollowupFilter('side',null)">ทั้งหมด</button>`,
-                    ...sides.map(s => `<button class="filter-chip ${statsActiveSideFilter===s?'active-chip':''}" onclick="setFollowupFilter('side','${s.replace(/'/g,'\\\'')}')">${s}</button>`)
-                ].join('');
-            }
-        }
 
-        function setFollowupFilter(type, val) {
-            if (type === 'branch') statsActiveBranchFilter = val;
-            else                   statsActiveSideFilter   = val;
-            buildFollowupFilters();
-            renderFollowUpList();
+            // Populate side <select>
+            const sides = [...new Set(statsFollowupRawData.map(r => r['ด้านของบทคัดย่อ']).filter(Boolean))].sort();
+            const sideSel = document.getElementById('followupSideSelect');
+            if (sideSel) {
+                const prev = sideSel.value;
+                sideSel.innerHTML = `<option value="">ทั้งหมด</option>` +
+                    sides.map(s => `<option value="${s}">${s}</option>`).join('');
+                if (sides.includes(prev)) sideSel.value = prev;
+            }
         }
 
         function renderFollowUpList() {
             const now    = getSyncedTime();
             const search = (document.getElementById('followupSearch')?.value || '').trim().toLowerCase();
+            const branchFilter = document.getElementById('followupBranchSelect')?.value || '';
+            const sideFilter   = document.getElementById('followupSideSelect')?.value || '';
             let list = statsFollowupRawData;
-            if (statsActiveBranchFilter) list = list.filter(r => getBranchFromCode(r['รหัสผลงาน']) === statsActiveBranchFilter);
-            if (statsActiveSideFilter)   list = list.filter(r => r['ด้านของบทคัดย่อ'] === statsActiveSideFilter);
+            if (branchFilter) list = list.filter(r => getBranchFromCode(r['รหัสผลงาน']) === branchFilter);
+            if (sideFilter)   list = list.filter(r => r['ด้านของบทคัดย่อ'] === sideFilter);
             if (search) {
                 list = list.filter(r => {
                     const code = (r['รหัสผลงาน'] || '').toLowerCase();
@@ -2282,6 +2293,8 @@
             }
             const container = document.getElementById('followupList');
             if (!container) return;
+            const countEl = document.getElementById('followupCount');
+            if (countEl) countEl.textContent = list.length > 0 ? `พบ ${list.length} รายการ` : '';
             if (list.length === 0) {
                 container.innerHTML = `<p class="text-center text-sm text-slate-400 py-10">ไม่พบข้อมูล</p>`;
                 return;
