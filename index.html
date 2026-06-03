@@ -690,6 +690,9 @@
                     <!-- injected by JS -->
                 </div>
 
+                <!-- กำลังนำเสนออยู่ -->
+                <div id="statsLiveSection"></div>
+
                 <!-- Branch breakdown -->
                 <div>
                     <h4 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
@@ -703,9 +706,13 @@
             </div>
 
             <!-- Close bar -->
-            <div class="shrink-0 px-6 py-4 border-t border-slate-100">
+            <div class="shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
+                <button onclick="exportStatsCSV()"
+                        class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                </button>
                 <button onclick="closeStatsDashboard()"
-                        class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95">
+                        class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95">
                     ปิด
                 </button>
             </div>
@@ -721,6 +728,8 @@
         // =============================================================
         var RAW_SUPABASE_URL = 'https://jdujdpqihtknelmpqxhy.supabase.co/rest/v1/';
         var SUPABASE_KEY     = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
+        // เลือกเฉพาะ column ที่ใช้จริง → payload น้อยลง ~70%
+        var DASHBOARD_SELECT = 'รหัสผลงาน,ชื่อ,นามสกุล,เวลาการนำเสนอ,หมดการนำเสนอ,จอที่,ด้านของบทคัดย่อ,สาขา,ชื่อผลงาน,Check-in,รับประกาศ,เวลา Check-in,เวลารับประกาศ,QR CODE';
 
         // ─── [FIX 1] PIN เป็น SHA-256 Hash แทนตัวอักษรตรงๆ ─────────────────
         // เปลี่ยน PIN ผ่านฟังก์ชัน hashPin() แล้วคัดลอกค่ามาใส่ด้านล่าง
@@ -788,13 +797,50 @@
             return null;
         }
 
+        // ── badge สำหรับการ์ดในลิสต์ ─────────────────────────────────────
+        function getCardCountdownBadge(startStr, endStr) {
+            if (!startStr) return '';
+            const now   = getSyncedTime();
+            const start = parseTime(startStr);
+            const end   = parseTime(endStr);
+            if (!start) return '';
+            if (end && now >= start && now < end) {
+                return `<span class="inline-flex items-center gap-1.5 bg-rose-100 text-rose-600
+                               px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1 w-max border border-rose-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block"></span>
+                    กำลังนำเสนออยู่
+                </span>`;
+            }
+            const diff = Math.round((start - now) / 60000);
+            if (diff > 0 && diff <= 15) {
+                return `<span class="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700
+                               px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1 w-max border border-orange-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block"></span>
+                    อีก ${diff} นาที — เตรียมพร้อม!
+                </span>`;
+            }
+            if (diff > 15 && diff <= 30) {
+                return `<span class="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-700
+                               px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1 w-max border border-yellow-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>
+                    อีก ${diff} นาที
+                </span>`;
+            }
+            return '';
+        }
+
         function updateCountdowns() {
+            // อัปเดต hero card
             ['checkin','reward'].forEach(sec => {
                 const t = heroTimings[sec];
                 const el = document.getElementById(`${sec}HeroCountdown`);
                 if (!el || (!t.start && !t.end)) return;
                 const status = getTimeStatus(t.start, t.end);
                 el.innerHTML = status ? status.html : '';
+            });
+            // อัปเดต badge ในการ์ดทุกใบ (ไม่มี reflow — อ่านแค่ dataset)
+            document.querySelectorAll('.card-cdwn').forEach(el => {
+                el.innerHTML = getCardCountdownBadge(el.dataset.s, el.dataset.e);
             });
         }
 
@@ -928,7 +974,7 @@
                 // ─────────────────────────────────────────────────────────────
                 const { data: allData, error: fetchError } = await supabaseClient
                     .from('eposter_works')
-                    .select('*');
+                    .select(DASHBOARD_SELECT);
 
                 if (fetchError) {
                     console.error('[Supabase Error]', fetchError);
@@ -1200,18 +1246,12 @@
                 const iExp     = isExpired(iEnd);
                 const iRecord  = isCheckinSec ? item['เวลา Check-in'] : item['เวลารับประกาศ'];
 
-                const liveBadge = iLive
-                    ? `<span class="bg-rose-100 text-rose-600 px-2 py-0.5 rounded text-[10px] font-bold
-                                   flex items-center gap-1 mt-1 w-max">
-                           <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Live
-                       </span>` : "";
-
                 listHtml += `
                     <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-start gap-4
                                 list-enter transition-all border ${st.border} shadow-sm
                                 hover:-translate-y-0.5 hover:shadow-md
                                 ${iExp ? 'expired-card' : ''}"
-                         style="animation-delay:${idx * 0.06}s">
+                         style="animation-delay:${Math.min(idx,20) * 0.06}s">
                         <!-- ID badge -->
                         <div class="bg-slate-100 px-2.5 py-1.5 rounded-lg flex items-center justify-center
                                     shrink-0 border border-slate-200 shadow-inner min-w-[52px] mt-0.5">
@@ -1233,7 +1273,7 @@
                                     นำเสนอจอที่ ${item['จอที่'] || "-"}
                                     เวลา ${iStart || "-"}${iEnd ? " – " + iEnd : ""} น.
                                 </span>
-                                ${liveBadge}
+                                <span class="card-cdwn" data-s="${iStart}" data-e="${iEnd}">${getCardCountdownBadge(iStart, iEnd)}</span>
                                 <span class="text-slate-500 font-medium truncate mt-0.5">
                                     <span class="text-slate-400">ด้าน:</span> ${item['ด้านของบทคัดย่อ'] || "-"}
                                     <span class="text-slate-300 mx-1">|</span>
@@ -1719,7 +1759,7 @@
                 // ── 2. ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่ ─────────────
                 let rows = cachedAllData;
                 if (rows.length === 0) {
-                    const { data: fresh } = await supabaseClient.from('eposter_works').select('*');
+                    const { data: fresh } = await supabaseClient.from('eposter_works').select(DASHBOARD_SELECT);
                     rows = fresh || [];
                     cachedAllData = rows;
                 }
@@ -2009,6 +2049,39 @@
             }).join('');
             document.getElementById('statsBranchList').innerHTML = branchHtml || `<p class="text-center text-sm text-slate-400 py-4">ยังไม่มีข้อมูล</p>`;
 
+            // ─── 🔴 กำลังนำเสนออยู่ตอนนี้ ─────────────────────────────────────
+            const liveNow = rows.filter(r => {
+                const s = parseTime(r['เวลาการนำเสนอ'] || '');
+                const e = parseTime(r['หมดการนำเสนอ']   || '');
+                return s && e && now >= s && now < e;
+            });
+            let liveHtml = '';
+            if (liveNow.length > 0) {
+                liveHtml = `
+                <div>
+                    <h4 class="text-sm font-bold text-rose-600 mb-3 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>
+                        กำลังนำเสนออยู่ตอนนี้ (${liveNow.length} ผลงาน)
+                    </h4>
+                    <div class="space-y-2">
+                        ${liveNow.map(r => {
+                            const name = [r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+                            const e = parseTime(r['หมดการนำเสนอ'] || '');
+                            const left = e ? Math.max(0, Math.round((e - now) / 60000)) : '-';
+                            return `<div class="bg-rose-50 border border-rose-200 rounded-xl px-4 py-2.5 flex justify-between items-center gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-bold text-slate-800 truncate">${name}</p>
+                                    <p class="text-[11px] text-slate-500">${r['รหัสผลงาน'] || '-'} · จอ ${r['จอที่'] || '-'}</p>
+                                </div>
+                                <span class="text-xs font-bold text-rose-600 shrink-0">เหลือ ${left} นาที</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+            document.getElementById('statsLiveSection').innerHTML = liveHtml;
+            lucide.createIcons();
+
             // ─── ⚠️ ยังไม่เช็คอิน + ใกล้เวลา ──────────────────────────────
             const urgentList = rows
                 .filter(r => r['Check-in'] !== 'Y')
@@ -2103,11 +2176,31 @@
             document.getElementById('statsModal').classList.add('hidden');
         }
 
+        function exportStatsCSV() {
+            const rows = cachedAllData;
+            if (!rows || rows.length === 0) { alert('ยังไม่มีข้อมูล'); return; }
+            const headers = ['รหัสผลงาน','ชื่อ','นามสกุล','สาขา','ด้านของบทคัดย่อ','ชื่อผลงาน',
+                             'จอที่','เวลาการนำเสนอ','หมดการนำเสนอ','Check-in','เวลา Check-in','รับประกาศ','เวลารับประกาศ'];
+            const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+            const csvLines = [
+                headers.map(escape).join(','),
+                ...rows.map(r => headers.map(h => escape(r[h] ?? '')).join(','))
+            ];
+            const blob = new Blob(['﻿' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a    = Object.assign(document.createElement('a'), {
+                href: url, download: `EQueue_Report_${new Date().toLocaleDateString('th-TH').replace(/\//g,'-')}.csv`
+            });
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         // =============================================================
         // 📱 TRACKING PAGE — มือถือสแกน QR แล้วติดตามสถานะ (สูงสุด 3 ผลงาน)
         // =============================================================
         var trackingTimer         = null;
         var trackRealtimeChannel  = null;
+        var lastTrackRefresh      = 0;   // ป้องกัน Realtime + polling ยิงซ้ำภายใน 3 วิ
         var notifSent     = {};   // keyed by CODE_checkin / CODE_30 / CODE_15 / CODE_ended / CODE_reward
         var TRACK_LS_KEY  = 'eq_tracking_codes_v2';
         var MAX_TRACK     = 3;
@@ -2228,7 +2321,11 @@
             startTrackingPolling();
         }
 
-        async function refreshTrackingCards() {
+        async function refreshTrackingCards(source) {
+            const now = Date.now();
+            // ถ้า Realtime เพิ่งยิงไปไม่ถึง 3 วิ ให้ polling ข้ามรอบนั้น
+            if (source === 'poll' && now - lastTrackRefresh < 3000) return;
+            lastTrackRefresh = now;
             const results = await fetchAllTrackedRows();
             if (results.length > 0) {
                 renderAllTrackingCards(results);
@@ -2242,12 +2339,12 @@
             trackRealtimeChannel = supabaseClient
                 .channel('track_live_' + Date.now())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'eposter_works' },
-                    () => refreshTrackingCards())
+                    () => refreshTrackingCards('realtime'))
                 .subscribe();
 
             // ── Polling 5s เป็น fallback กรณี Realtime ไม่ทำงาน ────
             clearInterval(trackingTimer);
-            trackingTimer = setInterval(refreshTrackingCards, 5000);
+            trackingTimer = setInterval(() => refreshTrackingCards('poll'), 5000);
         }
 
         function checkAndNotify(r) {
@@ -2485,8 +2582,8 @@
             // Polling สำรอง 15 วินาที เผื่อ Realtime subscription ขัดข้อง
             setInterval(fetchDashboardData, 15000);
 
-            // Countdown timer — อัปเดต hero card ทุก 30 วินาที
-            setInterval(updateCountdowns, 30000);
+            // Countdown timer — อัปเดตทุก 10 วินาที (hero + list badges)
+            setInterval(updateCountdowns, 10000);
         });
     </script>
 </body>
