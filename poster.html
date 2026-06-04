@@ -702,6 +702,8 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         // 🌟 เพิ่มระบบส่งคำสั่งไปบวกเลขยอดวิวด้านหลังบ้านแบบเงียบๆ เมื่อหน้าเว็บโหลด
         document.addEventListener("DOMContentLoaded", () => {
             checkDeadline();
+            // แสดง popup คำเตือนอัตโนมัติเมื่อโหลดเว็บครั้งแรก
+            document.getElementById('systemWarningModal').classList.remove('hidden');
             if (typeof API_URL !== 'undefined' && API_URL.includes("script.google.com")) {
                 fetch(API_URL, {
                     method: 'POST',
@@ -734,12 +736,11 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
                 showToast("ระบบยังไม่เปิดรับผลงานในขณะนี้", "warning");
                 return;
             }
-            document.getElementById('systemWarningModal').classList.remove('hidden');
+            document.getElementById('instructionModal').classList.remove('hidden');
         }
 
         window.closeWarningAndEnter = function() {
             document.getElementById('systemWarningModal').classList.add('hidden');
-            proceedToMainScreen();
         }
         
         window.showTemplateScreen = function() {
