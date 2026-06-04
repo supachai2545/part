@@ -1213,7 +1213,7 @@ if (isTimeLocked && !isUploaded && !isApproved && !hasEdited) lockedCount++;
                         for (let part of parts) {
                             if (part.toLowerCase() === '<i>' || part.toLowerCase() === '<em>') {
                                 isItalicActive = true;
-                            } else if (part.toLowerCase() === '</i>' || part.toLowerCase() === '/</em>') {
+                            } else if (part.toLowerCase() === '</i>' || part.toLowerCase() === '</em>') {
                                 isItalicActive = false;
                             } else if (part) {
                                 const subParts = part.split(/(\s+)/);
