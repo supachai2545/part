@@ -381,6 +381,22 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbwoCrhS9I4jLpLsfmSwoxCyGA2FiLG4HqptWienagy1z5HDqJJG6Xk52e-hQi5nUCWNaQ/exec";
 
+        // ── API helper: เพิ่ม Content-Type เพื่อป้องกัน GAS redirect → HTML ────
+        async function callAPI(payload) {
+            const res  = await fetch(API_URL, {
+                method:  "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body:    JSON.stringify(payload)
+            });
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch {
+                console.error("[API] Non-JSON response:", text.slice(0, 300));
+                throw new Error("เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ กรุณารอสักครู่แล้วลองใหม่");
+            }
+        }
+
         // ── Constants ───────────────────────────────────────────────────────────
         const PAGE_SIZE        = 15;
         const DOWNLOAD_DELAY   = 700;   // ms ระหว่างไฟล์ — ป้องกัน browser block
@@ -426,7 +442,7 @@
         // ── Activity log ─────────────────────────────────────────────────────────
         async function logActivityToBackend(detail) {
             try {
-                fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "logActivity", adminUser: currentUser.username, detail }) });
+                callAPI({ action: "logActivity", adminUser: currentUser.username, detail });
             } catch (_) {}
         }
 
@@ -476,8 +492,7 @@
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.remove('opacity-0'), 10);
 
-                const res  = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "verifyAdminLogin", username: user, password: pass }) });
-                const data = await res.json();
+                const data = await callAPI({ action: "verifyAdminLogin", username: user, password: pass });
 
                 if (data.status === "success") {
                     currentUser.username = user;
@@ -547,8 +562,7 @@
 
         async function fetchPosterData() {
             try {
-                const res  = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getPosterData" }) });
-                const data = await res.json();
+                const data = await callAPI({ action: "getPosterData" });
                 allData = (currentUser.role === 'reviewer' && currentUser.branch !== 'ALL')
                     ? data.filter(d => d.category === currentUser.branch)
                     : data;
@@ -996,8 +1010,7 @@
             try {
                 let payload = { action: "updateBulkAdminStatus", items, status, remark, adminUser: currentUser.username };
                 if (status === 'Reminder') payload = { action: "sendBulkReminders", items, adminUser: currentUser.username };
-                const res  = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-                const data = await res.json();
+                const data = await callAPI(payload);
                 if (data.status === "success") {
                     showToast(`ดำเนินการและส่งอีเมลแจ้งเตือนสำเร็จ ${data.count} รายการ`, "success");
                     await fetchPosterData();
@@ -1073,8 +1086,7 @@
             const txt = document.getElementById('saveStatusText');
             btn.disabled = true; txt.innerText = "กำลังบันทึก..."; btn.classList.add('opacity-50','cursor-not-allowed');
             try {
-                const res  = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action:"updateAdminStatus", submissionId:id, status, remark, email, name, adminUser: currentUser.username }) });
-                const data = await res.json();
+                const data = await callAPI({ action:"updateAdminStatus", submissionId:id, status, remark, email, name, adminUser: currentUser.username });
                 if (data.status === 'success') {
                     showToast('บันทึกสถานะและส่งอีเมลแจ้งเตือนสำเร็จ', 'success');
                     closeStatusModal();
