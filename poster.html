@@ -298,39 +298,6 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         </div>
     </div>
 
-    <!-- โมดอลคำเตือนสำหรับผู้ใช้ระบบ (แสดงก่อนเข้าระบบ) -->
-    <div id="systemWarningModal" class="hidden fixed inset-0 z-[65] flex items-center justify-center p-4 sm:p-6">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm modal-fade"></div>
-        <div class="bg-white rounded-[24px] w-full max-w-md shadow-2xl relative z-10 modal-slide-up border border-slate-100 overflow-hidden">
-            <!-- หัว -->
-            <div class="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
-                </div>
-                <h3 class="font-extrabold text-amber-800 text-[16px]">คำเตือนสำหรับผู้ใช้ระบบ</h3>
-            </div>
-            <!-- เนื้อหา -->
-            <div class="px-6 py-5">
-                <p class="text-slate-600 text-[14.5px] leading-relaxed font-medium">
-                    ขณะนี้ระบบส่งอีเมลตอบกลับอัตโนมัติ (E-mail) อาจเกิดความล่าช้าหรือขัดข้อง เนื่องจากมีผู้ใช้งานพร้อมกันเป็นจำนวนมาก
-                </p>
-                <div class="mt-3 bg-blue-50 border border-blue-100 rounded-[12px] px-4 py-3 flex items-start gap-2.5">
-                    <i data-lucide="info" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5"></i>
-                    <p class="text-blue-700 text-[13.5px] font-medium leading-relaxed">
-                        หากท่านอัปโหลดไฟล์เรียบร้อยแล้ว แต่ยังไม่ได้รับอีเมลตอบกลับ กรุณาตรวจสอบไฟล์ผลงานของท่านผ่าน
-                        <strong class="font-bold">ระบบสืบค้น E-Poster Online</strong>
-                    </p>
-                </div>
-            </div>
-            <!-- ปุ่ม -->
-            <div class="px-6 pb-6">
-                <button onclick="closeWarningAndEnter()" class="w-full py-3.5 rounded-[14px] font-bold btn-primary text-[15px] flex items-center justify-center shadow-md">
-                    รับทราบ และเข้าสู่ระบบ <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- โมดอลคำแนะนำ -->
     <div id="instructionModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm modal-fade" onclick="document.getElementById('instructionModal').classList.add('hidden')"></div>
@@ -700,17 +667,8 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         }
 
         // 🌟 เพิ่มระบบส่งคำสั่งไปบวกเลขยอดวิวด้านหลังบ้านแบบเงียบๆ เมื่อหน้าเว็บโหลด
-        let _warningFromButton = false;
-
-        function showSystemWarning(fromButton = false) {
-            _warningFromButton = fromButton;
-            document.getElementById('systemWarningModal').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
         document.addEventListener("DOMContentLoaded", () => {
             checkDeadline();
-            showSystemWarning(false); // แสดงอัตโนมัติตอนโหลดเว็บ
             if (typeof API_URL !== 'undefined' && API_URL.includes("script.google.com")) {
                 fetch(API_URL, {
                     method: 'POST',
@@ -740,19 +698,10 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         window.startSystem = function() {
             const status = checkDeadline();
             if (status === "not_open") {
-                showToast("ระบบยังไม่เปิดรับผลงานในขณะนี้", "warning");
-                return;
+                showToast("ระบบยังไม่เปิดรับผลงานในขณะนี้", "warning"); 
+                return; 
             }
-            showSystemWarning(true); // แสดง popup ก่อนเข้าระบบ
-        }
-
-        window.closeWarningAndEnter = function() {
-            document.getElementById('systemWarningModal').classList.add('hidden');
-            if (_warningFromButton) {
-                // กดมาจากปุ่มเข้าระบบ → ไปหน้า instruction modal
-                document.getElementById('instructionModal').classList.remove('hidden');
-            }
-            // กดมาจากโหลดเว็บ → อยู่หน้าแรกตามปกติ
+            document.getElementById('instructionModal').classList.remove('hidden');
         }
         
         window.showTemplateScreen = function() {
