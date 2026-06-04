@@ -305,7 +305,7 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
             <!-- หัว -->
             <div class="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600"></i>
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
                 </div>
                 <h3 class="font-extrabold text-amber-800 text-[16px]">คำเตือนสำหรับผู้ใช้ระบบ</h3>
             </div>
@@ -700,10 +700,17 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         }
 
         // 🌟 เพิ่มระบบส่งคำสั่งไปบวกเลขยอดวิวด้านหลังบ้านแบบเงียบๆ เมื่อหน้าเว็บโหลด
+        let _warningFromButton = false;
+
+        function showSystemWarning(fromButton = false) {
+            _warningFromButton = fromButton;
+            document.getElementById('systemWarningModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             checkDeadline();
-            // แสดง popup คำเตือนอัตโนมัติเมื่อโหลดเว็บครั้งแรก
-            document.getElementById('systemWarningModal').classList.remove('hidden');
+            showSystemWarning(false); // แสดงอัตโนมัติตอนโหลดเว็บ
             if (typeof API_URL !== 'undefined' && API_URL.includes("script.google.com")) {
                 fetch(API_URL, {
                     method: 'POST',
@@ -736,11 +743,16 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
                 showToast("ระบบยังไม่เปิดรับผลงานในขณะนี้", "warning");
                 return;
             }
-            document.getElementById('instructionModal').classList.remove('hidden');
+            showSystemWarning(true); // แสดง popup ก่อนเข้าระบบ
         }
 
         window.closeWarningAndEnter = function() {
             document.getElementById('systemWarningModal').classList.add('hidden');
+            if (_warningFromButton) {
+                // กดมาจากปุ่มเข้าระบบ → ไปหน้า instruction modal
+                document.getElementById('instructionModal').classList.remove('hidden');
+            }
+            // กดมาจากโหลดเว็บ → อยู่หน้าแรกตามปกติ
         }
         
         window.showTemplateScreen = function() {
