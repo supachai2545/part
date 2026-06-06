@@ -66,7 +66,7 @@
             <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
             </div>
-            <h3 class="text-xl font-black text-slate-800 mb-3">กำลังสร้าง ZIP</h3>
+            <h3 class="text-xl font-black text-slate-800 mb-3">กำลังเตรียมไฟล์</h3>
             <p id="zipStatusText" class="text-sm font-medium text-slate-600 mb-3">กำลังรวบรวมไฟล์...</p>
             <div class="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
                 <div id="zipProgressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
@@ -1021,8 +1021,6 @@
             return m ? m[1] : null;
         }
 
-        const ZIP_CHUNK = 30; // ไฟล์ต่อ ZIP เพื่อไม่ให้เกิน GAS blob limit (~50MB)
-
         window.startZipDownload = async function(mode, fromSelected = false) {
             closeDownloadModal();
 
@@ -1046,10 +1044,9 @@
             const fileIds = items.map(extractDriveFileId).filter(Boolean);
             if (fileIds.length === 0) { showToast('ไม่สามารถอ่าน ID ไฟล์ จาก Google Drive URL', 'error'); return; }
 
-            const modeText    = mode === 'pdf' ? 'E-Poster' : 'บทคัดย่อ';
-            const dateStr     = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            const total       = fileIds.length;
-            const totalChunks = Math.ceil(total / ZIP_CHUNK);
+            const modeText   = mode === 'pdf' ? 'E-Poster' : 'บทคัดย่อ';
+            const folderName = `E-Poster_${modeText}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+            const total      = fileIds.length;
 
             const overlay   = document.getElementById('zipLoadingOverlay');
             const bar       = document.getElementById('zipProgressBar');
@@ -1057,69 +1054,46 @@
             const statusTxt = document.getElementById('zipStatusText');
 
             bar.style.width = '0%'; pctEl.innerText = '0%';
+            statusTxt.innerText = `กำลังคัดลอกไฟล์ที่ 0 จาก ${total} เข้าโฟลเดอร์...`;
             overlay.classList.remove('hidden');
-            logActivityToBackend(`สร้าง ZIP: ${modeText} จำนวน ${total} ไฟล์ (${totalChunks} ชุด)`);
+            logActivityToBackend(`สร้างโฟลเดอร์ดาวน์โหลด: ${modeText} จำนวน ${total} ไฟล์`);
 
-            for (let c = 0; c < totalChunks; c++) {
-                const from     = c * ZIP_CHUNK;
-                const to       = Math.min(from + ZIP_CHUNK, total);
-                const chunkIds = fileIds.slice(from, to);
-                const zipName  = totalChunks > 1
-                    ? `E-Poster_${modeText}_ชุด${c + 1}จาก${totalChunks}_${dateStr}`
-                    : `E-Poster_${modeText}_${dateStr}`;
+            // Simulated progress (~2s per file for Drive copy)
+            let simFile = 0;
+            const msPerFile = Math.max(300, Math.min(2000, 150000 / total));
+            const timer = setInterval(() => {
+                if (simFile < total - 1) {
+                    simFile++;
+                    const p = Math.round((simFile / total) * 90);
+                    bar.style.width = p + '%'; pctEl.innerText = p + '%';
+                    statusTxt.innerText = `กำลังคัดลอกไฟล์ที่ ${simFile} จาก ${total} (${p}%)`;
+                }
+            }, msPerFile);
 
-                // ── Simulated progress within chunk ───────────────────────────
-                const baseP  = (c / totalChunks) * 100;
-                const chunkP = (1 / totalChunks) * 100;
-                let simFile  = 0;
-                const msPerFile = Math.max(400, Math.min(1800, 60000 / chunkIds.length));
-                const timer = setInterval(() => {
-                    if (simFile < chunkIds.length - 1) {
-                        simFile++;
-                        const p = Math.round(baseP + (simFile / chunkIds.length) * chunkP * 0.88);
-                        bar.style.width = p + '%'; pctEl.innerText = p + '%';
-                        statusTxt.innerText = `ชุดที่ ${c + 1}/${totalChunks} — กำลังรวบรวมไฟล์ที่ ${from + simFile} จาก ${total} (${p}%)`;
-                    }
-                }, msPerFile);
+            try {
+                const result = await callAPI({ action: 'createSharedFolder', fileIds, folderName });
+                clearInterval(timer);
+                overlay.classList.add('hidden');
 
-                try {
-                    const result = await callAPI({ action: 'createZipDownload', fileIds: chunkIds, zipName });
-                    clearInterval(timer);
-
-                    if (result.status !== 'success') {
-                        overlay.classList.add('hidden');
-                        showToast(result.message || 'เกิดข้อผิดพลาดในการสร้าง ZIP', 'error');
-                        return;
-                    }
-
-                    const endP = Math.round(((c + 1) / totalChunks) * 100);
-                    bar.style.width = endP + '%'; pctEl.innerText = endP + '%';
-                    statusTxt.innerText = `ชุดที่ ${c + 1}/${totalChunks} เสร็จแล้ว (${result.count} ไฟล์) — กำลังดาวน์โหลด...`;
-
-                    const win = window.open(result.downloadUrl, '_blank', 'noopener');
+                if (result.status === 'success') {
+                    bar.style.width = '100%'; pctEl.innerText = '100%';
+                    showToast(`โฟลเดอร์พร้อมแล้ว ${result.count} ไฟล์ — เปิด Drive เพื่อดาวน์โหลด`, 'success');
+                    // เปิดโฟลเดอร์ใน Drive
+                    const win = window.open(result.folderUrl, '_blank', 'noopener');
                     if (!win) {
                         const a = document.createElement('a');
-                        a.href = result.downloadUrl; a.target = '_blank'; a.rel = 'noopener';
+                        a.href = result.folderUrl; a.target = '_blank'; a.rel = 'noopener';
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     }
-
-                    if (c < totalChunks - 1) await new Promise(r => setTimeout(r, 2500));
-                } catch (err) {
-                    clearInterval(timer);
-                    overlay.classList.add('hidden');
-                    showToast('สร้าง ZIP ไม่สำเร็จ: ' + err.message, 'error');
-                    return;
+                    setTimeout(() => showToast('ใน Drive: กด Ctrl+A เลือกทั้งหมด → คลิกขวา → ดาวน์โหลด', 'info'), 2000);
+                } else {
+                    showToast(result.message || 'เกิดข้อผิดพลาดในการสร้างโฟลเดอร์', 'error');
                 }
+            } catch (err) {
+                clearInterval(timer);
+                overlay.classList.add('hidden');
+                showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
             }
-
-            await new Promise(r => setTimeout(r, 600));
-            overlay.classList.add('hidden');
-            showToast(
-                totalChunks > 1
-                    ? `ดาวน์โหลด ZIP สำเร็จ ${totalChunks} ชุด รวม ${total} ไฟล์`
-                    : `ZIP สำเร็จ — ดาวน์โหลด ${total} ไฟล์`,
-                'success'
-            );
         };
 
         // ── CSV Export ───────────────────────────────────────────────────────────
