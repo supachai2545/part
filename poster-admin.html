@@ -275,7 +275,10 @@
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden modal-slide-up border border-slate-100 text-center p-8">
             <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="folder-down" class="w-8 h-8"></i></div>
             <h3 class="text-xl font-black text-slate-800 mb-2">เลือกประเภทไฟล์</h3>
-            <p class="text-sm text-slate-500 mb-6">กรุณาเลือกประเภทเอกสารที่ต้องการดาวน์โหลดแบบกลุ่ม</p>
+            <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-left">
+                <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                <p class="text-[12px] text-amber-700 font-medium leading-relaxed">Browser จะขอสิทธิ์ <strong>Popup</strong> — กรุณากด <strong>"อนุญาต"</strong> เมื่อมีแถบแจ้งเตือนที่ด้านบน ไม่เช่นนั้นไฟล์จะไม่ดาวน์โหลด</p>
+            </div>
             <div class="space-y-3">
                 <button onclick="startBulkDownload('pdf')" class="w-full flex items-center justify-center px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl transition-colors border border-rose-200">
                     <i data-lucide="image" class="w-5 h-5 mr-2"></i> โหลดทั้งหมด: E-Poster
@@ -860,23 +863,21 @@
         };
 
         // ── Download ─────────────────────────────────────────────────────────────
-        // ใช้ iframe แทน <a> เพราะ:
-        //   1) a.download ไม่ทำงานกับ Google Drive (cross-origin) — browser navigate แทน
-        //   2) a.target='_parent' ทำให้หน้าเว็บ navigate ออกไปแทนที่จะโหลดไฟล์
-        //   3) iframe ไม่ติด popup blocker
-        //   4) confirm=t ข้าม Google Drive "virus scan warning" สำหรับไฟล์ใหญ่
-        window.downloadSingleFile = function(url, type, id, skipLog = false) {
-            if (!skipLog) logActivityToBackend(`ดาวน์โหลดไฟล์ ${type} รหัส ${id}`);
+        // Google Drive = cross-origin → ใช้ window.open() เท่านั้นที่ trigger download ได้จริง
+        // iframe ถูก Chrome 83+ block สำหรับ hidden download
+        // a.download ถูก browser ignore สำหรับ cross-origin URL
+        function buildDriveDownloadUrl(url) {
             const idMatch = url.match(/id=(.*?)(&|$)/) || url.match(/\/d\/(.*?)\/view/);
             const fileId  = idMatch && idMatch[1];
-            const dlUrl   = fileId
+            return fileId
                 ? `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
                 : url;
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
-            iframe.src = dlUrl;
-            document.body.appendChild(iframe);
-            setTimeout(() => { if (iframe.parentNode) document.body.removeChild(iframe); }, 30000);
+        }
+
+        window.downloadSingleFile = function(url, type, id, skipLog = false) {
+            if (!skipLog) logActivityToBackend(`ดาวน์โหลดไฟล์ ${type} รหัส ${id}`);
+            const win = window.open(buildDriveDownloadUrl(url), '_blank', 'noopener');
+            if (!win) showToast('Browser บล็อก Popup — กรุณากด "อนุญาต Popup" ในแถบ URL แล้วกดดาวน์โหลดใหม่', 'warning');
         };
 
         window.openDownloadModal  = () => document.getElementById('bulkDownloadModal').classList.remove('hidden');
@@ -909,30 +910,56 @@
         };
 
         async function processDownloadQueue(files, type) {
-            const total      = files.length;
-            const bar        = document.getElementById('dlProgressBar');
-            const percentEl  = document.getElementById('dlProgressText');
-            const statusEl   = document.getElementById('dlStatusText');
-            const closeBtn   = document.getElementById('dlCloseBtn');
+            const total     = files.length;
+            const bar       = document.getElementById('dlProgressBar');
+            const percentEl = document.getElementById('dlProgressText');
+            const statusEl  = document.getElementById('dlStatusText');
+            const closeBtn  = document.getElementById('dlCloseBtn');
+
             document.getElementById('dlTotalText').innerText = total;
             bar.style.width = '0%'; percentEl.innerText = '0%';
             statusEl.innerText = 'กำลังเตรียมการ...';
             closeBtn.disabled = true;
-            closeBtn.className = "w-full py-3.5 bg-slate-100 text-slate-400 font-bold rounded-[16px] transition-all cursor-not-allowed border border-transparent";
+            closeBtn.className = "w-full py-3.5 bg-slate-100 text-slate-400 font-bold rounded-[16px] cursor-not-allowed border border-transparent";
             closeBtn.innerText = "กำลังดาวน์โหลดข้อมูล...";
             document.getElementById('downloadProgressModal').classList.remove('hidden');
+
+            // ── ตรวจสอบ Popup Permission ก่อนเริ่ม ────────────────────────────
+            const testWin = window.open('about:blank', '_blank', 'noopener,width=1,height=1,left=-100,top=-100');
+            if (!testWin) {
+                statusEl.innerText = '❌ Browser บล็อก Popup';
+                closeBtn.disabled = false;
+                closeBtn.className = "w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-[16px] cursor-pointer border border-transparent";
+                closeBtn.innerText = "ปิด";
+                showToast('กรุณาคลิก "อนุญาต Popup" ในแถบ URL ของ Browser แล้วกดดาวน์โหลดใหม่อีกครั้ง', 'warning');
+                return;
+            }
+            testWin.close();
+
+            // ── ดาวน์โหลดทีละไฟล์ ─────────────────────────────────────────────
+            let blocked = 0;
             for (let i = 0; i < total; i++) {
-                statusEl.innerText = `กำลังดึงไฟล์ที่ ${i + 1} / ${total}`;
-                downloadSingleFile(files[i], type, "", true);
+                statusEl.innerText = `กำลังเปิดไฟล์ที่ ${i + 1} / ${total}`;
+                const dlUrl = buildDriveDownloadUrl(files[i]);
+                const win   = window.open(dlUrl, '_blank', 'noopener');
+                if (!win) blocked++;
+
                 const pct = Math.round(((i + 1) / total) * 100);
                 bar.style.width = pct + '%'; percentEl.innerText = pct + '%';
                 await new Promise(r => setTimeout(r, DOWNLOAD_DELAY));
             }
-            statusEl.innerText = 'ดาวน์โหลดครบทุกไฟล์เรียบร้อย';
+
+            // ── สรุปผล ────────────────────────────────────────────────────────
+            if (blocked > 0) {
+                statusEl.innerText = `⚠️ ส่งคำสั่งครบแล้ว แต่ถูกบล็อก ${blocked} ไฟล์ — กรุณาอนุญาต Popup`;
+                showToast(`ถูกบล็อก ${blocked} ไฟล์ — กด "อนุญาต" ที่แถบ URL แล้วดาวน์โหลดใหม่`, 'warning');
+            } else {
+                statusEl.innerText = `✅ ส่งคำสั่งดาวน์โหลดครบ ${total} ไฟล์`;
+                showToast("ส่งคำสั่งดาวน์โหลดสำเร็จทุกไฟล์", "success");
+            }
             closeBtn.disabled = false;
-            closeBtn.className = "w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[16px] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 border border-transparent cursor-pointer";
+            closeBtn.className = "w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[16px] shadow-lg hover:-translate-y-0.5 border border-transparent cursor-pointer";
             closeBtn.innerText = "ตกลง / ปิดหน้าต่าง";
-            showToast("ส่งคำสั่งดาวน์โหลดสำเร็จ", "success");
         }
 
         // ── CSV Export ───────────────────────────────────────────────────────────
