@@ -223,6 +223,8 @@
                         <span class="font-bold text-sm">รายการที่เลือก</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button onclick="startZipDownload('pdf', true)" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-sm"><i data-lucide="file-archive" class="w-4 h-4 mr-2"></i> ZIP E-Poster</button>
+                        <button onclick="startZipDownload('abstract', true)" class="px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-bold transition-colors flex items-center shadow-sm border border-emerald-200"><i data-lucide="file-archive" class="w-4 h-4 mr-2"></i> ZIP บทคัดย่อ</button>
                         <button onclick="downloadSelected('pdf')" class="px-4 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-sm font-bold transition-colors flex items-center shadow-sm border border-rose-200"><i data-lucide="image" class="w-4 h-4 mr-2"></i> โหลด E-Poster</button>
                         <button onclick="downloadSelected('abstract')" class="px-4 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-sm font-bold transition-colors flex items-center shadow-sm border border-blue-200 mr-2"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i> โหลดบทคัดย่อ</button>
                         <button id="bulkBtnApprove" onclick="bulkAction('Approved')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-bold transition-colors flex items-center shadow-sm"><i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> อนุมัติผ่าน</button>
@@ -274,20 +276,64 @@
     <div id="bulkDownloadModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm modal-fade">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden modal-slide-up border border-slate-100 text-center p-8">
             <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="folder-down" class="w-8 h-8"></i></div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">เลือกประเภทไฟล์</h3>
-            <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-left">
-                <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-                <p class="text-[12px] text-amber-700 font-medium leading-relaxed">ระบบจะดาวน์โหลด <strong>ทีละ 10 ไฟล์</strong> — Browser จะขอสิทธิ์ <strong>Popup</strong> ครั้งแรก กรุณากด <strong>"อนุญาต"</strong></p>
+            <h3 class="text-xl font-black text-slate-800 mb-1">เลือกประเภทไฟล์</h3>
+            <p class="text-sm text-slate-500 mb-4">เลือกรูปแบบการดาวน์โหลด</p>
+
+            <!-- ZIP (แนะนำ) -->
+            <div class="mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="flex-1 h-px bg-emerald-200"></span>
+                    <span class="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full tracking-wide">ZIP — แนะนำ</span>
+                    <span class="flex-1 h-px bg-emerald-200"></span>
+                </div>
+                <div class="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-3 text-left">
+                    <i data-lucide="package" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                    <p class="text-[12px] text-emerald-700 font-medium leading-relaxed">รวมทุกไฟล์เป็น <strong>1 ไฟล์ ZIP</strong> — ดาวน์โหลดครั้งเดียว ไม่ต้องอนุญาต Popup</p>
+                </div>
+                <div class="space-y-2">
+                    <button onclick="startZipDownload('pdf')" class="w-full flex items-center justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm">
+                        <i data-lucide="file-archive" class="w-5 h-5 mr-2"></i> ZIP: E-Poster ทั้งหมด
+                    </button>
+                    <button onclick="startZipDownload('abstract')" class="w-full flex items-center justify-center px-4 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl transition-colors border border-emerald-200">
+                        <i data-lucide="file-archive" class="w-5 h-5 mr-2"></i> ZIP: บทคัดย่อทั้งหมด
+                    </button>
+                </div>
             </div>
-            <div class="space-y-3">
-                <button onclick="startBulkDownload('pdf')" class="w-full flex items-center justify-center px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl transition-colors border border-rose-200">
-                    <i data-lucide="image" class="w-5 h-5 mr-2"></i> โหลดทั้งหมด: E-Poster
-                </button>
-                <button onclick="startBulkDownload('abstract')" class="w-full flex items-center justify-center px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl transition-colors border border-blue-200">
-                    <i data-lucide="file-text" class="w-5 h-5 mr-2"></i> โหลดทั้งหมด: บทคัดย่อ
-                </button>
-                <button onclick="closeDownloadModal()" class="w-full mt-2 py-3 text-slate-500 hover:text-slate-800 font-bold transition-colors">ยกเลิก</button>
+
+            <!-- แบบเดิม (ทีละ 10) -->
+            <div class="mb-2">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="flex-1 h-px bg-slate-200"></span>
+                    <span class="text-[11px] font-black text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-full tracking-wide">แบบเดิม ทีละ 10</span>
+                    <span class="flex-1 h-px bg-slate-200"></span>
+                </div>
+                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-3 text-left">
+                    <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                    <p class="text-[12px] text-amber-700 font-medium leading-relaxed">ระบบจะดาวน์โหลด <strong>ทีละ 10 ไฟล์</strong> — Browser จะขอสิทธิ์ <strong>Popup</strong> ครั้งแรก กรุณากด <strong>"อนุญาต"</strong></p>
+                </div>
+                <div class="space-y-2">
+                    <button onclick="startBulkDownload('pdf')" class="w-full flex items-center justify-center px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl transition-colors border border-rose-200">
+                        <i data-lucide="image" class="w-5 h-5 mr-2"></i> โหลดทั้งหมด: E-Poster
+                    </button>
+                    <button onclick="startBulkDownload('abstract')" class="w-full flex items-center justify-center px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl transition-colors border border-blue-200">
+                        <i data-lucide="file-text" class="w-5 h-5 mr-2"></i> โหลดทั้งหมด: บทคัดย่อ
+                    </button>
+                </div>
             </div>
+
+            <button onclick="closeDownloadModal()" class="w-full mt-3 py-3 text-slate-500 hover:text-slate-800 font-bold transition-colors">ยกเลิก</button>
+        </div>
+    </div>
+
+    <!-- ZIP Loading Overlay -->
+    <div id="zipLoadingOverlay" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm modal-fade">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full mx-4 text-center border border-slate-100 modal-slide-up">
+            <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">กำลังสร้าง ZIP</h3>
+            <p id="zipStatusText" class="text-sm font-medium text-slate-600 mb-1">กำลังรวบรวมไฟล์...</p>
+            <p class="text-xs text-slate-400">กรุณารอสักครู่ ขึ้นกับจำนวนไฟล์</p>
         </div>
     </div>
 
@@ -983,6 +1029,66 @@
             closeBtn.className = "w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[16px] shadow-lg hover:-translate-y-0.5 border border-transparent cursor-pointer";
             closeBtn.innerText = "ตกลง / ปิดหน้าต่าง";
         }
+
+        // ── ZIP Download ─────────────────────────────────────────────────────────
+        function extractDriveFileId(url) {
+            const m = url.match(/id=([\w-]+)/) || url.match(/\/d\/([\w-]+)/);
+            return m ? m[1] : null;
+        }
+
+        window.startZipDownload = async function(mode, fromSelected = false) {
+            closeDownloadModal();
+
+            let items;
+            if (fromSelected) {
+                items = [];
+                selectedItems.forEach(id => {
+                    const item = dataMap.get(id);
+                    if (!item) return;
+                    if (mode === 'pdf'      && item.pdfUrl)      items.push(item.pdfUrl);
+                    if (mode === 'abstract' && item.abstractUrl) items.push(item.abstractUrl);
+                });
+            } else {
+                items = filteredData
+                    .filter(item => mode === 'pdf' ? (item.pdfUrl && item.pdfUrl.trim()) : (item.abstractUrl && item.abstractUrl.trim()))
+                    .map(item => mode === 'pdf' ? item.pdfUrl : item.abstractUrl);
+            }
+
+            if (items.length === 0) { showToast('ไม่มีไฟล์ให้ดาวน์โหลดในรายการที่เลือก', 'warning'); return; }
+
+            const fileIds = items.map(extractDriveFileId).filter(Boolean);
+            if (fileIds.length === 0) { showToast('ไม่สามารถอ่าน ID ไฟล์ จาก Google Drive URL', 'error'); return; }
+
+            const modeText = mode === 'pdf' ? 'E-Poster' : 'บทคัดย่อ';
+            const zipName  = `E-Poster_${modeText}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+
+            const overlay   = document.getElementById('zipLoadingOverlay');
+            const statusTxt = document.getElementById('zipStatusText');
+            statusTxt.innerText = `กำลังรวบรวม ${fileIds.length} ไฟล์ จาก Google Drive...`;
+            overlay.classList.remove('hidden');
+
+            logActivityToBackend(`สร้าง ZIP: ${modeText} จำนวน ${fileIds.length} ไฟล์`);
+
+            try {
+                const result = await callAPI({ action: 'createZipDownload', fileIds, zipName });
+                overlay.classList.add('hidden');
+                if (result.status === 'success') {
+                    showToast(`ZIP สำเร็จ ${result.count} ไฟล์ — กำลังดาวน์โหลด...`, 'success');
+                    const win = window.open(result.downloadUrl, '_blank', 'noopener');
+                    if (!win) {
+                        const a = document.createElement('a');
+                        a.href = result.downloadUrl; a.target = '_blank'; a.rel = 'noopener';
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        showToast('ZIP พร้อม — คลิกลิงก์ที่เปิดขึ้นเพื่อดาวน์โหลด', 'warning');
+                    }
+                } else {
+                    showToast(result.message || 'เกิดข้อผิดพลาดในการสร้าง ZIP', 'error');
+                }
+            } catch (err) {
+                overlay.classList.add('hidden');
+                showToast('สร้าง ZIP ไม่สำเร็จ: ' + err.message, 'error');
+            }
+        };
 
         // ── CSV Export ───────────────────────────────────────────────────────────
         window.exportCSV = function() {
