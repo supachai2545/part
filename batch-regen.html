@@ -270,31 +270,46 @@ async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, hea
     const PAGE_WIDTH    = 1275.59;
     const HEADER_HEIGHT = 368.50;
 
-    const userDoc   = await PDFDocument.load(userPdfBuffer);
+    // getSize() ใน pdf-lib คืนค่า CropBox (ถ้ามี) ไม่ใช่ MediaBox
+    // ทำให้รู้ขนาดที่ "มองเห็น" จริงของหน้า (ไม่รวม bleed)
+    const srcDoc  = await PDFDocument.load(userPdfBuffer);
+    const { width: cropW, height: cropH } = srcDoc.getPage(0).getSize();
+
     const mergedPdf = await PDFDocument.create();
 
-    // copyPages คัดลอก content stream ตรงๆ — ไม่ผ่าน XObject embedding
-    // ป้องกัน alignment drift ที่เกิดจาก drawPage scaling
-    const [copiedPage] = await mergedPdf.copyPages(userDoc, [0]);
-    const { width: origW, height: origH } = copiedPage.getSize();
+    // embedPdf ใช้ MediaBox สำหรับ BBox ของ XObject
+    const [embeddedPage] = await mergedPdf.embedPdf(userPdfBuffer, [0]);
+    const origW = embeddedPage.width;   // MediaBox width
+    const origH = embeddedPage.height;  // MediaBox height (อาจรวม bleed ที่ขอบล่าง)
 
-    const scale      = PAGE_WIDTH / origW;
-    const scaledOrigH = origH * scale;
+    const scale       = PAGE_WIDTH / origW;
+    const scaledCropH = cropH * scale;
+    // bleedPts = ส่วนล่างของ MediaBox ที่เกิน CropBox (white bleed area)
+    const bleedPts    = Math.max(0, origH - cropH);
 
-    // Scale content stream แล้ว resize page ให้พอดี
-    copiedPage.scaleContent(scale, scale);
-    copiedPage.setSize(PAGE_WIDTH, scaledOrigH + HEADER_HEIGHT);
-
-    // วาด header ด้านบน (y = scaledOrigH ขึ้นไป)
     const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
     const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
     const headerImage  = await mergedPdf.embedJpg(headerBase64);
-    copiedPage.drawImage(headerImage, {
-        x: 0, y: scaledOrigH,
-        width: PAGE_WIDTH, height: HEADER_HEIGHT
+
+    // สร้างหน้าใหม่ขนาด CropBox + header
+    const newPage = mergedPdf.addPage([PAGE_WIDTH, scaledCropH + HEADER_HEIGHT]);
+
+    // วาดโปสเตอร์: เลื่อนลง bleedPts เพื่อซ่อน bleed ที่ขอบล่าง
+    newPage.drawPage(embeddedPage, {
+        x:      0,
+        y:      -bleedPts * scale,
+        width:  PAGE_WIDTH,
+        height: origH * scale
     });
 
-    mergedPdf.addPage(copiedPage);
+    // วาด header ด้านบน
+    newPage.drawImage(headerImage, {
+        x:      0,
+        y:      scaledCropH,
+        width:  PAGE_WIDTH,
+        height: HEADER_HEIGHT
+    });
+
     return await mergedPdf.saveAsBase64();
 }
 
