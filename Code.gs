@@ -43,6 +43,9 @@ function doGet(e) {
       case 'getWorkById':
         result = handleGetWorkById(e.parameter.submissionId);
         break;
+      case 'listFolderFiles':
+        result = handleListFolderFiles(e.parameter.prefix);
+        break;
       default:
         result = { status: 'error', message: 'Unknown GET action: ' + action };
     }
@@ -181,13 +184,13 @@ function handleGetOriginalFiles(submissionId) {
   const pdfFolder = DriveApp.getFolderById(folders.pdf);
   const imgFolder = DriveApp.getFolderById(folders.img);
 
-  // ค้นหาด้วย submissionId อย่างเดียว (ASCII) เพื่อหลีกเลี่ยง encoding ภาษาไทยใน query
-  // แล้วกรองเอาเฉพาะไฟล์ที่ชื่อมี '_ต้นฉบับ_' ใน GAS code
+  // ค้นหาด้วย submissionId อย่างเดียว (ไม่กรอง mimeType เพราะอาจ encode ผิด)
+  // แล้วกรองชื่อ '_ต้นฉบับ_' ใน GAS code
   const pdfIter = pdfFolder.searchFiles(
-    `title contains '${submissionId}' and mimeType = 'application/pdf' and trashed = false`
+    `title contains '${submissionId}' and trashed = false`
   );
   const jpgIter = imgFolder.searchFiles(
-    `title contains '${submissionId}' and (mimeType = 'image/jpeg' or mimeType = 'image/jpg') and trashed = false`
+    `title contains '${submissionId}' and trashed = false`
   );
 
   let pdfFile = null;
@@ -214,6 +217,36 @@ function handleGetOriginalFiles(submissionId) {
     jpgName   : jpgFile.getName(),
     pdfBase64 : Utilities.base64Encode(pdfFile.getBlob().getBytes()),
     jpgBase64 : Utilities.base64Encode(jpgFile.getBlob().getBytes())
+  };
+}
+
+// =========================================================
+// ACTION: listFolderFiles  (debug)
+// แสดง 40 ไฟล์แรกในโฟลเดอร์ PDF + IMG ของ prefix นั้น
+// เพื่อตรวจสอบชื่อและ mimeType จริงของไฟล์ต้นฉบับ
+// =========================================================
+function handleListFolderFiles(prefix) {
+  if (!prefix) return { status: 'error', message: 'ต้องระบุ prefix' };
+  prefix = prefix.toUpperCase();
+  const folders = ORIGINAL_FOLDER_MAP[prefix];
+  if (!folders) return { status: 'error', message: `ไม่พบโฟลเดอร์สำหรับ prefix: ${prefix}` };
+
+  function listFolder(folderId, label) {
+    const folder = DriveApp.getFolderById(folderId);
+    const iter   = folder.getFiles();
+    const files  = [];
+    while (iter.hasNext() && files.length < 40) {
+      const f = iter.next();
+      files.push({ name: f.getName(), mime: f.getMimeType(), id: f.getId() });
+    }
+    return { folderId, label, count: files.length, files };
+  }
+
+  return {
+    status : 'success',
+    prefix,
+    pdf    : listFolder(folders.pdf, 'PDF folder'),
+    img    : listFolder(folders.img, 'IMG folder')
   };
 }
 
