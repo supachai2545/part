@@ -178,27 +178,35 @@ function handleGetOriginalFiles(submissionId) {
   const folders = ORIGINAL_FOLDER_MAP[prefix];
   if (!folders) return { status: 'error', message: `ไม่พบโฟลเดอร์สำหรับ prefix: ${prefix}` };
 
-  const searchKey = `${submissionId}_ต้นฉบับ_`;
-
   const pdfFolder = DriveApp.getFolderById(folders.pdf);
   const imgFolder = DriveApp.getFolderById(folders.img);
 
+  // ค้นหาด้วย submissionId อย่างเดียว (ASCII) เพื่อหลีกเลี่ยง encoding ภาษาไทยใน query
+  // แล้วกรองเอาเฉพาะไฟล์ที่ชื่อมี '_ต้นฉบับ_' ใน GAS code
   const pdfIter = pdfFolder.searchFiles(
-    `title contains '${searchKey}' and mimeType = 'application/pdf' and trashed = false`
+    `title contains '${submissionId}' and mimeType = 'application/pdf' and trashed = false`
   );
   const jpgIter = imgFolder.searchFiles(
-    `title contains '${searchKey}' and (mimeType = 'image/jpeg' or mimeType = 'image/jpg') and trashed = false`
+    `title contains '${submissionId}' and (mimeType = 'image/jpeg' or mimeType = 'image/jpg') and trashed = false`
   );
 
-  if (!pdfIter.hasNext()) {
-    return { status: 'error', message: `ไม่พบ PDF ต้นฉบับ (${searchKey}*.pdf) ในโฟลเดอร์ PDF ของ ${prefix}` };
+  let pdfFile = null;
+  while (pdfIter.hasNext()) {
+    const f = pdfIter.next();
+    if (f.getName().indexOf('_ต้นฉบับ_') !== -1) { pdfFile = f; break; }
   }
-  if (!jpgIter.hasNext()) {
-    return { status: 'error', message: `ไม่พบ JPG ต้นฉบับ (${searchKey}*.jpg) ในโฟลเดอร์ IMG ของ ${prefix}` };
+  let jpgFile = null;
+  while (jpgIter.hasNext()) {
+    const f = jpgIter.next();
+    if (f.getName().indexOf('_ต้นฉบับ_') !== -1) { jpgFile = f; break; }
   }
 
-  const pdfFile = pdfIter.next();
-  const jpgFile = jpgIter.next();
+  if (!pdfFile) {
+    return { status: 'error', message: `ไม่พบ PDF ต้นฉบับ (${submissionId}_ต้นฉบับ_*.pdf) ในโฟลเดอร์ PDF ของ ${prefix}` };
+  }
+  if (!jpgFile) {
+    return { status: 'error', message: `ไม่พบ JPG ต้นฉบับ (${submissionId}_ต้นฉบับ_*.jpg) ในโฟลเดอร์ IMG ของ ${prefix}` };
+  }
 
   return {
     status    : 'success',
