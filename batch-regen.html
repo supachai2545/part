@@ -267,21 +267,29 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
 
 async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, headerNames) {
     const { PDFDocument } = window.PDFLib;
-    const mergedPdf = await PDFDocument.create();
-    const PAGE_WIDTH  = 1275.59;
-    const PAGE_HEIGHT = 2834.65;
+    const PAGE_WIDTH    = 1275.59;
     const HEADER_HEIGHT = 368.50;
-    const USER_HEIGHT   = 2466.15;
 
+    const userDoc  = await PDFDocument.load(userPdfBuffer);
+    const origPage = userDoc.getPage(0);
+    const { width: origW, height: origH } = origPage.getSize();
+
+    // คำนวณ height ของเนื้อหาจาก aspect ratio จริงของ PDF ต้นฉบับ
+    // เพื่อไม่ให้มีช่องขาวด้านล่าง
+    const contentScale  = PAGE_WIDTH / origW;
+    const USER_HEIGHT   = origH * contentScale;
+    const PAGE_HEIGHT   = HEADER_HEIGHT + USER_HEIGHT;
+
+    const mergedPdf = await PDFDocument.create();
     const page = mergedPdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+
     const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
     const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
-    const headerImage = await mergedPdf.embedJpg(headerBase64);
+    const headerImage  = await mergedPdf.embedJpg(headerBase64);
 
-    const userDoc = await PDFDocument.load(userPdfBuffer);
     const [userEmbed] = await mergedPdf.embedPdf(userDoc);
 
-    page.drawPage(userEmbed, { x: 0, y: 0, width: PAGE_WIDTH, height: USER_HEIGHT });
+    page.drawPage(userEmbed,  { x: 0, y: 0,           width: PAGE_WIDTH, height: USER_HEIGHT   });
     page.drawImage(headerImage, { x: 0, y: USER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT });
 
     return await mergedPdf.saveAsBase64();
