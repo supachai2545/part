@@ -30,9 +30,10 @@
 
     <!-- ===== CONFIG ===== -->
     <script>
-        var LIFF_ID      = '2010315530-js3lnuH9';
-        var SUPABASE_URL = 'https://jdujdpqihtknelmpqxhy.supabase.co';
-        var SUPABASE_KEY = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
+        var LIFF_ID       = '2010315530-js3lnuH9';
+        var OA_ADD_FRIEND = 'https://line.me/R/ti/p/@759oqdlo';   // ลิงก์เพิ่มเพื่อน OA
+        var SUPABASE_URL  = 'https://jdujdpqihtknelmpqxhy.supabase.co';
+        var SUPABASE_KEY  = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
     </script>
 
     <!-- ===== PAGE (หน้าตาเดียวกับหน้าติดตามในเว็บ) ===== -->
@@ -73,6 +74,23 @@
 
             <!-- Content -->
             <div id="contentBox" class="hidden space-y-4">
+
+                <!-- แถบเพิ่มเพื่อน (โชว์เมื่อยังไม่ได้แอด OA) -->
+                <div id="addFriendBanner" class="hidden highlight-card rounded-[1.5rem] p-5 border-2 border-amber-300 bg-amber-50/80">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">⚠️</span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-amber-800">ยังไม่ได้เพิ่มเพื่อน OA</p>
+                            <p class="text-xs text-amber-600 mt-0.5 leading-relaxed">ต้องเพิ่มเพื่อน <b>DMSc Conference #34</b> ก่อน ระบบจึงจะส่งแจ้งเตือนเข้า LINE ของคุณได้</p>
+                        </div>
+                    </div>
+                    <a href="https://line.me/R/ti/p/@759oqdlo"
+                       class="w-full mt-3 py-3 text-white font-bold rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
+                       style="background:#06C755">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        เพิ่มเพื่อน OA เพื่อรับแจ้งเตือน
+                    </a>
+                </div>
 
                 <!-- เพิ่มผลงาน -->
                 <div class="highlight-card rounded-[1.5rem] p-5 border-2 border-indigo-100">
@@ -167,9 +185,24 @@
 
                 loadMyCodes();
                 lucide.createIcons();
+
+                // เช็คว่าเพิ่มเพื่อน OA แล้วหรือยัง + เช็คซ้ำทุกครั้งที่กลับมาหน้านี้ (หลังกดเพิ่มเพื่อน)
+                checkFriendship();
+                window.addEventListener('focus', checkFriendship);
+                document.addEventListener('visibilitychange', () => { if (!document.hidden) checkFriendship(); });
             } catch (e) {
                 showError('เชื่อมต่อไม่สำเร็จ: ' + (e && e.message ? e.message : e));
             }
+        }
+
+        // เช็คสถานะเพื่อนกับ OA — ถ้าเพิ่มแล้วซ่อนแถบเตือน
+        async function checkFriendship() {
+            try {
+                const fs = await liff.getFriendship();
+                const banner = document.getElementById('addFriendBanner');
+                if (banner) banner.classList.toggle('hidden', !!fs.friendFlag);
+                lucide.createIcons();
+            } catch (e) { /* getFriendship อาจไม่พร้อมถ้า channel ยังไม่ผูก OA */ }
         }
 
         function onCodeInput() {
