@@ -60,22 +60,19 @@
         </div>
     </div>
 
-    <!-- Modal ดาวน์โหลด -->
-    <div id="downloadProgressModal" class="hidden fixed inset-0 z-[150] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm modal-fade">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center border border-slate-100 modal-slide-up">
-            <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="download-cloud" class="w-8 h-8"></i></div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">กำลังดาวน์โหลดข้อมูล</h3>
-            <p class="text-sm text-slate-500 mb-5">ระบบกำลังทยอยดึงไฟล์จำนวน <span id="dlTotalText" class="font-bold text-blue-600">0</span> ไฟล์</p>
-            <div class="w-full bg-slate-100 rounded-full h-3.5 mb-2 overflow-hidden shadow-inner">
-                <div id="dlProgressBar" class="bg-blue-600 h-3.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+    <!-- ZIP Loading Overlay -->
+    <div id="zipLoadingOverlay" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm modal-fade">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full mx-4 text-center border border-slate-100 modal-slide-up">
+            <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
             </div>
-            <div class="flex justify-between items-center mb-6">
-                <span id="dlStatusText" class="text-[11px] font-bold text-slate-500">รอเริ่มดาวน์โหลด...</span>
-                <span id="dlProgressText" class="text-xs font-black text-blue-600">0%</span>
+            <h3 class="text-xl font-black text-slate-800 mb-3">กำลังสร้าง ZIP</h3>
+            <p id="zipStatusText" class="text-sm font-medium text-slate-600 mb-3">กำลังรวบรวมไฟล์...</p>
+            <div class="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
+                <div id="zipProgressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
-            <button id="dlCloseBtn" onclick="closeDownloadProgress()" disabled class="w-full py-3.5 bg-slate-100 text-slate-400 font-bold rounded-[16px] transition-all cursor-not-allowed border border-transparent">
-                กำลังเตรียมการ...
-            </button>
+            <p id="zipProgressPct" class="text-xs font-black text-emerald-600 mb-2">0%</p>
+            <p class="text-xs text-slate-400">กรุณารอสักครู่ ขึ้นกับจำนวนไฟล์</p>
         </div>
     </div>
 
@@ -322,18 +319,6 @@
             </div>
 
             <button onclick="closeDownloadModal()" class="w-full mt-3 py-3 text-slate-500 hover:text-slate-800 font-bold transition-colors">ยกเลิก</button>
-        </div>
-    </div>
-
-    <!-- ZIP Loading Overlay -->
-    <div id="zipLoadingOverlay" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm modal-fade">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full mx-4 text-center border border-slate-100 modal-slide-up">
-            <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-            </div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">กำลังสร้าง ZIP</h3>
-            <p id="zipStatusText" class="text-sm font-medium text-slate-600 mb-1">กำลังรวบรวมไฟล์...</p>
-            <p class="text-xs text-slate-400">กรุณารอสักครู่ ขึ้นกับจำนวนไฟล์</p>
         </div>
     </div>
 
@@ -1036,6 +1021,8 @@
             return m ? m[1] : null;
         }
 
+        const ZIP_CHUNK = 30; // ไฟล์ต่อ ZIP เพื่อไม่ให้เกิน GAS blob limit (~50MB)
+
         window.startZipDownload = async function(mode, fromSelected = false) {
             closeDownloadModal();
 
@@ -1059,35 +1046,80 @@
             const fileIds = items.map(extractDriveFileId).filter(Boolean);
             if (fileIds.length === 0) { showToast('ไม่สามารถอ่าน ID ไฟล์ จาก Google Drive URL', 'error'); return; }
 
-            const modeText = mode === 'pdf' ? 'E-Poster' : 'บทคัดย่อ';
-            const zipName  = `E-Poster_${modeText}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+            const modeText    = mode === 'pdf' ? 'E-Poster' : 'บทคัดย่อ';
+            const dateStr     = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const total       = fileIds.length;
+            const totalChunks = Math.ceil(total / ZIP_CHUNK);
 
             const overlay   = document.getElementById('zipLoadingOverlay');
+            const bar       = document.getElementById('zipProgressBar');
+            const pctEl     = document.getElementById('zipProgressPct');
             const statusTxt = document.getElementById('zipStatusText');
-            statusTxt.innerText = `กำลังรวบรวม ${fileIds.length} ไฟล์ จาก Google Drive...`;
+
+            bar.style.width = '0%'; pctEl.innerText = '0%';
             overlay.classList.remove('hidden');
+            logActivityToBackend(`สร้าง ZIP: ${modeText} จำนวน ${total} ไฟล์ (${totalChunks} ชุด)`);
 
-            logActivityToBackend(`สร้าง ZIP: ${modeText} จำนวน ${fileIds.length} ไฟล์`);
+            for (let c = 0; c < totalChunks; c++) {
+                const from     = c * ZIP_CHUNK;
+                const to       = Math.min(from + ZIP_CHUNK, total);
+                const chunkIds = fileIds.slice(from, to);
+                const zipName  = totalChunks > 1
+                    ? `E-Poster_${modeText}_ชุด${c + 1}จาก${totalChunks}_${dateStr}`
+                    : `E-Poster_${modeText}_${dateStr}`;
 
-            try {
-                const result = await callAPI({ action: 'createZipDownload', fileIds, zipName });
-                overlay.classList.add('hidden');
-                if (result.status === 'success') {
-                    showToast(`ZIP สำเร็จ ${result.count} ไฟล์ — กำลังดาวน์โหลด...`, 'success');
+                // ── Simulated progress within chunk ───────────────────────────
+                const baseP  = (c / totalChunks) * 100;
+                const chunkP = (1 / totalChunks) * 100;
+                let simFile  = 0;
+                const msPerFile = Math.max(400, Math.min(1800, 60000 / chunkIds.length));
+                const timer = setInterval(() => {
+                    if (simFile < chunkIds.length - 1) {
+                        simFile++;
+                        const p = Math.round(baseP + (simFile / chunkIds.length) * chunkP * 0.88);
+                        bar.style.width = p + '%'; pctEl.innerText = p + '%';
+                        statusTxt.innerText = `ชุดที่ ${c + 1}/${totalChunks} — กำลังรวบรวมไฟล์ที่ ${from + simFile} จาก ${total} (${p}%)`;
+                    }
+                }, msPerFile);
+
+                try {
+                    const result = await callAPI({ action: 'createZipDownload', fileIds: chunkIds, zipName });
+                    clearInterval(timer);
+
+                    if (result.status !== 'success') {
+                        overlay.classList.add('hidden');
+                        showToast(result.message || 'เกิดข้อผิดพลาดในการสร้าง ZIP', 'error');
+                        return;
+                    }
+
+                    const endP = Math.round(((c + 1) / totalChunks) * 100);
+                    bar.style.width = endP + '%'; pctEl.innerText = endP + '%';
+                    statusTxt.innerText = `ชุดที่ ${c + 1}/${totalChunks} เสร็จแล้ว (${result.count} ไฟล์) — กำลังดาวน์โหลด...`;
+
                     const win = window.open(result.downloadUrl, '_blank', 'noopener');
                     if (!win) {
                         const a = document.createElement('a');
                         a.href = result.downloadUrl; a.target = '_blank'; a.rel = 'noopener';
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        showToast('ZIP พร้อม — คลิกลิงก์ที่เปิดขึ้นเพื่อดาวน์โหลด', 'warning');
                     }
-                } else {
-                    showToast(result.message || 'เกิดข้อผิดพลาดในการสร้าง ZIP', 'error');
+
+                    if (c < totalChunks - 1) await new Promise(r => setTimeout(r, 2500));
+                } catch (err) {
+                    clearInterval(timer);
+                    overlay.classList.add('hidden');
+                    showToast('สร้าง ZIP ไม่สำเร็จ: ' + err.message, 'error');
+                    return;
                 }
-            } catch (err) {
-                overlay.classList.add('hidden');
-                showToast('สร้าง ZIP ไม่สำเร็จ: ' + err.message, 'error');
             }
+
+            await new Promise(r => setTimeout(r, 600));
+            overlay.classList.add('hidden');
+            showToast(
+                totalChunks > 1
+                    ? `ดาวน์โหลด ZIP สำเร็จ ${totalChunks} ชุด รวม ${total} ไฟล์`
+                    : `ZIP สำเร็จ — ดาวน์โหลด ${total} ไฟล์`,
+                'success'
+            );
         };
 
         // ── CSV Export ───────────────────────────────────────────────────────────
