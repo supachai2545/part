@@ -300,7 +300,7 @@ function mergeWithHeaderImage(userJpgBase64, subId, title, name, domain, headerN
         const userImg = new Image();
         userImg.onload = () => {
             ctx.drawImage(userImg, 0, 1300, 4500, 8700);
-            resolve(canvas.toDataURL('image/jpeg', 0.95).split(',')[1]);
+            resolve(canvas.toDataURL('image/jpeg', 1.0).split(',')[1]);
         };
         userImg.src = 'data:image/jpeg;base64,' + userJpgBase64;
     });
