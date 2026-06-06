@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Re-generate Headers (Admin)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .log-success { color: #059669; }
+        .log-error   { color: #e11d48; }
+        .log-warning { color: #d97706; }
+        .log-info    { color: #475569; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 sm:p-8">
+<div class="max-w-5xl mx-auto space-y-5">
+
+    <!-- Title -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
+        <h1 class="text-2xl font-extrabold text-slate-800 mb-1">🔧 Batch Re-generate Headers (Admin)</h1>
+        <p class="text-slate-500 text-sm">สร้างไฟล์โปสเตอร์ที่มีหัวถูกต้องใหม่ทั้งหมด — อ่านจาก Sheets ชุดใหม่ ดึงต้นฉบับจาก Drive วาดหัวใหม่ ทับของเดิม</p>
+    </div>
+
+    <!-- Config -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
+        <h2 class="text-base font-extrabold text-slate-700 mb-5 pb-3 border-b border-slate-100">⚙️ ตั้งค่า</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-slate-600 mb-1.5">Google Apps Script API URL</label>
+                <input id="apiUrl" type="text"
+                    value="https://script.google.com/macros/s/AKfycbywDC1SXXFgLDT3FI98rebVOB6A7uuGmzUXlz2PwkkcDWZp5eDP3tVae6UsAbNaf1yO/exec"
+                    class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+
+            <!-- Header Images -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
+                    <label class="block text-sm font-bold text-blue-800 mb-2">รูปหัว กลุ่ม R&amp;D (HEADER_IMG_BASE64_RND)</label>
+                    <p class="text-xs text-blue-600 mb-3 leading-relaxed">
+                        อัปโหลดไฟล์รูปหัว R&D จากในเครื่อง (JPG/PNG)<br/>
+                        ระบบจะแปลงเป็น Base64 ให้อัตโนมัติ
+                    </p>
+                    <input type="file" id="headerRndFile" accept="image/*" onchange="loadHeaderImg(event,'RND')"
+                        class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer"/>
+                    <p id="rndStatus" class="text-xs mt-2 text-slate-400 font-medium">ยังไม่ได้โหลด</p>
+                </div>
+                <div class="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
+                    <label class="block text-sm font-bold text-emerald-800 mb-2">รูปหัว กลุ่ม R2R (HEADER_IMG_BASE64_R2R)</label>
+                    <p class="text-xs text-emerald-600 mb-3 leading-relaxed">
+                        อัปโหลดไฟล์รูปหัว R2R จากในเครื่อง (JPG/PNG)<br/>
+                        ระบบจะแปลงเป็น Base64 ให้อัตโนมัติ
+                    </p>
+                    <input type="file" id="headerR2RFile" accept="image/*" onchange="loadHeaderImg(event,'R2R')"
+                        class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer"/>
+                    <p id="r2rStatus" class="text-xs mt-2 text-slate-400 font-medium">ยังไม่ได้โหลด</p>
+                </div>
+            </div>
+
+            <!-- Info box -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">
+                <strong>📌 Google Apps Script ต้องมี 3 action ใหม่:</strong>
+                <code class="block bg-amber-100 rounded-lg px-3 py-2 mt-2 text-xs font-mono text-amber-900 whitespace-pre">batchGetAllWorks   → อ่านทุกแถวจาก Sheets ชุดใหม่
+getOriginalFiles   → ดึงไฟล์ต้นฉบับจาก Drive ตาม submissionId
+getWorkById        → ดึงข้อมูล 1 ชิ้น (ใช้ตอนทดสอบ)</code>
+                <p class="mt-2 text-xs">ดูโค้ดที่ต้องเพิ่มได้ใน comment ท้ายไฟล์นี้</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Single -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
+        <h2 class="text-base font-extrabold text-slate-700 mb-4 pb-3 border-b border-slate-100">🧪 ทดสอบ 1 ชิ้นก่อน</h2>
+        <div class="flex gap-3">
+            <input id="testSubId" type="text" placeholder="รหัสผลงาน เช่น RP2-58"
+                class="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            <button onclick="runTest()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                ทดสอบ
+            </button>
+        </div>
+        <p id="testStatus" class="text-sm mt-3 font-bold text-slate-400"></p>
+    </div>
+
+    <!-- Batch Control -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
+        <h2 class="text-base font-extrabold text-slate-700 mb-5 pb-3 border-b border-slate-100">🚀 รัน Batch ทั้งหมด</h2>
+
+        <div class="flex flex-wrap gap-3 items-center mb-6">
+            <button id="startBtn" onclick="startBatch()"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
+                เริ่มสร้างใหม่ทั้งหมด
+            </button>
+            <button id="stopBtn" onclick="stopBatch()" disabled
+                class="bg-rose-500 hover:bg-rose-600 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                หยุด
+            </button>
+            <span id="batchStatusText" class="text-sm font-bold text-slate-500"></span>
+        </div>
+
+        <div id="progressSection" class="hidden">
+            <div class="flex justify-between text-sm font-bold text-slate-600 mb-1.5">
+                <span id="progressLabel">กำลังประมวลผล...</span>
+                <span id="progressCount">0 / 0</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-3 mb-2">
+                <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-300" style="width:0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400">
+                <span id="progressEta"></span>
+                <span id="progressStats"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-base font-extrabold text-slate-700">📋 Log</h2>
+            <button onclick="clearLog()" class="text-xs text-slate-400 hover:text-slate-600 font-bold px-3 py-1 rounded-lg hover:bg-slate-100 transition-colors">ล้าง</button>
+        </div>
+        <div id="logContainer"
+            class="max-h-[480px] overflow-y-auto bg-slate-50 border border-slate-100 rounded-xl p-4 font-mono text-xs space-y-0.5">
+            <p class="log-info">รอการทำงาน...</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// =========================================================
+// STATE
+// =========================================================
+let HEADER_IMG_RND = null;  // data URL (data:image/...;base64,...)
+let HEADER_IMG_R2R = null;  // data URL
+let isStopped = false;
+
+// =========================================================
+// HEADER IMAGE LOADER
+// =========================================================
+function loadHeaderImg(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        if (type === 'RND') {
+            HEADER_IMG_RND = e.target.result;
+            document.getElementById('rndStatus').textContent = `✅ โหลดแล้ว: ${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+            document.getElementById('rndStatus').className = 'text-xs mt-2 text-emerald-600 font-bold';
+        } else {
+            HEADER_IMG_R2R = e.target.result;
+            document.getElementById('r2rStatus').textContent = `✅ โหลดแล้ว: ${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+            document.getElementById('r2rStatus').className = 'text-xs mt-2 text-emerald-600 font-bold';
+        }
+        addLog(`✅ โหลดรูปหัว ${type} เรียบร้อย: ${file.name}`, 'success');
+    };
+    reader.readAsDataURL(file);
+}
+
+// =========================================================
+// UTILS
+// =========================================================
+const fileToBase64 = file => new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => res(reader.result.split(',')[1]);
+    reader.onerror = err => rej(err);
+});
+
+function base64ToArrayBuffer(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function getApiUrl() { return document.getElementById('apiUrl').value.trim(); }
+
+async function apiGet(params) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${getApiUrl()}?${qs}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+async function apiPost(body) {
+    const res = await fetch(getApiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+// =========================================================
+// CANVAS FUNCTIONS — คัดลอกจากระบบเดิมทุกอย่าง
+// =========================================================
+function generateHeaderWithText(subId, title, name, domain, headerNames) {
+    return new Promise((resolve) => {
+        const cvs = document.createElement('canvas');
+        cvs.width = 4500;
+        cvs.height = 1300;
+        const ctx = cvs.getContext('2d');
+
+        const isR2R = domain && domain.toUpperCase().includes('R2R');
+        let isFallbackMode = false;
+
+        const drawText = async () => {
+            await document.fonts.ready;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'left';
+            const textColor = isFallbackMode ? '#ffffff' : (isR2R ? '#166534' : '#1e3a8a');
+
+            // รหัสผลงาน
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 83px "Sarabun", sans-serif';
+            ctx.fillText(subId, 830, 385);
+
+            function tokenizeFormattedText(text) {
+                if (!text) return [];
+                let processed = text
+                    .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                    .replace(/_(.*?)_/g, '<i>$1</i>');
+                const tokens = [];
+                const regex = /(<\/?[iI]>|<\/?[eE][mM]>)/g;
+                const parts = processed.split(regex);
+                let isItalicActive = false;
+                for (let part of parts) {
+                    if (part.toLowerCase() === '<i>' || part.toLowerCase() === '<em>') {
+                        isItalicActive = true;
+                    } else if (part.toLowerCase() === '</i>' || part.toLowerCase() === '</em>') {
+                        isItalicActive = false;
+                    } else if (part) {
+                        const subParts = part.split(/(\s+)/);
+                        for (let sp of subParts) {
+                            if (sp) tokens.push({ text: sp, italic: isItalicActive });
+                        }
+                    }
+                }
+                return tokens;
+            }
+
+            function drawDynamicWrappedText(ctx, text, x, centerY, maxWidth, maxHeight, maxFontSize, minFontSize) {
+                let fontSize = maxFontSize;
+                let lines = [];
+                const lineHeightRatio = 1.3;
+                const tokens = tokenizeFormattedText(text);
+                if (tokens.length === 0) return;
+
+                while (fontSize >= minFontSize) {
+                    lines = [];
+                    let currentLine = [], currentLineWidth = 0;
+                    for (let token of tokens) {
+                        ctx.font = token.italic
+                            ? `italic bold ${fontSize}px "Sarabun", sans-serif`
+                            : `bold ${fontSize}px "Sarabun", sans-serif`;
+                        let tokenWidth = ctx.measureText(token.text).width;
+                        if (currentLineWidth + tokenWidth > maxWidth) {
+                            if (tokenWidth > maxWidth) {
+                                if (currentLine.length > 0) { lines.push(currentLine); currentLine = []; currentLineWidth = 0; }
+                                let chars = token.text.split(''), tempText = '', tempWidth = 0;
+                                for (let ch of chars) {
+                                    ctx.font = token.italic ? `italic bold ${fontSize}px "Sarabun", sans-serif` : `bold ${fontSize}px "Sarabun", sans-serif`;
+                                    let chW = ctx.measureText(ch).width;
+                                    if (tempWidth + chW > maxWidth) { lines.push([{ text: tempText, italic: token.italic }]); tempText = ch; tempWidth = chW; }
+                                    else { tempText += ch; tempWidth += chW; }
+                                }
+                                if (tempText) { currentLine.push({ text: tempText, italic: token.italic }); currentLineWidth = tempWidth; }
+                            } else {
+                                if (currentLine.length > 0) lines.push(currentLine);
+                                if (token.text.trim() === '' && currentLine.length === 0) { currentLine = []; currentLineWidth = 0; }
+                                else { currentLine = [token]; currentLineWidth = tokenWidth; }
+                            }
+                        } else { currentLine.push(token); currentLineWidth += tokenWidth; }
+                    }
+                    if (currentLine.length > 0) lines.push(currentLine);
+                    if (lines.length * (fontSize * lineHeightRatio) <= maxHeight || fontSize === minFontSize) break;
+                    fontSize -= 2;
+                }
+
+                let lineHeight = fontSize * lineHeightRatio;
+                let startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+                for (let i = 0; i < lines.length; i++) {
+                    let currentX = x;
+                    for (let span of lines[i]) {
+                        ctx.font = span.italic ? `italic bold ${fontSize}px "Sarabun", sans-serif` : `bold ${fontSize}px "Sarabun", sans-serif`;
+                        ctx.fillText(span.text, currentX, startY + i * lineHeight);
+                        currentX += ctx.measureText(span.text).width;
+                    }
+                }
+            }
+
+            // ชื่อผลงาน (สีขาว)
+            ctx.fillStyle = '#ffffff';
+            drawDynamicWrappedText(ctx, title, 400, 720, 3100, 420, 75, 25);
+
+            // รายชื่อผู้จัดทำ
+            ctx.fillStyle = textColor;
+            const namesToPrint = (headerNames && headerNames.trim() !== '') ? headerNames : name;
+            drawDynamicWrappedText(ctx, namesToPrint, 400, 1110, 3500, 240, 55, 16);
+
+            resolve(cvs);
+        };
+
+        const headerDataUrl = isR2R ? HEADER_IMG_R2R : HEADER_IMG_RND;
+
+        if (!headerDataUrl) {
+            isFallbackMode = true;
+            ctx.fillStyle = isR2R ? '#166534' : '#1e3a8a';
+            ctx.fillRect(0, 0, 4500, 1300);
+            drawText();
+            return;
+        }
+
+        const hImg = new Image();
+        hImg.onload = () => { ctx.drawImage(hImg, 0, 0, 4500, 1300); drawText(); };
+        hImg.onerror = () => {
+            isFallbackMode = true;
+            ctx.fillStyle = isR2R ? '#166534' : '#1e3a8a';
+            ctx.fillRect(0, 0, 4500, 1300);
+            drawText();
+        };
+        hImg.src = headerDataUrl;
+    });
+}
+
+async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, headerNames) {
+    const { PDFDocument } = window.PDFLib;
+    const mergedPdf = await PDFDocument.create();
+    const PAGE_WIDTH  = 1275.59;
+    const PAGE_HEIGHT = 2834.65;
+    const HEADER_HEIGHT = 368.50;
+    const USER_HEIGHT   = 2466.15;
+
+    const page = mergedPdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
+    const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
+    const headerImage = await mergedPdf.embedJpg(headerBase64);
+
+    const userDoc = await PDFDocument.load(userPdfBuffer);
+    const [userEmbed] = await mergedPdf.embedPdf(userDoc);
+
+    page.drawPage(userEmbed, { x: 0, y: 0, width: PAGE_WIDTH, height: USER_HEIGHT });
+    page.drawImage(headerImage, { x: 0, y: USER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT });
+
+    return await mergedPdf.saveAsBase64();
+}
+
+function mergeWithHeaderImage(userJpgBase64, subId, title, name, domain, headerNames) {
+    return new Promise(async (resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 4500;
+        canvas.height = 10000;
+
+        const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
+        ctx.drawImage(headerCanvas, 0, 0);
+
+        const userImg = new Image();
+        userImg.onload = () => {
+            ctx.drawImage(userImg, 0, 1300, 4500, 8700);
+            resolve(canvas.toDataURL('image/jpeg', 0.95).split(',')[1]);
+        };
+        userImg.src = 'data:image/jpeg;base64,' + userJpgBase64;
+    });
+}
+
+// =========================================================
+// UPLOAD — ทับไฟล์เดิม (ต้องการ action 'batchUploadFile' ใน GAS)
+// =========================================================
+async function uploadMergedFile(submissionId, fileType, base64Str, mimeType, fileName) {
+    const res = await apiPost({
+        action: 'batchUploadFile',   // action ใหม่ที่ทับของเดิม
+        submissionId,
+        fileType,
+        fileBase64: base64Str,
+        mimeType,
+        fileName
+    });
+    if (res.status !== 'success') throw new Error(`อัปโหลด ${fileType} ไม่สำเร็จ: ${res.message}`);
+}
+
+// =========================================================
+// PROCESS ONE WORK
+// =========================================================
+async function processOneWork(work) {
+    // 1. ดึงไฟล์ต้นฉบับจาก Drive
+    const filesRes = await apiGet({
+        action: 'getOriginalFiles',
+        submissionId: work.submissionId
+    });
+    if (filesRes.status !== 'success') throw new Error('ดึงไฟล์ไม่สำเร็จ: ' + filesRes.message);
+
+    const { pdfBase64, jpgBase64 } = filesRes;
+
+    // 2. วาดหัวใหม่และรวมไฟล์ (logic เดิมเป๊ะๆ)
+    const pdfBuffer = base64ToArrayBuffer(pdfBase64);
+    const finalPdfBase64 = await mergeWithHeaderPDF(pdfBuffer, work.submissionId, work.projectTitle, work.fullName, work.domain, work.headerNames);
+    const finalJpgBase64 = await mergeWithHeaderImage(jpgBase64, work.submissionId, work.projectTitle, work.fullName, work.domain, work.headerNames);
+
+    // 3. อัปโหลดทับของเดิม
+    const cleanName = work.fullName.replace(/\s+/g, ' ').trim();
+    await uploadMergedFile(work.submissionId, 'Merged_PDF', finalPdfBase64, 'application/pdf', `${work.submissionId}_${cleanName}.pdf`);
+    await uploadMergedFile(work.submissionId, 'Merged_JPG', finalJpgBase64, 'image/jpeg',      `${work.submissionId}_${cleanName}.jpg`);
+}
+
+// =========================================================
+// TEST SINGLE ITEM
+// =========================================================
+async function runTest() {
+    const subId = document.getElementById('testSubId').value.trim();
+    if (!subId)        { alert('กรุณาใส่รหัสผลงาน'); return; }
+    if (!getApiUrl())  { alert('กรุณาใส่ API URL');   return; }
+
+    setTestStatus('⏳ กำลังทดสอบ...', 'text-blue-600');
+    addLog(`🧪 ทดสอบ: ${subId}`, 'info');
+
+    try {
+        const res = await apiGet({ action: 'getWorkById', submissionId: subId });
+        if (res.status !== 'success') throw new Error(res.message);
+        await processOneWork(res.data);
+        setTestStatus(`✅ สำเร็จ: ${subId}`, 'text-emerald-600');
+        addLog(`✅ ทดสอบสำเร็จ: ${subId}`, 'success');
+    } catch (err) {
+        setTestStatus(`❌ ${err.message}`, 'text-rose-600');
+        addLog(`❌ ทดสอบล้มเหลว: ${err.message}`, 'error');
+    }
+}
+
+function setTestStatus(msg, cls) {
+    const el = document.getElementById('testStatus');
+    el.textContent = msg;
+    el.className = `text-sm mt-3 font-bold ${cls}`;
+}
+
+// =========================================================
+// BATCH
+// =========================================================
+async function startBatch() {
+    if (!getApiUrl()) { alert('กรุณาใส่ API URL'); return; }
+
+    isStopped = false;
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('progressSection').classList.remove('hidden');
+    document.getElementById('batchStatusText').textContent = '';
+
+    addLog('🚀 เริ่มดึงข้อมูลทั้งหมดจาก Sheets ใหม่...', 'info');
+
+    // 1. ดึงข้อมูลทั้งหมด
+    let works;
+    try {
+        const res = await apiGet({ action: 'batchGetAllWorks' });
+        if (res.status !== 'success') throw new Error(res.message);
+        works = res.data;
+        addLog(`✅ พบข้อมูลทั้งหมด ${works.length} ชิ้น — เริ่มประมวลผล`, 'success');
+    } catch (err) {
+        addLog(`❌ ดึงข้อมูลไม่สำเร็จ: ${err.message}`, 'error');
+        resetBatchUI();
+        return;
+    }
+
+    // 2. วนทำทีละชิ้น
+    let successes = 0, errors = 0;
+    const startTime = Date.now();
+
+    for (let i = 0; i < works.length; i++) {
+        if (isStopped) { addLog('⏹ หยุดโดยผู้ใช้', 'warning'); break; }
+
+        const work = works[i];
+        document.getElementById('progressLabel').textContent = `กำลังประมวลผล: ${work.submissionId} – ${work.fullName}`;
+
+        try {
+            await processOneWork(work);
+            successes++;
+            addLog(`✅ [${i+1}/${works.length}] ${work.submissionId} – ${work.fullName}`, 'success');
+        } catch (err) {
+            errors++;
+            addLog(`❌ [${i+1}/${works.length}] ${work.submissionId} – ${err.message}`, 'error');
+        }
+
+        // อัปเดต progress
+        const pct = Math.round(((i + 1) / works.length) * 100);
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressCount').textContent = `${i+1} / ${works.length}`;
+        document.getElementById('progressStats').textContent = `✅ ${successes}  ❌ ${errors}`;
+
+        // คำนวณเวลาที่เหลือ
+        const elapsed = (Date.now() - startTime) / 1000;
+        const avgSec  = elapsed / (i + 1);
+        const remaining = Math.round(avgSec * (works.length - i - 1));
+        document.getElementById('progressEta').textContent =
+            remaining > 60
+                ? `เหลืออีกประมาณ ${Math.round(remaining/60)} นาที`
+                : remaining > 0 ? `เหลืออีกประมาณ ${remaining} วินาที` : 'เกือบเสร็จแล้ว...';
+
+        // ให้ browser ได้อัปเดต UI
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    const summary = `🎉 เสร็จสิ้น — สำเร็จ ${successes} ชิ้น | ล้มเหลว ${errors} ชิ้น`;
+    document.getElementById('progressLabel').textContent = isStopped ? '⏹ หยุดแล้ว' : summary;
+    document.getElementById('progressEta').textContent = '';
+    document.getElementById('batchStatusText').textContent = isStopped ? '' : `สำเร็จ ${successes} | ล้มเหลว ${errors}`;
+    addLog(summary, 'info');
+    resetBatchUI();
+}
+
+function stopBatch() {
+    isStopped = true;
+    document.getElementById('stopBtn').disabled = true;
+    addLog('⏹ กำลังหยุด (รอชิ้นปัจจุบันเสร็จก่อน)...', 'warning');
+}
+
+function resetBatchUI() {
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+}
+
+// =========================================================
+// LOG
+// =========================================================
+function addLog(message, type = 'info') {
+    const container = document.getElementById('logContainer');
+    const placeholder = container.querySelector('p.log-info');
+    if (placeholder && placeholder.textContent === 'รอการทำงาน...') placeholder.remove();
+
+    const time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const el = document.createElement('p');
+    el.className = `log-${type}`;
+    el.textContent = `[${time}] ${message}`;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+}
+
+function clearLog() {
+    document.getElementById('logContainer').innerHTML = '<p class="log-info">ล้าง Log แล้ว</p>';
+}
+</script>
+
+<!--
+=======================================================================
+📋 โค้ดที่ต้องเพิ่มใน Google Apps Script (ไฟล์ Code.gs)
+=======================================================================
+
+1. เพิ่มใน doGet(e) — switch case:
+
+    case 'batchGetAllWorks':
+        result = handleBatchGetAllWorks();
+        break;
+    case 'getOriginalFiles':
+        result = handleGetOriginalFiles(e.parameter.submissionId);
+        break;
+    case 'getWorkById':
+        result = handleGetWorkById(e.parameter.submissionId);
+        break;
+
+2. เพิ่มใน doPost(e) — switch case:
+
+    case 'batchUploadFile':
+        result = handleBatchUploadFile(payload);
+        break;
+
+3. เพิ่มฟังก์ชันใหม่:
+
+// อ่านทุกแถวจาก Sheets ชุดใหม่
+// คอลัมน์: A=รหัสผลงาน, B=ชื่อผลงาน, C=ชื่อผู้วิจัยหลัก, D=ด้าน(R&D/R2R), E=รายชื่อทั้งหมด, F=อีเมล
+function handleBatchGetAllWorks() {
+    try {
+        const ss    = SpreadsheetApp.openById('YOUR_NEW_SHEET_ID'); // ← ใส่ ID ชีต
+        const sheet = ss.getSheetByName('Sheet1');                  // ← ปรับชื่อชีต
+        const data  = sheet.getDataRange().getValues();
+        const works = data.slice(1)
+            .filter(r => r[0] && r[0].toString().trim() !== '')
+            .map(r => ({
+                submissionId : r[0].toString().trim(),
+                projectTitle : r[1].toString().trim(),
+                fullName     : r[2].toString().trim(),
+                domain       : r[3].toString().trim(),
+                headerNames  : r[4] ? r[4].toString().trim() : '',
+                email        : r[5] ? r[5].toString().trim() : ''
+            }));
+        return { status: 'success', data: works };
+    } catch(e) { return { status: 'error', message: e.message }; }
+}
+
+// ดึงไฟล์ต้นฉบับจาก Drive ตาม submissionId
+function handleGetOriginalFiles(submissionId) {
+    try {
+        const folder = DriveApp.getFolderById('YOUR_DRIVE_FOLDER_ID'); // ← ใส่ ID โฟลเดอร์
+        const pdfFiles = folder.searchFiles(`title contains '${submissionId}_ต้นฉบับ_' and mimeType='application/pdf'`);
+        const jpgFiles = folder.searchFiles(`title contains '${submissionId}_ต้นฉบับ_' and mimeType='image/jpeg'`);
+
+        if (!pdfFiles.hasNext()) return { status: 'error', message: `ไม่พบ PDF ต้นฉบับ: ${submissionId}` };
+        if (!jpgFiles.hasNext()) return { status: 'error', message: `ไม่พบ JPG ต้นฉบับ: ${submissionId}` };
+
+        return {
+            status    : 'success',
+            pdfBase64 : Utilities.base64Encode(pdfFiles.next().getBlob().getBytes()),
+            jpgBase64 : Utilities.base64Encode(jpgFiles.next().getBlob().getBytes())
+        };
+    } catch(e) { return { status: 'error', message: e.message }; }
+}
+
+// ดึงข้อมูล 1 ชิ้น (ใช้ตอนทดสอบ)
+function handleGetWorkById(submissionId) {
+    try {
+        const ss    = SpreadsheetApp.openById('YOUR_NEW_SHEET_ID');
+        const sheet = ss.getSheetByName('Sheet1');
+        const data  = sheet.getDataRange().getValues();
+        const row   = data.slice(1).find(r => r[0].toString().trim() === submissionId);
+        if (!row) return { status: 'error', message: `ไม่พบ ${submissionId} ใน Sheets` };
+        return {
+            status: 'success',
+            data: {
+                submissionId : row[0].toString().trim(),
+                projectTitle : row[1].toString().trim(),
+                fullName     : row[2].toString().trim(),
+                domain       : row[3].toString().trim(),
+                headerNames  : row[4] ? row[4].toString().trim() : '',
+                email        : row[5] ? row[5].toString().trim() : ''
+            }
+        };
+    } catch(e) { return { status: 'error', message: e.message }; }
+}
+
+// อัปโหลดไฟล์ merged ทับของเดิม (ถ้ามีชื่อซ้ำ ให้ trash แล้วสร้างใหม่)
+function handleBatchUploadFile(payload) {
+    try {
+        const folder   = DriveApp.getFolderById('YOUR_DRIVE_FOLDER_ID');
+        const bytes    = Utilities.base64Decode(payload.fileBase64);
+        const blob     = Utilities.newBlob(bytes, payload.mimeType, payload.fileName);
+
+        // ถ้ามีไฟล์ชื่อเดิมอยู่แล้ว ให้ลบก่อน
+        const existing = folder.getFilesByName(payload.fileName);
+        while (existing.hasNext()) existing.next().setTrashed(true);
+
+        const newFile = folder.createFile(blob);
+        newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        return { status: 'success', fileUrl: newFile.getUrl() };
+    } catch(e) { return { status: 'error', message: e.message }; }
+}
+=======================================================================
+-->
+</body>
+</html>
