@@ -277,7 +277,7 @@
             <h3 class="text-xl font-black text-slate-800 mb-2">เลือกประเภทไฟล์</h3>
             <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-left">
                 <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-                <p class="text-[12px] text-amber-700 font-medium leading-relaxed">Browser จะขอสิทธิ์ <strong>Popup</strong> — กรุณากด <strong>"อนุญาต"</strong> เมื่อมีแถบแจ้งเตือนที่ด้านบน ไม่เช่นนั้นไฟล์จะไม่ดาวน์โหลด</p>
+                <p class="text-[12px] text-amber-700 font-medium leading-relaxed">ระบบจะดาวน์โหลด <strong>ทีละ 10 ไฟล์</strong> — Browser จะขอสิทธิ์ <strong>Popup</strong> ครั้งแรก กรุณากด <strong>"อนุญาต"</strong></p>
             </div>
             <div class="space-y-3">
                 <button onclick="startBulkDownload('pdf')" class="w-full flex items-center justify-center px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl transition-colors border border-rose-200">
@@ -401,10 +401,12 @@
         }
 
         // ── Constants ───────────────────────────────────────────────────────────
-        const PAGE_SIZE        = 15;
-        const DOWNLOAD_DELAY   = 700;   // ms ระหว่างไฟล์ — ป้องกัน browser block
-        const IDLE_TIMEOUT     = 15;    // นาที auto-logout
-        const NEW_BADGE_HOURS  = 48;    // ชั่วโมงที่แสดง NEW badge
+        const PAGE_SIZE          = 15;
+        const DOWNLOAD_BATCH     = 10;   // จำนวนไฟล์ต่อชุด
+        const DELAY_IN_BATCH     = 400;  // ms ระหว่างไฟล์ภายในชุด
+        const DELAY_BETWEEN_BATCH = 4000; // ms รอระหว่างชุด (ให้ downloads เริ่มต้นก่อน)
+        const IDLE_TIMEOUT       = 15;   // นาที auto-logout
+        const NEW_BADGE_HOURS    = 48;   // ชั่วโมงที่แสดง NEW badge
 
         // ── State ────────────────────────────────────────────────────────────────
         let allData      = [];
@@ -910,8 +912,9 @@
         };
 
         async function processDownloadQueue(files, type) {
-            const total     = files.length;
-            const bar       = document.getElementById('dlProgressBar');
+            const total    = files.length;
+            const batches  = Math.ceil(total / DOWNLOAD_BATCH);
+            const bar      = document.getElementById('dlProgressBar');
             const percentEl = document.getElementById('dlProgressText');
             const statusEl  = document.getElementById('dlStatusText');
             const closeBtn  = document.getElementById('dlCloseBtn');
@@ -924,38 +927,57 @@
             closeBtn.innerText = "กำลังดาวน์โหลดข้อมูล...";
             document.getElementById('downloadProgressModal').classList.remove('hidden');
 
-            // ── ตรวจสอบ Popup Permission ก่อนเริ่ม ────────────────────────────
+            // ── ตรวจสอบ Popup Permission ก่อนเริ่ม ──────────────────────────
             const testWin = window.open('about:blank', '_blank', 'noopener,width=1,height=1,left=-100,top=-100');
             if (!testWin) {
                 statusEl.innerText = '❌ Browser บล็อก Popup';
                 closeBtn.disabled = false;
                 closeBtn.className = "w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-[16px] cursor-pointer border border-transparent";
                 closeBtn.innerText = "ปิด";
-                showToast('กรุณาคลิก "อนุญาต Popup" ในแถบ URL ของ Browser แล้วกดดาวน์โหลดใหม่อีกครั้ง', 'warning');
+                showToast('กรุณาคลิก "อนุญาต Popup" ในแถบ URL ของ Browser แล้วกดดาวน์โหลดใหม่', 'warning');
                 return;
             }
             testWin.close();
 
-            // ── ดาวน์โหลดทีละไฟล์ ─────────────────────────────────────────────
+            // ── ดาวน์โหลดทีละ 10 ไฟล์ (batch) ─────────────────────────────
+            let opened = 0;
             let blocked = 0;
-            for (let i = 0; i < total; i++) {
-                statusEl.innerText = `กำลังเปิดไฟล์ที่ ${i + 1} / ${total}`;
-                const dlUrl = buildDriveDownloadUrl(files[i]);
-                const win   = window.open(dlUrl, '_blank', 'noopener');
-                if (!win) blocked++;
 
-                const pct = Math.round(((i + 1) / total) * 100);
-                bar.style.width = pct + '%'; percentEl.innerText = pct + '%';
-                await new Promise(r => setTimeout(r, DOWNLOAD_DELAY));
+            for (let b = 0; b < batches; b++) {
+                const from  = b * DOWNLOAD_BATCH;
+                const to    = Math.min(from + DOWNLOAD_BATCH, total);
+                const batch = files.slice(from, to);
+
+                statusEl.innerText = `ชุดที่ ${b + 1} / ${batches}  (ไฟล์ ${from + 1}–${to} จาก ${total})`;
+
+                // เปิดทีละไฟล์ภายในชุด
+                for (const url of batch) {
+                    const win = window.open(buildDriveDownloadUrl(url), '_blank', 'noopener');
+                    win ? opened++ : blocked++;
+                    await new Promise(r => setTimeout(r, DELAY_IN_BATCH));
+                }
+
+                // อัปเดต progress bar หลังจบแต่ละชุด
+                const pct = Math.round((to / total) * 100);
+                bar.style.width = pct + '%';
+                percentEl.innerText = pct + '%';
+
+                // รอระหว่างชุด ให้ downloads เริ่มต้นก่อน (ยกเว้นชุดสุดท้าย)
+                if (b < batches - 1) {
+                    for (let s = DELAY_BETWEEN_BATCH / 1000; s > 0; s--) {
+                        statusEl.innerText = `ชุดที่ ${b + 1} / ${batches} เสร็จแล้ว — ชุดถัดไปใน ${s} วินาที...`;
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
             }
 
-            // ── สรุปผล ────────────────────────────────────────────────────────
+            // ── สรุปผล ──────────────────────────────────────────────────────
             if (blocked > 0) {
-                statusEl.innerText = `⚠️ ส่งคำสั่งครบแล้ว แต่ถูกบล็อก ${blocked} ไฟล์ — กรุณาอนุญาต Popup`;
+                statusEl.innerText = `⚠️ เปิดได้ ${opened} ไฟล์ / ถูกบล็อก ${blocked} ไฟล์ — กรุณาอนุญาต Popup`;
                 showToast(`ถูกบล็อก ${blocked} ไฟล์ — กด "อนุญาต" ที่แถบ URL แล้วดาวน์โหลดใหม่`, 'warning');
             } else {
-                statusEl.innerText = `✅ ส่งคำสั่งดาวน์โหลดครบ ${total} ไฟล์`;
-                showToast("ส่งคำสั่งดาวน์โหลดสำเร็จทุกไฟล์", "success");
+                statusEl.innerText = `✅ เปิดดาวน์โหลดครบ ${total} ไฟล์ จาก ${batches} ชุด`;
+                showToast(`ดาวน์โหลดสำเร็จ ${total} ไฟล์`, 'success');
             }
             closeBtn.disabled = false;
             closeBtn.className = "w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[16px] shadow-lg hover:-translate-y-0.5 border border-transparent cursor-pointer";
