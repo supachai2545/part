@@ -273,9 +273,19 @@ async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, hea
     const userDoc   = await PDFDocument.load(userPdfBuffer);
     const mergedPdf = await PDFDocument.create();
 
-    // embed ก่อน แล้วใช้ dimensions จาก embedded object เลย
-    // (แม่นกว่า getSize() กรณี PDF มี CropBox/BleedBox ต่างกัน)
-    const [userEmbed] = await mergedPdf.embedPdf(userDoc);
+    // Canva PDF exports มี bottom margin ~32pt ที่ viewer ซ่อนให้
+    // ใช้ boundingBox crop ทิ้งก่อน embed เพื่อไม่ให้มีช่องขาวด้านล่าง
+    const origPage  = userDoc.getPage(0);
+    const { width: origW, height: origH } = origPage.getSize();
+    const BOTTOM_CROP = 32;
+
+    const [userEmbed] = await mergedPdf.embedPdf(userDoc, [0], {
+        left:   0,
+        bottom: BOTTOM_CROP,
+        right:  origW,
+        top:    origH
+    });
+
     const contentScale = PAGE_WIDTH / userEmbed.width;
     const USER_HEIGHT  = userEmbed.height * contentScale;
     const PAGE_HEIGHT  = HEADER_HEIGHT + USER_HEIGHT;
