@@ -2707,12 +2707,13 @@
             lucide.createIcons();
         }
 
-        // 🔔 ย้ายมาแจ้งเตือนผ่าน LINE OA — เปิดหน้า LIFF ลงทะเบียน (prefill รหัสที่กำลังติดตาม)
+        // 🔔 ย้ายมาแจ้งเตือนผ่าน LINE OA — เปิดหน้า LIFF ลงทะเบียน
+        //    ส่งรหัสที่กำลังติดตามทั้งหมดไปด้วย (?codes=A,B,C) เพื่อลงทะเบียนให้อัตโนมัติ ไม่ต้องกรอกซ้ำ
         var LINE_LIFF_URL = 'https://liff.line.me/2010315530-js3lnuH9';
         function requestTrackNotif() {
             const codes = getTrackedCodes();
-            const codeParam = codes.length > 0 ? '?code=' + encodeURIComponent(codes[0]) : '';
-            window.location.href = LINE_LIFF_URL + codeParam;
+            const param = codes.length > 0 ? '?codes=' + encodeURIComponent(codes.join(',')) : '';
+            window.location.href = LINE_LIFF_URL + param;
         }
 
         // =============================================================
