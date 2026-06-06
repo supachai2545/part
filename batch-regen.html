@@ -273,32 +273,28 @@ async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, hea
     const userDoc   = await PDFDocument.load(userPdfBuffer);
     const mergedPdf = await PDFDocument.create();
 
-    // Canva PDF exports มี bottom margin ~32pt ที่ viewer ซ่อนให้
-    // ใช้ boundingBox crop ทิ้งก่อน embed เพื่อไม่ให้มีช่องขาวด้านล่าง
-    const origPage  = userDoc.getPage(0);
-    const { width: origW, height: origH } = origPage.getSize();
-    const BOTTOM_CROP = 32;
+    // copyPages คัดลอก content stream ตรงๆ — ไม่ผ่าน XObject embedding
+    // ป้องกัน alignment drift ที่เกิดจาก drawPage scaling
+    const [copiedPage] = await mergedPdf.copyPages(userDoc, [0]);
+    const { width: origW, height: origH } = copiedPage.getSize();
 
-    const [userEmbed] = await mergedPdf.embedPdf(userDoc, [0], {
-        left:   0,
-        bottom: BOTTOM_CROP,
-        right:  origW,
-        top:    origH
-    });
+    const scale      = PAGE_WIDTH / origW;
+    const scaledOrigH = origH * scale;
 
-    const contentScale = PAGE_WIDTH / userEmbed.width;
-    const USER_HEIGHT  = userEmbed.height * contentScale;
-    const PAGE_HEIGHT  = HEADER_HEIGHT + USER_HEIGHT;
+    // Scale content stream แล้ว resize page ให้พอดี
+    copiedPage.scaleContent(scale, scale);
+    copiedPage.setSize(PAGE_WIDTH, scaledOrigH + HEADER_HEIGHT);
 
-    const page = mergedPdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-
+    // วาด header ด้านบน (y = scaledOrigH ขึ้นไป)
     const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
     const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
     const headerImage  = await mergedPdf.embedJpg(headerBase64);
+    copiedPage.drawImage(headerImage, {
+        x: 0, y: scaledOrigH,
+        width: PAGE_WIDTH, height: HEADER_HEIGHT
+    });
 
-    page.drawPage(userEmbed,    { x: 0, y: 0,           width: PAGE_WIDTH, height: USER_HEIGHT   });
-    page.drawImage(headerImage, { x: 0, y: USER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT });
-
+    mergedPdf.addPage(copiedPage);
     return await mergedPdf.saveAsBase64();
 }
 
