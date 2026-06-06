@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ลงทะเบียนรับแจ้งเตือน — Smart E-Queue</title>
+
+    <!-- LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Tailwind + Supabase -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif;
+               background: linear-gradient(135deg,#f0f4ff 0%,#e8eeff 50%,#f0f4ff 100%); }
+        @keyframes pop { 0%{transform:scale(.7);opacity:0} 100%{transform:scale(1);opacity:1} }
+        .pop { animation: pop .3s cubic-bezier(.34,1.56,.64,1) both; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ===== CONFIG: แก้ 2 ค่านี้ ===== -->
+    <script>
+        // 1) LIFF ID — ได้จาก LINE Developers Console (ดูใน LINE_SETUP.md ขั้นที่ 4)
+        var LIFF_ID      = 'PUT-YOUR-LIFF-ID-HERE';
+        // 2) Supabase (ใช้ค่าเดียวกับ index.html ได้เลย — เป็น public key)
+        var SUPABASE_URL = 'https://jdujdpqihtknelmpqxhy.supabase.co';
+        var SUPABASE_KEY = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
+    </script>
+
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-100 py-4 px-5 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-extrabold">🔔</div>
+        <div>
+            <h1 class="text-base font-extrabold text-slate-800 leading-tight">ลงทะเบียนรับแจ้งเตือน</h1>
+            <p class="text-[11px] text-slate-400 font-medium">Smart E-Queue · ประชุมวิชาการ ครั้งที่ 34</p>
+        </div>
+    </header>
+
+    <main class="flex-1 p-5 max-w-md w-full mx-auto space-y-4">
+
+        <!-- Loading -->
+        <div id="loadingBox" class="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+            <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p class="text-sm font-medium">กำลังเชื่อมต่อ LINE...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="errorBox" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-5 text-center">
+            <p class="text-3xl mb-2">⚠️</p>
+            <p id="errorText" class="text-sm font-semibold text-rose-700"></p>
+            <p class="text-[11px] text-rose-400 mt-2">กรุณาเปิดหน้านี้ผ่านแอป LINE</p>
+        </div>
+
+        <!-- Main content -->
+        <div id="contentBox" class="hidden space-y-4">
+
+            <!-- Profile -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-3">
+                <img id="profilePic" src="" class="w-12 h-12 rounded-full object-cover bg-slate-100">
+                <div class="min-w-0">
+                    <p class="text-[11px] text-slate-400 font-medium">เข้าสู่ระบบเป็น</p>
+                    <p id="profileName" class="text-sm font-bold text-slate-800 truncate">-</p>
+                </div>
+                <span class="ml-auto text-[10px] bg-emerald-100 text-emerald-600 font-bold px-2 py-1 rounded-full">เชื่อมต่อแล้ว</span>
+            </div>
+
+            <!-- Add work form -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+                <label class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span>➕</span> เพิ่มรหัสผลงานที่ต้องการติดตาม
+                </label>
+                <input id="codeInput" type="text" placeholder="เช่น RP1-001"
+                       oninput="onCodeInput()"
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50">
+                <!-- preview ของผลงานที่ตรงกับรหัส -->
+                <div id="codePreview" class="hidden bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5 text-xs"></div>
+                <button id="addBtn" onclick="addCode()" disabled
+                        class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400">
+                    บันทึกรับแจ้งเตือน
+                </button>
+            </div>
+
+            <!-- Registered list -->
+            <div>
+                <p class="text-xs font-bold text-slate-500 mb-2 px-1">📋 ผลงานที่คุณติดตามอยู่</p>
+                <div id="myCodes" class="space-y-2"></div>
+            </div>
+
+            <p class="text-[11px] text-slate-400 text-center leading-relaxed px-2">
+                ระบบจะส่งแจ้งเตือนผ่าน LINE นี้ เมื่อเช็คอินสำเร็จ · ใกล้เวลานำเสนอ (30/15/10 นาที) · หมดเวลา และเมื่อรับใบประกาศ
+            </p>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg z-50 pop"></div>
+    </main>
+
+    <script>
+        var sb       = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        var userId   = null;
+        var userName = '';
+        var allWorks = {};   // code -> row
+
+        function showError(msg) {
+            document.getElementById('loadingBox').classList.add('hidden');
+            document.getElementById('contentBox').classList.add('hidden');
+            document.getElementById('errorBox').classList.remove('hidden');
+            document.getElementById('errorText').textContent = msg;
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            clearTimeout(t._tm);
+            t._tm = setTimeout(() => t.classList.add('hidden'), 2200);
+        }
+
+        async function boot() {
+            try {
+                if (LIFF_ID === 'PUT-YOUR-LIFF-ID-HERE') {
+                    showError('ยังไม่ได้ตั้งค่า LIFF ID (ดู LINE_SETUP.md ขั้นที่ 4)');
+                    return;
+                }
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) { liff.login(); return; }
+
+                const profile = await liff.getProfile();
+                userId   = profile.userId;
+                userName = profile.displayName || '';
+                document.getElementById('profileName').textContent = userName;
+                document.getElementById('profilePic').src = profile.pictureUrl || '';
+
+                // โหลดผลงานทั้งหมดไว้ตรวจรหัส (ใช้ select('*') ตามข้อจำกัด PostgREST)
+                const { data } = await sb.from('eposter_works').select('*');
+                (data || []).forEach(r => { if (r['รหัสผลงาน']) allWorks[String(r['รหัสผลงาน']).toUpperCase().trim()] = r; });
+
+                // รองรับ ?code= เพื่อ prefill
+                const qcode = new URLSearchParams(location.search).get('code');
+                if (qcode) { document.getElementById('codeInput').value = qcode; onCodeInput(); }
+
+                document.getElementById('loadingBox').classList.add('hidden');
+                document.getElementById('contentBox').classList.remove('hidden');
+                loadMyCodes();
+            } catch (e) {
+                showError('เชื่อมต่อไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+            }
+        }
+
+        function onCodeInput() {
+            const code = document.getElementById('codeInput').value.toUpperCase().trim();
+            const prev = document.getElementById('codePreview');
+            const btn  = document.getElementById('addBtn');
+            if (!code) { prev.classList.add('hidden'); btn.disabled = true; return; }
+            const w = allWorks[code];
+            if (w) {
+                const name = [w['คำนำหน้า'], w['ชื่อ'], w['นามสกุล']].filter(Boolean).join(' ');
+                prev.className = 'bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5 text-xs text-indigo-700';
+                prev.innerHTML = `✓ <b>${name || 'ไม่ระบุชื่อ'}</b><br>${w['ชื่อผลงาน'] || ''}<br>⏰ นำเสนอ ${w['เวลาการนำเสนอ'] || '-'} น. · จอ ${w['จอที่'] || '-'}`;
+                prev.classList.remove('hidden');
+                btn.disabled = false;
+            } else {
+                prev.className = 'bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs text-rose-600';
+                prev.textContent = '✗ ไม่พบรหัสผลงานนี้ในระบบ กรุณาตรวจสอบอีกครั้ง';
+                prev.classList.remove('hidden');
+                btn.disabled = true;
+            }
+        }
+
+        async function addCode() {
+            const code = document.getElementById('codeInput').value.toUpperCase().trim();
+            if (!code || !allWorks[code] || !userId) return;
+            const { error } = await sb.from('line_links').upsert(
+                { line_user_id: userId, code: code, display_name: userName },
+                { onConflict: 'line_user_id,code' }
+            );
+            if (error) { toast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+            document.getElementById('codeInput').value = '';
+            document.getElementById('codePreview').classList.add('hidden');
+            document.getElementById('addBtn').disabled = true;
+            toast('✅ บันทึกแล้ว จะได้รับแจ้งเตือนทาง LINE');
+            loadMyCodes();
+        }
+
+        async function loadMyCodes() {
+            const { data } = await sb.from('line_links').select('*').eq('line_user_id', userId);
+            const box = document.getElementById('myCodes');
+            if (!data || data.length === 0) {
+                box.innerHTML = `<div class="bg-white rounded-2xl p-5 border border-dashed border-slate-200 text-center text-sm text-slate-400">ยังไม่มีผลงานที่ติดตาม</div>`;
+                return;
+            }
+            box.innerHTML = data.map(d => {
+                const w = allWorks[String(d.code).toUpperCase().trim()] || {};
+                const name = [w['คำนำหน้า'], w['ชื่อ'], w['นามสกุล']].filter(Boolean).join(' ');
+                return `
+                <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center justify-between gap-3 pop">
+                    <div class="min-w-0">
+                        <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${d.code}</span>
+                        <p class="text-sm font-semibold text-slate-800 truncate mt-1">${name || 'ไม่ระบุชื่อ'}</p>
+                        <p class="text-[11px] text-slate-400">⏰ ${w['เวลาการนำเสนอ'] || '-'} น. · จอ ${w['จอที่'] || '-'}</p>
+                    </div>
+                    <button onclick="removeCode('${d.code}')" class="shrink-0 w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center active:scale-90 transition-all text-lg">🗑️</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function removeCode(code) {
+            await sb.from('line_links').delete().eq('line_user_id', userId).eq('code', code);
+            toast('นำออกแล้ว');
+            loadMyCodes();
+        }
+
+        boot();
+    </script>
+</body>
+</html>
