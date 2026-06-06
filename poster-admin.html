@@ -860,13 +860,23 @@
         };
 
         // ── Download ─────────────────────────────────────────────────────────────
+        // ใช้ iframe แทน <a> เพราะ:
+        //   1) a.download ไม่ทำงานกับ Google Drive (cross-origin) — browser navigate แทน
+        //   2) a.target='_parent' ทำให้หน้าเว็บ navigate ออกไปแทนที่จะโหลดไฟล์
+        //   3) iframe ไม่ติด popup blocker
+        //   4) confirm=t ข้าม Google Drive "virus scan warning" สำหรับไฟล์ใหญ่
         window.downloadSingleFile = function(url, type, id, skipLog = false) {
             if (!skipLog) logActivityToBackend(`ดาวน์โหลดไฟล์ ${type} รหัส ${id}`);
             const idMatch = url.match(/id=(.*?)(&|$)/) || url.match(/\/d\/(.*?)\/view/);
-            const dlUrl   = (idMatch && idMatch[1]) ? `https://drive.google.com/uc?export=download&id=${idMatch[1]}` : url;
-            const a = document.createElement('a');
-            a.href = dlUrl; a.target = '_parent'; a.download = '';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            const fileId  = idMatch && idMatch[1];
+            const dlUrl   = fileId
+                ? `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
+                : url;
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
+            iframe.src = dlUrl;
+            document.body.appendChild(iframe);
+            setTimeout(() => { if (iframe.parentNode) document.body.removeChild(iframe); }, 30000);
         };
 
         window.openDownloadModal  = () => document.getElementById('bulkDownloadModal').classList.remove('hidden');
