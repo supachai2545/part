@@ -198,20 +198,9 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
                         ctx.font = token.italic ? `italic bold ${fontSize}px "Sarabun", sans-serif` : `bold ${fontSize}px "Sarabun", sans-serif`;
                         let tokenWidth = ctx.measureText(token.text).width;
                         if (currentLineWidth + tokenWidth > maxWidth) {
-                            if (tokenWidth > maxWidth) {
-                                if (currentLine.length > 0) { lines.push(currentLine); currentLine = []; currentLineWidth = 0; }
-                                let tempText = '', tempWidth = 0;
-                                for (let ch of token.text.split('')) {
-                                    let chW = ctx.measureText(ch).width;
-                                    if (tempWidth + chW > maxWidth) { lines.push([{ text: tempText, italic: token.italic }]); tempText = ch; tempWidth = chW; }
-                                    else { tempText += ch; tempWidth += chW; }
-                                }
-                                if (tempText) { currentLine.push({ text: tempText, italic: token.italic }); currentLineWidth = tempWidth; }
-                            } else {
-                                if (currentLine.length > 0) lines.push(currentLine);
-                                if (token.text.trim() === '') { currentLine = []; currentLineWidth = 0; }
-                                else { currentLine = [token]; currentLineWidth = tokenWidth; }
-                            }
+                            if (currentLine.length > 0) lines.push(currentLine);
+                            if (token.text.trim() === '') { currentLine = []; currentLineWidth = 0; }
+                            else { currentLine = [token]; currentLineWidth = tokenWidth; }
                         } else { currentLine.push(token); currentLineWidth += tokenWidth; }
                     }
                     if (currentLine.length > 0) lines.push(currentLine);

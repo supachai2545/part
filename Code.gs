@@ -5,19 +5,25 @@
 const SHEET_ID   = '1P9WjAYFELFbXJ0l5So01w0HSTJFUyzXx_Gi_c8DGI5I';
 const SHEET_NAME = 'รายชื่อผลงาน';
 
-// โฟลเดอร์ต้นฉบับ แยกตาม prefix ของรหัสผลงาน
+// โฟลเดอร์ต้นฉบับ แยกตาม prefix และประเภทไฟล์ (img/pdf)
 const ORIGINAL_FOLDER_MAP = {
-  "P1":  "1zj_8OTascLGRYqIJ4zbfO3MiEG8tOT9K",
-  "P2":  "1m9wxrJF5tMfvIg5Qv3GrTsNsOqbeYlBV",
-  "P3":  "1Ul5S7bnwWf9lJEFlYEM5VkHR8D-2pDih",
-  "P4":  "1mYJ6VBKLCBCKMp5gLSCyxsNbUt6RxV4Q",
-  "RP1": "1Qx_nZvUruKB7wSy_lmyamYu8g11EZOhq",
-  "RP2": "1FHsPL4-33H0n2ONZMsgm-F7RV2SaLU7f"
+  "P1":  { img: "1n32NOm67363lSNDH3P5Ej4gOmIaJPSie", pdf: "1ptF5TiSUpGSJSd0JXzPZHUKmwIsRQSwd" },
+  "P2":  { img: "13iHgQcsLYdu3bg6j1fHpNpZpfzsgX78Y", pdf: "1EfLLJocUiUYNIRxAw3aoiE2lmcMzarpM" },
+  "P3":  { img: "1bD4Cz0NKXMz8Wmn3Hn_NbgRmFcLp7yH6", pdf: "1-RE_Xm6BZ9IeBUznpiRBXfxHYXQX0uFe" },
+  "P4":  { img: "1bMU9VWI6K8JLE9RjZc7VtOH4cc-IXq-V", pdf: "1rMHscua-SAswWNij3og-OB25PppVZ-jd" },
+  "RP1": { img: "1xEEwYV6-9tY11AeHhF04mAZSTWo6vm5q", pdf: "10Cf2JyIQ9uHWoKoQNJbZfhBKBw2H7fka" },
+  "RP2": { img: "1iyzokDEEMx7sS1aEfWCHgx19gT3mqAHb", pdf: "1gIkLjjXGpFIhqGhw39RSbEfklZlvGtfc" }
 };
 
-// โฟลเดอร์ผลลัพธ์ (merged files)
-const OUTPUT_FOLDER_JPG = '1dckF23J3tWLaHuX8-S_ywGKbaxaKZlLR';
-const OUTPUT_FOLDER_PDF = '1niZv73fPrWJy4XS3tAOkvc0iGJTCjhIM';
+// โฟลเดอร์ผลลัพธ์ (merged files) — แยกตาม prefix เช่นกัน
+const OUTPUT_FOLDER_MAP = {
+  "P1":  { img: "1n32NOm67363lSNDH3P5Ej4gOmIaJPSie", pdf: "1ptF5TiSUpGSJSd0JXzPZHUKmwIsRQSwd" },
+  "P2":  { img: "13iHgQcsLYdu3bg6j1fHpNpZpfzsgX78Y", pdf: "1EfLLJocUiUYNIRxAw3aoiE2lmcMzarpM" },
+  "P3":  { img: "1bD4Cz0NKXMz8Wmn3Hn_NbgRmFcLp7yH6", pdf: "1-RE_Xm6BZ9IeBUznpiRBXfxHYXQX0uFe" },
+  "P4":  { img: "1bMU9VWI6K8JLE9RjZc7VtOH4cc-IXq-V", pdf: "1rMHscua-SAswWNij3og-OB25PppVZ-jd" },
+  "RP1": { img: "1xEEwYV6-9tY11AeHhF04mAZSTWo6vm5q", pdf: "10Cf2JyIQ9uHWoKoQNJbZfhBKBw2H7fka" },
+  "RP2": { img: "1iyzokDEEMx7sS1aEfWCHgx19gT3mqAHb", pdf: "1gIkLjjXGpFIhqGhw39RSbEfklZlvGtfc" }
+};
 
 // =========================================================
 // ROUTING
@@ -160,7 +166,8 @@ function handleGetWorkById(submissionId) {
 
 // =========================================================
 // ACTION: getOriginalFiles
-// ดึงไฟล์ต้นฉบับ PDF + JPG จากโฟลเดอร์ตาม prefix
+// ดึงไฟล์ต้นฉบับ PDF + JPG จากโฟลเดอร์ img/pdf แยกตาม prefix
+// ค้นหาด้วย "${submissionId}_ต้นฉบับ_" เพื่อไม่ให้ชนกับไฟล์ merged
 // =========================================================
 function handleGetOriginalFiles(submissionId) {
   if (!submissionId) return { status: 'error', message: 'ต้องระบุ submissionId' };
@@ -168,25 +175,26 @@ function handleGetOriginalFiles(submissionId) {
   const prefix = getPrefixFromId(submissionId);
   if (!prefix) return { status: 'error', message: `แยก prefix ไม่ได้จาก: ${submissionId}` };
 
-  const folderId = ORIGINAL_FOLDER_MAP[prefix];
-  if (!folderId) return { status: 'error', message: `ไม่พบโฟลเดอร์ใน ORIGINAL_FOLDER_MAP สำหรับ prefix: ${prefix}` };
+  const folders = ORIGINAL_FOLDER_MAP[prefix];
+  if (!folders) return { status: 'error', message: `ไม่พบโฟลเดอร์สำหรับ prefix: ${prefix}` };
 
-  const folder = DriveApp.getFolderById(folderId);
+  const searchKey = `${submissionId}_ต้นฉบับ_`;
 
-  // ค้นหาไฟล์ PDF ที่มีรหัสผลงานในชื่อไฟล์
-  const pdfIter = folder.searchFiles(
-    `title contains '${submissionId}' and mimeType = 'application/pdf' and trashed = false`
+  const pdfFolder = DriveApp.getFolderById(folders.pdf);
+  const imgFolder = DriveApp.getFolderById(folders.img);
+
+  const pdfIter = pdfFolder.searchFiles(
+    `title contains '${searchKey}' and mimeType = 'application/pdf' and trashed = false`
   );
-  // ค้นหาไฟล์ JPG/JPEG
-  const jpgIter = folder.searchFiles(
-    `title contains '${submissionId}' and (mimeType = 'image/jpeg' or mimeType = 'image/jpg') and trashed = false`
+  const jpgIter = imgFolder.searchFiles(
+    `title contains '${searchKey}' and (mimeType = 'image/jpeg' or mimeType = 'image/jpg') and trashed = false`
   );
 
   if (!pdfIter.hasNext()) {
-    return { status: 'error', message: `ไม่พบไฟล์ PDF ในโฟลเดอร์ ${prefix} สำหรับ: ${submissionId}` };
+    return { status: 'error', message: `ไม่พบ PDF ต้นฉบับ (${searchKey}*.pdf) ในโฟลเดอร์ PDF ของ ${prefix}` };
   }
   if (!jpgIter.hasNext()) {
-    return { status: 'error', message: `ไม่พบไฟล์ JPG ในโฟลเดอร์ ${prefix} สำหรับ: ${submissionId}` };
+    return { status: 'error', message: `ไม่พบ JPG ต้นฉบับ (${searchKey}*.jpg) ในโฟลเดอร์ IMG ของ ${prefix}` };
   }
 
   const pdfFile = pdfIter.next();
@@ -211,14 +219,21 @@ function handleGetOriginalFiles(submissionId) {
 function handleBatchUploadFile(payload) {
   const { submissionId, fileType, fileBase64, mimeType, fileName } = payload;
 
-  if (!fileBase64) return { status: 'error', message: 'ไม่มีข้อมูล fileBase64' };
-  if (!fileName)   return { status: 'error', message: 'ไม่มี fileName' };
+  if (!fileBase64)    return { status: 'error', message: 'ไม่มีข้อมูล fileBase64' };
+  if (!fileName)      return { status: 'error', message: 'ไม่มี fileName' };
+  if (!submissionId)  return { status: 'error', message: 'ไม่มี submissionId' };
+
+  const prefix = getPrefixFromId(submissionId);
+  if (!prefix) return { status: 'error', message: `แยก prefix ไม่ได้จาก: ${submissionId}` };
+
+  const folders = OUTPUT_FOLDER_MAP[prefix];
+  if (!folders) return { status: 'error', message: `ไม่พบโฟลเดอร์ output สำหรับ prefix: ${prefix}` };
 
   let folderId;
   if (fileType === 'Merged_PDF') {
-    folderId = OUTPUT_FOLDER_PDF;
+    folderId = folders.pdf;
   } else if (fileType === 'Merged_JPG') {
-    folderId = OUTPUT_FOLDER_JPG;
+    folderId = folders.img;
   } else {
     return { status: 'error', message: `fileType ไม่ถูกต้อง: ${fileType} (ต้องเป็น Merged_PDF หรือ Merged_JPG)` };
   }
