@@ -284,20 +284,22 @@ async function mergeWithHeaderPDF(userPdfBuffer, subId, title, name, domain, hea
 
     const scale       = PAGE_WIDTH / origW;
     const scaledCropH = cropH * scale;
-    // bleedPts = ส่วนล่างของ MediaBox ที่เกิน CropBox (white bleed area)
-    const bleedPts    = Math.max(0, origH - cropH);
+    // bleed = ส่วนที่ MediaBox กว้างกว่า CropBox (Canva bleed margin)
+    // สมมติว่าบน+ล่างเท่ากัน (symmetric) → bottom bleed = half of total
+    const bleedTotal  = Math.max(0, origH - cropH);
+    const bleedBottom = bleedTotal / 2;
 
     const headerCanvas = await generateHeaderWithText(subId, title, name, domain, headerNames);
     const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.95);
     const headerImage  = await mergedPdf.embedJpg(headerBase64);
 
-    // สร้างหน้าใหม่ขนาด CropBox + header
     const newPage = mergedPdf.addPage([PAGE_WIDTH, scaledCropH + HEADER_HEIGHT]);
 
-    // วาดโปสเตอร์: เลื่อนลง bleedPts เพื่อซ่อน bleed ที่ขอบล่าง
+    // วาดโปสเตอร์: เลื่อนลง bleedBottom เพื่อซ่อนเฉพาะ bleed ขอบล่าง
+    // bleed ขอบบน (ถ้ามี) จะถูกซ่อนโดย header ที่วาดทับ
     newPage.drawPage(embeddedPage, {
         x:      0,
-        y:      -bleedPts * scale,
+        y:      -bleedBottom * scale,
         width:  PAGE_WIDTH,
         height: origH * scale
     });
