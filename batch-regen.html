@@ -68,28 +68,53 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
 
     <!-- Batch -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
-        <h2 class="text-base font-extrabold text-slate-700 mb-5 pb-3 border-b border-slate-100">🚀 รัน Batch ทั้งหมด</h2>
-        <div class="flex flex-wrap gap-3 items-center mb-6">
-            <button id="startBtn" onclick="startBatch()"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
-                เริ่มสร้างใหม่ทั้งหมด
-            </button>
+        <h2 class="text-base font-extrabold text-slate-700 mb-5 pb-3 border-b border-slate-100">🚀 รัน Batch</h2>
+
+        <!-- R&D -->
+        <div class="mb-4">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">R&amp;D (P1–P4)</p>
+            <div class="flex flex-wrap gap-2">
+                <button class="batch-btn bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['P1'])">สาขา P1</button>
+                <button class="batch-btn bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['P2'])">สาขา P2</button>
+                <button class="batch-btn bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['P3'])">สาขา P3</button>
+                <button class="batch-btn bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['P4'])">สาขา P4</button>
+                <button class="batch-btn bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['P1','P2','P3','P4'])">R&amp;D ทั้งหมด</button>
+            </div>
+        </div>
+
+        <!-- R2R -->
+        <div class="mb-5">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">R2R (RP1–RP2)</p>
+            <div class="flex flex-wrap gap-2">
+                <button class="batch-btn bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['RP1'])">สาขา RP1</button>
+                <button class="batch-btn bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['RP2'])">สาขา RP2</button>
+                <button class="batch-btn bg-cyan-700 hover:bg-cyan-800 text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch(['RP1','RP2'])">R2R ทั้งหมด</button>
+            </div>
+        </div>
+
+        <!-- Run all + Stop -->
+        <div class="flex flex-wrap gap-3 items-center mb-6 pt-4 border-t border-slate-100">
+            <button class="batch-btn bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" onclick="startBatch()">🚀 รันทั้งหมด</button>
             <button id="stopBtn" onclick="stopBatch()" disabled
                 class="bg-rose-500 hover:bg-rose-600 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                หยุด
+                ⏹ หยุด
             </button>
-            <span id="batchStatusText" class="text-sm font-bold text-slate-500"></span>
         </div>
+
+        <!-- Progress -->
         <div id="progressSection" class="hidden">
+            <div class="bg-slate-50 rounded-xl px-4 py-3 mb-3">
+                <p class="text-xs font-bold text-slate-400 mb-0.5" id="progressGroup">—</p>
+                <p class="text-sm font-bold text-slate-700 truncate" id="progressLabel">กำลังประมวลผล...</p>
+            </div>
             <div class="flex justify-between text-sm font-bold text-slate-600 mb-1.5">
-                <span id="progressLabel">กำลังประมวลผล...</span>
+                <span id="progressEta" class="text-xs text-slate-400"></span>
                 <span id="progressCount">0 / 0</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-3 mb-2">
                 <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-300" style="width:0%"></div>
             </div>
-            <div class="flex justify-between text-xs text-slate-400">
-                <span id="progressEta"></span>
+            <div class="text-right text-xs text-slate-400">
                 <span id="progressStats"></span>
             </div>
         </div>
@@ -341,26 +366,46 @@ function setTestStatus(msg, cls) {
 // =========================================================
 // BATCH
 // =========================================================
-async function startBatch() {
+function getPrefixFromId(submissionId) {
+    const m = submissionId.match(/^([A-Za-z]+\d*)/);
+    return m ? m[1].toUpperCase() : null;
+}
+
+function setBatchRunning(running) {
+    document.querySelectorAll('.batch-btn').forEach(btn => { btn.disabled = running; });
+    document.getElementById('stopBtn').disabled = !running;
+    if (!running) document.getElementById('progressSection').classList.add('hidden');
+}
+
+async function startBatch(prefixes) {
     if (!getApiUrl()) { alert('กรุณาใส่ API URL'); return; }
 
     isStopped = false;
-    document.getElementById('startBtn').disabled = true;
-    document.getElementById('stopBtn').disabled = false;
+    setBatchRunning(true);
     document.getElementById('progressSection').classList.remove('hidden');
 
-    addLog('🚀 เริ่มดึงข้อมูลจาก Sheets ใหม่...', 'info');
+    const label = prefixes ? prefixes.join(', ') : 'ทั้งหมด';
+    addLog(`🚀 ดึงข้อมูลจาก Sheets — รัน: ${label}`, 'info');
 
-    let works;
+    let allWorks;
     try {
         const res = await apiGet({ action: 'batchGetAllWorks' });
         if (res.status !== 'success') throw new Error(res.message);
-        works = res.data;
-        addLog(`✅ พบ ${works.length} ชิ้น — เริ่มประมวลผล`, 'success');
+        allWorks = res.data;
     } catch (err) {
         addLog(`❌ ดึงข้อมูลไม่สำเร็จ: ${err.message}`, 'error');
-        resetBatchUI(); return;
+        setBatchRunning(false); return;
     }
+
+    const works = prefixes
+        ? allWorks.filter(w => prefixes.includes(getPrefixFromId(w.submissionId)))
+        : allWorks;
+
+    if (works.length === 0) {
+        addLog(`⚠️ ไม่พบผลงานในสาขา ${label}`, 'warning');
+        setBatchRunning(false); return;
+    }
+    addLog(`✅ พบ ${works.length} ชิ้น (${label}) — เริ่มประมวลผล`, 'success');
 
     let successes = 0, errors = 0;
     const startTime = Date.now();
@@ -369,7 +414,11 @@ async function startBatch() {
         if (isStopped) { addLog('⏹ หยุดโดยผู้ใช้', 'warning'); break; }
 
         const work = works[i];
-        document.getElementById('progressLabel').textContent = `กำลังประมวลผล: ${work.submissionId} – ${work.fullName}`;
+        const prefix = getPrefixFromId(work.submissionId);
+        document.getElementById('progressGroup').textContent =
+            `สาขา ${prefix} — ชิ้นที่ ${i + 1} จาก ${works.length}`;
+        document.getElementById('progressLabel').textContent =
+            `${work.submissionId} – ${work.fullName}`;
 
         try {
             await processOneWork(work);
@@ -382,34 +431,32 @@ async function startBatch() {
 
         const pct = Math.round(((i + 1) / works.length) * 100);
         document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('progressCount').textContent = `${i+1} / ${works.length}`;
+        document.getElementById('progressCount').textContent = `${i + 1} / ${works.length}`;
         document.getElementById('progressStats').textContent = `✅ ${successes}  ❌ ${errors}`;
 
         const elapsed = (Date.now() - startTime) / 1000;
         const remaining = Math.round((elapsed / (i + 1)) * (works.length - i - 1));
         document.getElementById('progressEta').textContent =
-            remaining > 60 ? `เหลืออีกประมาณ ${Math.round(remaining/60)} นาที`
+            remaining > 60 ? `เหลืออีกประมาณ ${Math.round(remaining / 60)} นาที`
             : remaining > 0 ? `เหลืออีกประมาณ ${remaining} วินาที` : 'เกือบเสร็จแล้ว...';
 
         await new Promise(r => setTimeout(r, 80));
     }
 
-    const summary = `🎉 เสร็จ — สำเร็จ ${successes} | ล้มเหลว ${errors}`;
-    document.getElementById('progressLabel').textContent = isStopped ? '⏹ หยุดแล้ว' : summary;
+    const summary = isStopped
+        ? `⏹ หยุด — สำเร็จ ${successes} | ล้มเหลว ${errors}`
+        : `🎉 เสร็จ — สำเร็จ ${successes} | ล้มเหลว ${errors}`;
+    document.getElementById('progressGroup').textContent = summary;
+    document.getElementById('progressLabel').textContent = '';
     document.getElementById('progressEta').textContent = '';
     addLog(summary, 'info');
-    resetBatchUI();
+    setBatchRunning(false);
 }
 
 function stopBatch() {
     isStopped = true;
     document.getElementById('stopBtn').disabled = true;
     addLog('⏹ กำลังหยุด...', 'warning');
-}
-
-function resetBatchUI() {
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
 }
 
 // =========================================================
