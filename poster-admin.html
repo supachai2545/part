@@ -731,7 +731,7 @@
                 const hasPdf      = item.pdfUrl && item.pdfUrl.trim() !== "";
                 const hasAbstract = item.abstractUrl && item.abstractUrl.trim() !== "";
                 const isNew       = item.timestamp && (new Date() - parseThaiDateForNewTag(item.timestamp)) < NEW_BADGE_HOURS * 3600000;
-                const newBadge    = (isNew && hasPdf) ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white animate-pulse">NEW</span>` : '';
+                const newBadge    = (isNew && (hasPdf || hasAbstract)) ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white animate-pulse">NEW</span>` : '';
 
                 // ── File buttons ──────────────────────────────────────────────
                 const pdfBtns = hasPdf ? `
