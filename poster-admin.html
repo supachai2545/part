@@ -697,12 +697,15 @@
 
         function parseThaiDateForNewTag(dateStr) {
             if (!dateStr) return new Date(0);
-            const parts = dateStr.split(/[\s/:]+/);
+            // แปลงเลขไทย → Arabic ก่อน (๐-๙ → 0-9)
+            const s = dateStr.replace(/[๐-๙]/g, c => '๐๑๒๓๔๕๖๗๘๙'.indexOf(c));
+            const parts = s.split(/[\s/,:]+/).map(Number);
             if (parts.length >= 3) {
-                let [d, m, y] = parts; if (y > 2500) y -= 543;
-                return new Date(`${y}-${m}-${d}T${parts[3]||'00'}:${parts[4]||'00'}:00`);
+                let [d, m, y] = parts;
+                if (y > 2500) y -= 543;
+                return new Date(y, m - 1, d, parts[3] || 0, parts[4] || 0, 0);
             }
-            return new Date(dateStr);
+            return new Date(0);
         }
 
         // ── Table Render ─────────────────────────────────────────────────────────
