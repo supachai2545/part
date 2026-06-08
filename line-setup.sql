@@ -99,7 +99,7 @@ begin
                w."จอที่"          as screen,
                w."ลำดับคิว"       as queue_no,
                l.line_user_id     as uid
-        from public."E-poster E-Q" w
+        from public.eposter_works w
         join public.line_links l on l.code = w."รหัสผลงาน"
     loop
         -- แปลง "HH:MM" → timestamp ของวันนี้ (เวลาไทย)

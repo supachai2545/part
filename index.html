@@ -999,7 +999,7 @@
                 // วิธีแก้: fetch ทุก row ครั้งเดียว แล้ว filter+sort client-side ทั้งหมด
                 // ─────────────────────────────────────────────────────────────
                 const { data: allData, error: fetchError } = await supabaseClient
-                    .from('E-poster E-Q')
+                    .from('eposter_works')
                     .select(DASHBOARD_SELECT);
 
                 if (fetchError) {
@@ -1509,7 +1509,7 @@
                 realtimeChannel = supabaseClient.channel('realtime_eposter_works')
                     .on(
                         'postgres_changes',
-                        { event: '*', schema: 'public', table: 'E-poster E-Q' },
+                        { event: '*', schema: 'public', table: 'eposter_works' },
                         (payload) => {
                             console.log('Realtime Change Received:', payload);
                             fetchDashboardData();
@@ -1788,7 +1788,7 @@
                 // ── 2. ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่ ─────────────
                 let rows = cachedAllData;
                 if (rows.length === 0) {
-                    const { data: fresh } = await supabaseClient.from('E-poster E-Q').select(DASHBOARD_SELECT);
+                    const { data: fresh } = await supabaseClient.from('eposter_works').select(DASHBOARD_SELECT);
                     rows = fresh || [];
                     cachedAllData = rows;
                 }
@@ -1972,7 +1972,7 @@
                 const items = currentScannedItems.length > 0 ? currentScannedItems : [currentScannedItem];
                 for (const item of items) {
                     const { error } = await supabaseClient
-                        .from('E-poster E-Q')
+                        .from('eposter_works')
                         .update(updatePayload)
                         .eq('QRCODE', item['QRCODE'])
                         .select();
@@ -2457,7 +2457,7 @@
         }
 
         async function fetchTrackRow(code) {
-            const { data: rows } = await supabaseClient.from('E-poster E-Q').select(TRACK_SELECT);
+            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
             if (!rows) return null;
             return rows.find(r =>
                 String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase() ||
@@ -2466,7 +2466,7 @@
         }
 
         async function fetchAllTrackedRows() {
-            const { data: rows } = await supabaseClient.from('E-poster E-Q').select(TRACK_SELECT);
+            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
             if (!rows) return [];
             const codes = getTrackedCodes();
             return codes.map(code =>
@@ -2505,7 +2505,7 @@
             if (trackRealtimeChannel) supabaseClient.removeChannel(trackRealtimeChannel);
             trackRealtimeChannel = supabaseClient
                 .channel('track_live_' + Date.now())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'E-poster E-Q' },
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'eposter_works' },
                     () => refreshTrackingCards('realtime'))
                 .subscribe();
 
