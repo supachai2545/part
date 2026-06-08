@@ -30,7 +30,7 @@ create policy "links anon all" on public.line_links
 -- ── 2) ตารางกันส่งซ้ำ (1 ผลงาน 1 จังหวะ ส่งได้ครั้งเดียว) ──────────────────
 create table if not exists public.line_notif_log (
     code     text not null,
-    stage    text not null,   -- checkin | lead30 | lead15 | lead10 | ended | reward
+    stage    text not null,   -- checkin | lead30 | lead15 | lead3 | ended | reward
     sent_at  timestamptz default now(),
     primary key (code, stage)
 );
@@ -97,8 +97,9 @@ begin
                w."Checkin"        as checkin,
                w."รับประกาศ"      as reward,
                w."จอที่"          as screen,
+               w."ลำดับคิว"       as queue_no,
                l.line_user_id     as uid
-        from public.eposter_works w
+        from public."E-poster E-Q" w
         join public.line_links l on l.code = w."รหัสผลงาน"
     loop
         -- แปลง "HH:MM" → timestamp ของวันนี้ (เวลาไทย)
@@ -116,7 +117,9 @@ begin
         if r.checkin = 'Y' then
             perform public.line_try_send(r.uid, r.code, 'checkin',
                 '✅ เช็คอินสำเร็จแล้ว!' || E'\n' ||
-                'ผลงาน ' || r.code || ' — ระบบบันทึกการเช็คอินเรียบร้อยแล้ว', v_token);
+                'ผลงาน ' || r.code ||
+                coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
+                ' — ระบบบันทึกการเช็คอินเรียบร้อยแล้ว', v_token);
         end if;
 
         -- (2-4) นับถอยหลังก่อนนำเสนอ (เฉพาะยังไม่รับประกาศ)
@@ -126,15 +129,21 @@ begin
             if v_diff between 16 and 30 then
                 perform public.line_try_send(r.uid, r.code, 'lead30',
                     '⏰ อีก ' || v_diff || ' นาที ถึงเวลานำเสนอ' || E'\n' ||
-                    'ผลงาน ' || r.code || ' — เตรียมตัวให้พร้อมนะครับ', v_token);
-            elsif v_diff between 11 and 15 then
+                    'ผลงาน ' || r.code ||
+                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
+                    ' — เตรียมตัวให้พร้อมนะครับ', v_token);
+            elsif v_diff between 4 and 15 then
                 perform public.line_try_send(r.uid, r.code, 'lead15',
                     '🔔 อีก ' || v_diff || ' นาที ถึงเวลานำเสนอ' || E'\n' ||
-                    'ผลงาน ' || r.code || ' — กรุณาไปรอที่จุดรอนำเสนอ ห้อง 205', v_token);
-            elsif v_diff between 1 and 10 then
-                perform public.line_try_send(r.uid, r.code, 'lead10',
+                    'ผลงาน ' || r.code ||
+                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
+                    ' — กรุณาไปรอที่จุดรอนำเสนอ ห้อง 205', v_token);
+            elsif v_diff between 1 and 3 then
+                perform public.line_try_send(r.uid, r.code, 'lead3',
                     '🔴 อีก ' || v_diff || ' นาที จะถึงเวลานำเสนอแล้ว!' || E'\n' ||
-                    'ผลงาน ' || r.code || ' — กรุณาไปที่ห้อง 205 ด่วน', v_token);
+                    'ผลงาน ' || r.code ||
+                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
+                    ' — กรุณาไปที่ห้อง 205 ด่วน', v_token);
             end if;
         end if;
 
@@ -143,7 +152,9 @@ begin
            and coalesce(r.reward,'') <> 'Y' and v_now > v_end then
             perform public.line_try_send(r.uid, r.code, 'ended',
                 '🏆 หมดเวลานำเสนอแล้ว' || E'\n' ||
-                'ผลงาน ' || r.code || ' — กรุณาไปรับใบประกาศจากเจ้าหน้าที่', v_token);
+                'ผลงาน ' || r.code ||
+                coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
+                ' — กรุณาไปรับใบประกาศจากเจ้าหน้าที่', v_token);
         end if;
 
         -- (6) รับใบประกาศแล้ว
@@ -170,4 +181,8 @@ select cron.schedule('line-notify', '* * * * *',
 --        'LINE Messaging API channel access token');
 --
 --  ทดสอบยิงเองได้ทันที:  select public.line_send_notifications();
+--
+--  ล้างการจำ LINE ของผู้ใช้ทั้งหมด (ก่อนงาน / reset):
+--    delete from public.line_links;
+--    delete from public.line_notif_log;
 -- ============================================================================

@@ -523,8 +523,8 @@
                 <div class="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
                     <i data-lucide="shield-alert" class="w-7 h-7"></i>
                 </div>
-                <h3 class="text-xl font-bold text-slate-800">ยืนยันสิทธิ์อนุโลมคิว</h3>
-                <p class="text-xs text-slate-500 mt-1">กรุณากรอกรหัส PIN ระดับหัวหน้า</p>
+                <h3 class="text-xl font-bold text-slate-800">ยืนยันสิทธิ์พิเศษ</h3>
+                <p class="text-xs text-slate-500 mt-1" id="overridePinMsg">กรุณากรอกรหัส PIN เพื่อดำเนินการ</p>
             </div>
             <div class="mb-6">
                 <input type="password" id="overridePinInput" class="w-full text-center text-3xl tracking-[0.5em] font-bold bg-slate-50 border border-slate-200 rounded-xl py-3 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all text-slate-700" placeholder="••••" maxlength="4" autocomplete="off" inputmode="numeric">
@@ -999,7 +999,7 @@
                 // วิธีแก้: fetch ทุก row ครั้งเดียว แล้ว filter+sort client-side ทั้งหมด
                 // ─────────────────────────────────────────────────────────────
                 const { data: allData, error: fetchError } = await supabaseClient
-                    .from('eposter_works')
+                    .from('E-poster E-Q')
                     .select(DASHBOARD_SELECT);
 
                 if (fetchError) {
@@ -1234,6 +1234,7 @@
                         <p class="font-bold text-indigo-700">
                             นำเสนอจอที่ ${heroItem['จอที่'] || "-"}
                             เวลา ${startTime || "-"}${endTime ? " – " + endTime : ""} น.
+                            ${heroItem['ลำดับคิว'] ? `<span class="ml-2 bg-indigo-100 text-indigo-700 text-[11px] px-2 py-0.5 rounded-full font-bold">คิวที่ ${heroItem['ลำดับคิว']}</span>` : ''}
                         </p>
                         <p class="text-slate-600 font-semibold text-xs">
                             <span class="text-slate-400">ด้าน:</span>
@@ -1298,6 +1299,7 @@
                                 <span class="text-indigo-600 font-bold">
                                     นำเสนอจอที่ ${item['จอที่'] || "-"}
                                     เวลา ${iStart || "-"}${iEnd ? " – " + iEnd : ""} น.
+                                    ${item['ลำดับคิว'] ? `<span class="ml-1 bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full">คิวที่ ${item['ลำดับคิว']}</span>` : ''}
                                 </span>
                                 <span class="card-cdwn" data-s="${iStart}" data-e="${iEnd}">${getCardCountdownBadge(iStart, iEnd)}</span>
                                 <span class="text-slate-500 font-medium truncate mt-0.5">
@@ -1507,7 +1509,7 @@
                 realtimeChannel = supabaseClient.channel('realtime_eposter_works')
                     .on(
                         'postgres_changes',
-                        { event: '*', schema: 'public', table: 'eposter_works' },
+                        { event: '*', schema: 'public', table: 'E-poster E-Q' },
                         (payload) => {
                             console.log('Realtime Change Received:', payload);
                             fetchDashboardData();
@@ -1588,10 +1590,11 @@
         // =============================================================
         var pendingOverrideCallback = null;
 
-        function promptOverridePin(callback) {
+        function promptOverridePin(callback, msg) {
             pendingOverrideCallback = callback;
             document.getElementById('overridePinInput').value = "";
             document.getElementById('overridePinError').classList.add('hidden');
+            if (msg) document.getElementById('overridePinMsg').textContent = msg;
             document.getElementById('overridePinModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('overridePinInput').focus(), 300);
         }
@@ -1785,7 +1788,7 @@
                 // ── 2. ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่ ─────────────
                 let rows = cachedAllData;
                 if (rows.length === 0) {
-                    const { data: fresh } = await supabaseClient.from('eposter_works').select(DASHBOARD_SELECT);
+                    const { data: fresh } = await supabaseClient.from('E-poster E-Q').select(DASHBOARD_SELECT);
                     rows = fresh || [];
                     cachedAllData = rows;
                 }
@@ -1936,13 +1939,20 @@
         async function submitConfirmedAction() {
             if (!currentScannedItem) return;
 
-            const startTimeStr    = currentScannedItem['เวลาการนำเสนอ'] || "";
-            const endTimeStr      = currentScannedItem['หมดการนำเสนอ']   || "";
-            const isCurrentlyLive = isLive(startTimeStr, endTimeStr);
+            const startTimeStr = currentScannedItem['เวลาการนำเสนอ'] || "";
+            const endTimeStr   = currentScannedItem['หมดการนำเสนอ']   || "";
+            const now   = getSyncedTime();
+            const start = parseTime(startTimeStr);
+            const end   = parseTime(endTimeStr);
 
-            if (autoDeterminedAction === "ENTRY" && !isCurrentlyLive) {
+            // เช็คอินหลังเวลาเริ่มนำเสนอ → ต้องใส่ PIN
+            if (autoDeterminedAction === "ENTRY" && start && now > start) {
                 closeConfirmModal(false);
-                promptOverridePin(() => { executeDatabaseUpdate(); });
+                promptOverridePin(() => { executeDatabaseUpdate(); }, 'เช็คอินหลังเวลาเริ่มนำเสนอ — กรุณากรอก PIN เพื่อยืนยัน');
+            // รับประกาศก่อนเวลาหมดนำเสนอ → ต้องใส่ PIN
+            } else if (autoDeterminedAction === "REWARD" && end && now < end) {
+                closeConfirmModal(false);
+                promptOverridePin(() => { executeDatabaseUpdate(); }, 'รับประกาศก่อนเวลาหมดนำเสนอ — กรุณากรอก PIN เพื่อยืนยัน');
             } else {
                 executeDatabaseUpdate();
             }
@@ -1962,7 +1972,7 @@
                 const items = currentScannedItems.length > 0 ? currentScannedItems : [currentScannedItem];
                 for (const item of items) {
                     const { error } = await supabaseClient
-                        .from('eposter_works')
+                        .from('E-poster E-Q')
                         .update(updatePayload)
                         .eq('QRCODE', item['QRCODE'])
                         .select();
@@ -2293,7 +2303,7 @@
                 const diffMin = start ? Math.round((start - now) / 60000) : null;
                 const prefix  = r['คำนำหน้า'] || '';
                 const name    = [prefix, r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
-                const phone   = r['เบอร์โทร'] || '-';
+                const phone   = r['เบอร์โทรศัพท์ส่วนตัว'] || '-';
                 const branch  = getBranchFromCode(r['รหัสผลงาน']);
                 const side    = r['ด้านของบทคัดย่อ'] || '-';
                 let badge, cardBg;
@@ -2327,6 +2337,7 @@
                         <span class="flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3 shrink-0"></i>${side}</span>
                         <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3 shrink-0"></i>${r['เวลาการนำเสนอ'] || '-'} น.</span>
                         <span class="flex items-center gap-1 font-semibold text-slate-700"><i data-lucide="phone" class="w-3 h-3 shrink-0"></i>${phone}</span>
+                        ${r['ลำดับคิว'] ? `<span class="flex items-center gap-1 text-indigo-600 font-bold col-span-2"><i data-lucide="list-ordered" class="w-3 h-3 shrink-0"></i>คิวที่ ${r['ลำดับคิว']}</span>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -2446,7 +2457,7 @@
         }
 
         async function fetchTrackRow(code) {
-            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
+            const { data: rows } = await supabaseClient.from('E-poster E-Q').select(TRACK_SELECT);
             if (!rows) return null;
             return rows.find(r =>
                 String(r['รหัสผลงาน'] || '').toUpperCase() === code.toUpperCase() ||
@@ -2455,7 +2466,7 @@
         }
 
         async function fetchAllTrackedRows() {
-            const { data: rows } = await supabaseClient.from('eposter_works').select(TRACK_SELECT);
+            const { data: rows } = await supabaseClient.from('E-poster E-Q').select(TRACK_SELECT);
             if (!rows) return [];
             const codes = getTrackedCodes();
             return codes.map(code =>
@@ -2494,7 +2505,7 @@
             if (trackRealtimeChannel) supabaseClient.removeChannel(trackRealtimeChannel);
             trackRealtimeChannel = supabaseClient
                 .channel('track_live_' + Date.now())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'eposter_works' },
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'E-poster E-Q' },
                     () => refreshTrackingCards('realtime'))
                 .subscribe();
 
@@ -2654,6 +2665,7 @@
                     <div class="flex flex-col gap-1 text-xs mb-3">
                         <span class="text-indigo-700 font-bold text-sm">
                             นำเสนอจอที่ ${r['จอที่']||'-'} &nbsp; เวลา ${startStr||'-'}${endStr?' – '+endStr:''} น.
+                            ${r['ลำดับคิว'] ? `<span class="ml-1 bg-indigo-100 text-indigo-700 text-[11px] px-2 py-0.5 rounded-full font-bold">คิวที่ ${r['ลำดับคิว']}</span>` : ''}
                         </span>
                         <span class="text-slate-600 font-medium">
                             <span class="text-slate-400">ด้าน:</span> ${r['ด้านของบทคัดย่อ']||'-'}

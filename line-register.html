@@ -160,7 +160,7 @@
                 document.getElementById('profileChip').classList.add('flex');
 
                 // โหลดผลงานทั้งหมด (select '*' ตามข้อจำกัด PostgREST)
-                const { data } = await sb.from('eposter_works').select('*');
+                const { data } = await sb.from('E-poster E-Q').select('*');
                 (data || []).forEach(r => { if (r['รหัสผลงาน']) allWorks[String(r['รหัสผลงาน']).toUpperCase().trim()] = r; });
 
                 document.getElementById('loadingBox').classList.add('hidden');
