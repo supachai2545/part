@@ -1149,7 +1149,7 @@
             if (!endTimeStr) return false;
             const end = parseTime(endTimeStr);
             if (!end) return false;
-            return (getSyncedTime().getTime() - end.getTime()) > 1 * 60 * 60 * 1000;
+            return (getSyncedTime().getTime() - end.getTime()) > 2 * 60 * 60 * 1000;
         }
 
         function renderSection(section, data) {
