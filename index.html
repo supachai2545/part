@@ -1104,12 +1104,25 @@
         // 🔧 Render Section UI
         // =============================================================
         function parseTime(timeStr) {
-            if (!timeStr || timeStr === "-") return null;
-            const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
-            if (!match) return null;
+            if (timeStr === null || timeStr === undefined || timeStr === "" || timeStr === "-") return null;
+            const s = String(timeStr).trim();
+            let hh = null, mm = 0;
+            if (s.includes(':')) {
+                // รูปแบบ "HH:MM"
+                const m = s.match(/(\d{1,2}):(\d{2})/);
+                if (!m) return null;
+                hh = parseInt(m[1], 10);
+                mm = parseInt(m[2], 10);
+            } else {
+                // รูปแบบตัวเลข/ข้อความ "HH.MM" (จุดทศนิยม = นาที) เช่น 11.07 = 11:07, 11.4 = 11:40, 11 = 11:00
+                const num = parseFloat(s);
+                if (isNaN(num)) return null;
+                hh = Math.floor(num);
+                mm = Math.round((num - hh) * 100);
+            }
             const d = getSyncedTime();
-            d.setHours(parseInt(match[1], 10));
-            d.setMinutes(parseInt(match[2], 10));
+            d.setHours(hh);
+            d.setMinutes(mm);
             d.setSeconds(0);
             return d;
         }

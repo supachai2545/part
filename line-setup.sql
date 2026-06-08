@@ -77,6 +77,7 @@ declare
     v_start   timestamp;
     v_end     timestamp;
     v_diff    int;
+    v_m       text[];
     r         record;
 begin
     -- อ่าน Channel Access Token จาก Vault
@@ -102,15 +103,16 @@ begin
         from public.eposter_works w
         join public.line_links l on l.code = w."รหัสผลงาน"
     loop
-        -- แปลง "HH:MM" → timestamp ของวันนี้ (เวลาไทย)
+        -- แปลง "HH.MM" หรือ "HH:MM" → timestamp ของวันนี้ (เวลาไทย)
+        --   (จุด/โคลอน = ตัวคั่นนาที เช่น 11.07 = 11:07)
         v_start := null; v_end := null;
-        if r.start_str ~ '\d{1,2}:\d{2}' then
-            v_start := (to_char(v_now,'YYYY-MM-DD') || ' ' ||
-                        (regexp_match(r.start_str,'(\d{1,2}:\d{2})'))[1])::timestamp;
+        v_m := regexp_match(r.start_str::text, '(\d{1,2})[.:](\d{2})');
+        if v_m is not null then
+            v_start := (to_char(v_now,'YYYY-MM-DD') || ' ' || v_m[1] || ':' || v_m[2])::timestamp;
         end if;
-        if r.end_str ~ '\d{1,2}:\d{2}' then
-            v_end := (to_char(v_now,'YYYY-MM-DD') || ' ' ||
-                      (regexp_match(r.end_str,'(\d{1,2}:\d{2})'))[1])::timestamp;
+        v_m := regexp_match(r.end_str::text, '(\d{1,2})[.:](\d{2})');
+        if v_m is not null then
+            v_end := (to_char(v_now,'YYYY-MM-DD') || ' ' || v_m[1] || ':' || v_m[2])::timestamp;
         end if;
 
         -- (1) เช็คอินสำเร็จ
