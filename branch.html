@@ -51,7 +51,7 @@
            onerror="this.style.display='none'" alt="Conference" class="h-10 object-contain mix-blend-multiply"/>
     </div>
     <h2 class="text-2xl font-black text-center text-[#166534] mb-1">เข้าสู่ระบบเจ้าหน้าที่</h2>
-    <p class="text-center text-slate-500 text-sm mb-8 font-medium">กรุณาเข้าสู่ระบบเพื่อตรวจสอบสถานะผลงาน E-Poster</p>
+    <p class="text-center text-slate-500 text-sm mb-8 font-medium">กรุณาเข้าสู่ระบบเพื่อตรวจสอบสถานะการนำเสนอ E-Poster</p>
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="space-y-4 mb-6">
         <div class="relative">
@@ -203,15 +203,12 @@
 
       <!-- Table -->
       <div class="overflow-x-auto custom-scrollbar bg-white rounded-b-2xl">
-        <table class="w-full text-left min-w-[900px]">
+        <table class="w-full text-left min-w-[800px]">
           <thead class="bg-slate-50/80 border-b border-gray-100">
             <tr class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">
-              <th class="py-4 px-4 w-12">
-                <input type="checkbox" id="selectAll" onclick="toggleSelectAll()" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
-              </th>
               <th class="py-4 px-4 w-[10%]">รหัส</th>
-              <th class="py-4 px-4 w-[18%]">ผู้นำเสนอ</th>
-              <th class="py-4 px-4 w-[22%]">ชื่อผลงาน</th>
+              <th class="py-4 px-4 w-[19%]">ผู้นำเสนอ</th>
+              <th class="py-4 px-4 w-[24%]">ชื่อผลงาน</th>
               <th class="py-4 px-4 w-[13%]">สาขา / ด้าน</th>
               <th class="py-4 px-4 w-[12%] text-center">ลำดับ / เวลา</th>
               <th class="py-4 px-4 w-[13%] text-center">สถานะเช็คอิน</th>
@@ -219,7 +216,7 @@
             </tr>
           </thead>
           <tbody id="tableBody" class="divide-y divide-gray-100">
-            <tr><td colspan="8" class="py-8 px-4">
+            <tr><td colspan="7" class="py-8 px-4">
               <div class="space-y-3">
                 <div class="skeleton-shimmer h-10 rounded-xl w-full"></div>
                 <div class="skeleton-shimmer h-10 rounded-xl w-full"></div>
@@ -270,7 +267,7 @@ const PAGE_SIZE = 20;
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let session=null, allData=[], filteredData=[];
-let currentLimit=PAGE_SIZE, selectedItems=new Set();
+let currentLimit=PAGE_SIZE;
 let filters={ stat:'all', branch:'ALL', search:'' };
 
 lucide.createIcons();
@@ -291,6 +288,7 @@ function getBranch(code) {
   return 'อื่นๆ';
 }
 function esc(v){ return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function shortBranch(b){ return String(b||'').replace('สาขา ',''); }
 
 function showToast(msg,type='info'){
   const el=document.getElementById('toastMessage');
@@ -369,7 +367,7 @@ async function fetchData(){
     resetStatCards(); resetBranchCards(); applyFilters();
   }catch(ex){
     showToast('โหลดข้อมูลไม่สำเร็จ: '+ex.message,'error');
-    document.getElementById('tableBody').innerHTML=`<tr><td colspan="8" class="py-12 text-center text-red-500 font-bold">โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรช</td></tr>`;
+    document.getElementById('tableBody').innerHTML=`<tr><td colspan="7" class="py-12 text-center text-red-500 font-bold">โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรช</td></tr>`;
   }finally{ document.getElementById('dashLoadingOverlay').classList.add('hidden'); }
 }
 
@@ -436,8 +434,7 @@ window.performSearch=function(){ filters.search=document.getElementById('searchI
 window.clearFilters=function(){ filters={stat:'all',branch:'ALL',search:''}; document.getElementById('searchInput').value=''; resetStatCards(); resetBranchCards(); applyFilters(); };
 
 function applyFilters(){
-  currentLimit=PAGE_SIZE; selectedItems.clear();
-  const sa=document.getElementById('selectAll'); if(sa) sa.checked=false;
+  currentLimit=PAGE_SIZE;
   filteredData=allData.filter(r=>{
     if(filters.stat==='checkin'   && r['Checkin']!=='Y')    return false;
     if(filters.stat==='nocheckin' && r['Checkin']==='Y')    return false;
@@ -477,7 +474,6 @@ function renderTable(){
       :`<span class="bg-slate-100 text-slate-400 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center">ยังไม่รับประกาศ</span>`;
     const tr=document.createElement('tr'); tr.className='hover:bg-slate-50 transition-colors';
     tr.innerHTML=`
-      <td class="py-4 px-4 whitespace-nowrap align-top"><input type="checkbox" data-id="${esc(code)}" class="item-checkbox w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"></td>
       <td class="py-4 px-4 whitespace-nowrap align-top"><div class="text-[13px] font-bold text-slate-700 font-mono">${esc(code)}</div></td>
       <td class="py-4 px-4 align-top">
         <div class="font-bold text-slate-900 text-[14px] leading-tight">${esc(name)}</div>
@@ -486,7 +482,7 @@ function renderTable(){
       </td>
       <td class="py-4 px-4 align-top"><div class="font-bold text-slate-800 text-[13px] leading-snug whitespace-normal">${esc(title)}</div></td>
       <td class="py-4 px-4 align-top">
-        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[11px] font-bold inline-block mb-1">${esc(branch)}</span>
+        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[11px] font-bold inline-block mb-1">${esc(shortBranch(branch))}</span>
         <div class="text-[10px] text-slate-400 leading-tight mt-0.5">${esc(side)}</div>
       </td>
       <td class="py-4 px-4 align-top text-center">
@@ -501,10 +497,6 @@ function renderTable(){
   tbody.appendChild(frag); lucide.createIcons();
 }
 
-window.toggleSelectAll=function(){
-  const checked=document.getElementById('selectAll').checked; selectedItems.clear();
-  document.querySelectorAll('.item-checkbox').forEach(cb=>{ cb.checked=checked; if(checked) selectedItems.add(cb.dataset.id); });
-};
 
 window.exportCSV=function(){
   if(filteredData.length===0){showToast('ไม่มีข้อมูลสำหรับส่งออก','warning');return;}
