@@ -190,6 +190,16 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
 
             function tokenizeFormattedText(text) {
                 if (!text) return [];
+                // ถอด HTML entities ที่มาจาก richTextToHTML ใน GAS
+                text = text
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&nbsp;/g, ' ');
+                // แทน <br> ด้วย space
+                text = text.replace(/<br\s*\/?>/gi, ' ');
+                // ถอด <b></b> (canvas render bold อยู่แล้ว) และ <u></u>
+                text = text.replace(/<\/?(b|u)>/gi, '');
                 let processed = text
                     .replace(/\*(.*?)\*/g, '<i>$1</i>')
                     .replace(/_(.*?)_/g, '<i>$1</i>');
