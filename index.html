@@ -231,8 +231,8 @@
             <img id="mobileQrCode" src="" alt="QR" class="w-full h-full object-contain">
         </div>
         <div>
-            <p class="text-sm font-bold text-slate-800">ติดตามคิวส่วนตัว</p>
-            <p class="text-[11px] font-medium text-slate-500">สแกนเพื่อดูสถานะผ่านมือถือ</p>
+            <p class="text-sm font-bold text-slate-800">รับแจ้งเตือนผ่าน LINE</p>
+            <p class="text-[11px] font-medium text-slate-500">สแกนเพื่อลงทะเบียนรับแจ้งเตือน</p>
         </div>
     </div>
 
@@ -895,10 +895,10 @@
         var lastCheckinDataStr = "";
         var lastRewardDataStr  = "";
 
-        // QR Mobile — สร้างครั้งเดียว ไม่ regenerate ทุก render
+        // QR Mobile — ลิงก์ตรงไป LIFF ลงทะเบียนแจ้งเตือน LINE
         document.getElementById('mobileQrCode').src =
             'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' +
-            encodeURIComponent(window.location.href);
+            encodeURIComponent(LINE_LIFF_URL) + '&bgcolor=ffffff&color=1e293b&margin=4';
 
         // =============================================================
         // 🔧 [FIX 1] PIN Hashing ด้วย Web Crypto API
