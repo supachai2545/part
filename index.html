@@ -635,15 +635,31 @@
             </button>
         </div>
 
-        <!-- Detail List Panel (slides in below cards) -->
+        <!-- Search Bar (below stat cards, always visible) -->
+        <div class="px-4 pb-3 flex gap-2 shrink-0">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none"></i>
+                <input id="branchSearchName" type="search" placeholder="ชื่อ หรือ นามสกุล..."
+                    class="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200 text-slate-700"
+                    oninput="filterBranchList()">
+            </div>
+            <div class="relative flex-1">
+                <i data-lucide="hash" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none"></i>
+                <input id="branchSearchCode" type="search" placeholder="รหัสผลงาน..."
+                    class="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200 text-slate-700"
+                    oninput="filterBranchList()">
+            </div>
+        </div>
+
+        <!-- Detail List Panel -->
         <div id="branchListPanel" class="hidden flex-1 flex flex-col overflow-hidden mx-4 mb-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-                <h3 id="branchListTitle" class="text-sm font-bold text-slate-700">รายชื่อ</h3>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 shrink-0">
+                <h3 id="branchListTitle" class="text-xs font-bold text-slate-600">รายชื่อ</h3>
                 <button onclick="closeBranchList()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
-            <div id="branchListBody" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+            <div id="branchListBody" class="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2 content-start"></div>
         </div>
     </div>
 
@@ -874,6 +890,8 @@
             'admin01': { hash: '65c1313ef8fe1463232de830cb12d4e34a1e02dd0f1ca94780e939fd8185d859', branchFilter: null,          label: 'กองแผนงานและวิชาการ (ภาพรวม)' },
         };
         var branchSession = null;
+        var branchCurrentType = 'all';
+        var branchCurrentData = [];
 
         // ─── Clean URL ──────────────────────────────────────────────────────
         var SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, "");
@@ -2853,6 +2871,9 @@
             document.getElementById('bstat_checkin').textContent   = data.filter(r => r['Checkin'] === 'Y').length;
             document.getElementById('bstat_nocheckin').textContent = data.filter(r => r['Checkin'] !== 'Y').length;
             document.getElementById('bstat_reward').textContent    = data.filter(r => r['รับประกาศ'] === 'Y').length;
+            branchCurrentType = '_none';
+            document.getElementById('branchSearchName').value = '';
+            document.getElementById('branchSearchCode').value = '';
             document.getElementById('branchListPanel').classList.add('hidden');
             document.getElementById('branchDashPage').classList.remove('hidden');
             lucide.createIcons();
@@ -2860,47 +2881,79 @@
 
         function showBranchList(type) {
             if (!branchSession) return;
-            const filter = branchSession.branchFilter;
+            branchCurrentType = type;
+            document.getElementById('branchSearchName').value = '';
+            document.getElementById('branchSearchCode').value = '';
+            filterBranchList();
+        }
+
+        function filterBranchList() {
+            if (!branchSession) return;
+            const filter   = branchSession.branchFilter;
+            const nameQ    = (document.getElementById('branchSearchName')?.value || '').trim().toLowerCase();
+            const codeQ    = (document.getElementById('branchSearchCode')?.value || '').trim().toLowerCase();
+            const hasSearch = nameQ || codeQ;
+
+            // ถ้าไม่มี search และยังไม่ได้คลิกการ์ด ไม่แสดงรายการ
+            if (!hasSearch && branchCurrentType === '_none') {
+                document.getElementById('branchListPanel').classList.add('hidden');
+                return;
+            }
+
+            const labels = { all: 'ผลงานทั้งหมด', checkin: 'มาเช็คอินแล้ว', nocheckin: 'ขาดเช็คอิน', reward: 'รับประกาศแล้ว', _none: 'ผลการค้นหา' };
             let data = filter
                 ? cachedAllData.filter(r => getBranchFromCode(r['รหัสผลงาน']) === filter)
                 : cachedAllData;
-            const labels = { all: 'ผลงานทั้งหมด', checkin: 'มาเช็คอินแล้ว', nocheckin: 'ขาดเช็คอิน', reward: 'รับประกาศแล้ว' };
-            if (type === 'checkin')   data = data.filter(r => r['Checkin'] === 'Y');
-            if (type === 'nocheckin') data = data.filter(r => r['Checkin'] !== 'Y');
-            if (type === 'reward')    data = data.filter(r => r['รับประกาศ'] === 'Y');
-            document.getElementById('branchListTitle').textContent = `${labels[type]} (${data.length} รายการ)`;
+
+            if (branchCurrentType === 'checkin')   data = data.filter(r => r['Checkin'] === 'Y');
+            if (branchCurrentType === 'nocheckin') data = data.filter(r => r['Checkin'] !== 'Y');
+            if (branchCurrentType === 'reward')    data = data.filter(r => r['รับประกาศ'] === 'Y');
+
+            if (nameQ) {
+                data = data.filter(r => {
+                    const full = [r['คำนำหน้า'], r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ').toLowerCase();
+                    return full.includes(nameQ);
+                });
+            }
+            if (codeQ) {
+                data = data.filter(r => String(r['รหัสผลงาน'] || '').toLowerCase().includes(codeQ));
+            }
+
+            const typeLabel = hasSearch && branchCurrentType === '_none' ? 'ผลการค้นหา' : (labels[branchCurrentType] || 'รายชื่อ');
+            document.getElementById('branchListTitle').textContent = `${typeLabel} — ${data.length} รายการ`;
+
             const container = document.getElementById('branchListBody');
             if (data.length === 0) {
-                container.innerHTML = `<p class="text-center text-sm text-slate-400 py-10">ไม่มีข้อมูล</p>`;
+                container.innerHTML = `<div class="col-span-2 text-center text-sm text-slate-400 py-10">ไม่พบข้อมูล</div>`;
             } else {
-                container.innerHTML = data.map(r => {
-                    const prefix = r['คำนำหน้า'] || '';
-                    const name   = [prefix, r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
-                    const phone  = r['เบอร์โทรศัพท์ส่วนตัว'] || '-';
-                    const email  = r['อีเมลส่วนตัว'] || '-';
-                    const title  = r['ชื่อผลงาน'] || '-';
-                    const branch = r['สาขา'] || getBranchFromCode(r['รหัสผลงาน']);
-                    const side   = r['ด้านของบทคัดย่อ'] || '-';
-                    const code   = r['รหัสผลงาน'] || '-';
-                    const ciDot  = r['Checkin'] === 'Y'
-                        ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="เช็คอินแล้ว"></span>`
-                        : `<span class="w-2 h-2 rounded-full bg-rose-400 shrink-0" title="ยังไม่เช็คอิน"></span>`;
+                container.innerHTML = data.map((r, idx) => {
+                    const prefix  = r['คำนำหน้า'] || '';
+                    const name    = [prefix, r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
+                    const phone   = r['เบอร์โทรศัพท์ส่วนตัว'] || '-';
+                    const email   = r['อีเมลส่วนตัว'] || '-';
+                    const title   = r['ชื่อผลงาน'] || '-';
+                    const branch  = r['สาขา'] || getBranchFromCode(r['รหัสผลงาน']);
+                    const side    = r['ด้านของบทคัดย่อ'] || '-';
+                    const code    = r['รหัสผลงาน'] || '-';
+                    const ciColor = r['Checkin'] === 'Y' ? 'bg-emerald-500' : 'bg-rose-400';
+                    const ciLabel = r['Checkin'] === 'Y' ? 'เช็คอินแล้ว' : 'ยังไม่เช็คอิน';
                     const rwBadge = r['รับประกาศ'] === 'Y'
-                        ? `<span class="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">🏆 รับประกาศ</span>`
+                        ? `<span class="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded-full leading-none">🏆</span>`
                         : '';
                     return `
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                        <div class="flex items-center gap-2 mb-2 flex-wrap">
-                            <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">${code}</span>
-                            ${ciDot}${rwBadge}
+                    <div class="bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-extrabold bg-slate-700 text-white w-5 h-5 rounded-md flex items-center justify-center shrink-0">${idx + 1}</span>
+                            <span class="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full truncate">${code}</span>
+                            <span class="w-1.5 h-1.5 rounded-full ${ciColor} shrink-0" title="${ciLabel}"></span>
+                            ${rwBadge}
                         </div>
-                        <p class="text-sm font-bold text-slate-800 mb-2">${name}</p>
-                        <div class="grid grid-cols-1 gap-y-1 text-[11px]">
-                            <p class="flex gap-2"><span class="text-slate-400 w-20 shrink-0">โทรศัพท์</span><span class="font-semibold text-slate-700">${phone}</span></p>
-                            <p class="flex gap-2"><span class="text-slate-400 w-20 shrink-0">อีเมล</span><span class="font-medium text-slate-600 break-all">${email}</span></p>
-                            <p class="flex gap-2"><span class="text-slate-400 w-20 shrink-0">ชื่อผลงาน</span><span class="font-medium text-slate-600 leading-snug">${title}</span></p>
-                            <p class="flex gap-2"><span class="text-slate-400 w-20 shrink-0">สาขา</span><span class="font-medium text-slate-600">${branch}</span></p>
-                            <p class="flex gap-2"><span class="text-slate-400 w-20 shrink-0">ด้าน</span><span class="font-medium text-slate-600">${side}</span></p>
+                        <p class="text-[11px] font-bold text-slate-800 leading-tight">${name}</p>
+                        <div class="space-y-0.5 text-[10px] text-slate-500">
+                            <p><span class="text-slate-400">โทร </span><span class="font-semibold text-slate-700">${phone}</span></p>
+                            <p class="break-all"><span class="text-slate-400">อีเมล </span><span class="font-medium text-slate-600">${email}</span></p>
+                            <p class="leading-snug"><span class="text-slate-400">ชื่อผลงาน </span><span class="font-medium text-slate-600">${title}</span></p>
+                            <p><span class="text-slate-400">ด้าน </span><span class="font-medium text-slate-600">${side}</span></p>
                         </div>
                     </div>`;
                 }).join('');
@@ -2910,6 +2963,7 @@
         }
 
         function closeBranchList() {
+            branchCurrentType = '_none';
             document.getElementById('branchListPanel').classList.add('hidden');
         }
 
