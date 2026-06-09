@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart E-Queue — เจ้าหน้าที่สาขา</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background-color: #f8fafc;
+      background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+      background-size: 24px 24px;
+      min-height: 100vh;
+      color: #1e293b;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ── Glass Panels ── */
+    .glass-panel {
+      background: white;
+      border-radius: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .glass-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+      transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s cubic-bezier(0.16,1,0.3,1);
+      cursor: pointer;
+    }
+    .glass-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+    }
+    .glass-card.active-card {
+      outline: 2.5px solid #166534;
+      background: #f0fdf4;
+    }
+
+    /* ── Login Modal ── */
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(32px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+    .modal-slide-up { animation: modalSlideUp 0.42s cubic-bezier(0.16,1,0.3,1) both; }
+
+    /* ── Skeleton Shimmer ── */
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 8px;
+    }
+
+    /* ── Page In ── */
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.99); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+    .page-in { animation: pageIn 0.38s cubic-bezier(0.16,1,0.3,1) both; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0);   }
+    }
+    .fade-up { animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+    /* ── Table ── */
+    .data-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .data-table thead th {
+      background: #166534;
+      color: white;
+      font-weight: 600;
+      padding: 12px 14px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .data-table thead th:first-child { border-radius: 12px 0 0 0; }
+    .data-table thead th:last-child  { border-radius: 0 12px 0 0; }
+    .data-table tbody tr { transition: background 0.15s; }
+    .data-table tbody tr:hover { background: #f0fdf4; }
+    .data-table tbody td {
+      padding: 11px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    /* ── Status Badges ── */
+    .badge-yes  { background: #dcfce7; color: #166534; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+    .badge-no   { background: #fee2e2; color: #991b1b; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+
+    /* ── Input Focus ── */
+    .green-input:focus { outline: none; border-color: #166534; box-shadow: 0 0 0 3px rgba(22,101,52,0.15); }
+
+    /* ── Stat Card Number ── */
+    .stat-num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+
+    /* ── Branch KPI bar ── */
+    .kpi-bar { height: 5px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+    .kpi-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOGIN PAGE
+═══════════════════════════════════════════════════════════ -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
+  <div class="glass-panel modal-slide-up p-8 w-full max-w-sm">
+    <!-- Logos -->
+    <div class="flex items-center justify-center gap-4 mb-6">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/DMSIC_Logo.png/240px-DMSIC_Logo.png"
+           onerror="this.style.display='none'"
+           class="h-14 w-auto object-contain" alt="logo1">
+      <div class="w-px h-10 bg-slate-200"></div>
+      <div class="flex flex-col items-center">
+        <div class="w-12 h-12 rounded-2xl bg-green-700 flex items-center justify-center">
+          <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+        </div>
+      </div>
+    </div>
+
+    <h1 class="text-center text-xl font-bold text-slate-800 mb-1">ระบบเจ้าหน้าที่สาขา</h1>
+    <p class="text-center text-sm text-slate-500 mb-7">Smart E-Queue · E-Poster Management</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">ชื่อผู้ใช้</label>
+        <input id="loginUser" type="text" autocomplete="username"
+               placeholder="เช่น rnd01, admin01"
+               class="green-input w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm transition-all"
+               onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">รหัสผ่าน</label>
+        <input id="loginPass" type="password" autocomplete="current-password"
+               placeholder="รหัสผ่าน"
+               class="green-input w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm transition-all"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+    </div>
+
+    <div id="loginError" class="hidden mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 text-center">
+      ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
+    </div>
+
+    <button onclick="doLogin()"
+            class="mt-5 w-full py-3 rounded-xl bg-[#166534] hover:bg-[#14532d] active:bg-[#134e28] text-white font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2">
+      <i data-lucide="log-in" class="w-4 h-4"></i>
+      เข้าสู่ระบบเจ้าหน้าที่
+    </button>
+
+    <p class="text-center text-xs text-slate-400 mt-5">สงวนสิทธิ์เฉพาะเจ้าหน้าที่ที่ได้รับมอบหมาย</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DASHBOARD PAGE
+═══════════════════════════════════════════════════════════ -->
+<div id="dashPage" class="hidden page-in">
+
+  <!-- ── Header ── -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-green-700 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-base font-bold text-slate-800 leading-tight">ระบบเจ้าหน้าที่สาขา</h1>
+          <p id="roleLabel" class="text-xs text-green-700 font-semibold truncate">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button onclick="loadData()" id="refreshBtn"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-all">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">รีเฟรช</span>
+        </button>
+        <button onclick="doLogout()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-all">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">ออกจากระบบ</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+
+    <!-- ── 4 Stat Cards ── -->
+    <div id="statCards" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- skeleton placeholders -->
+      <div class="glass-card p-5 flex flex-col gap-2">
+        <div class="skeleton h-3.5 w-20 rounded"></div>
+        <div class="skeleton h-9 w-14 rounded mt-1"></div>
+        <div class="skeleton h-2.5 w-full rounded mt-1"></div>
+      </div>
+      <div class="glass-card p-5 flex flex-col gap-2">
+        <div class="skeleton h-3.5 w-20 rounded"></div>
+        <div class="skeleton h-9 w-14 rounded mt-1"></div>
+        <div class="skeleton h-2.5 w-full rounded mt-1"></div>
+      </div>
+      <div class="glass-card p-5 flex flex-col gap-2">
+        <div class="skeleton h-3.5 w-20 rounded"></div>
+        <div class="skeleton h-9 w-14 rounded mt-1"></div>
+        <div class="skeleton h-2.5 w-full rounded mt-1"></div>
+      </div>
+      <div class="glass-card p-5 flex flex-col gap-2">
+        <div class="skeleton h-3.5 w-20 rounded"></div>
+        <div class="skeleton h-9 w-14 rounded mt-1"></div>
+        <div class="skeleton h-2.5 w-full rounded mt-1"></div>
+      </div>
+    </div>
+
+    <!-- ── Branch KPI Cards ── -->
+    <div>
+      <h2 class="text-sm font-semibold text-slate-500 mb-2.5 px-0.5">กรองตามสาขา</h2>
+      <div id="branchCards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <!-- skeleton -->
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+        <div class="glass-card p-4"><div class="skeleton h-3 w-16 rounded mb-2"></div><div class="skeleton h-6 w-10 rounded mb-2"></div><div class="skeleton h-2 w-full rounded"></div></div>
+      </div>
+    </div>
+
+    <!-- ── Search + Export ── -->
+    <div class="glass-panel p-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[200px] relative">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+          <input id="searchInput" type="text" placeholder="ค้นหาชื่อ, นามสกุล, รหัสผลงาน..."
+                 class="green-input w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm transition-all"
+                 oninput="applyFilter()">
+        </div>
+        <button onclick="applyFilter()"
+                class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#166534] hover:bg-[#14532d] text-white text-sm font-semibold transition-all">
+          <i data-lucide="search" class="w-4 h-4"></i> ค้นหา
+        </button>
+        <button onclick="clearSearch()"
+                class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-all">
+          <i data-lucide="x" class="w-4 h-4"></i> ล้างค่า
+        </button>
+        <button onclick="exportExcel()"
+                class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-semibold transition-all border border-emerald-200">
+          <i data-lucide="download" class="w-4 h-4"></i> ส่งออก Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Data Table ── -->
+    <div class="glass-panel overflow-hidden">
+      <div id="tableCaption" class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-2">
+        <div class="skeleton h-4 w-32 rounded"></div>
+        <div class="skeleton h-4 w-16 rounded"></div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="text-left">#</th>
+              <th class="text-left">รหัสผลงาน</th>
+              <th class="text-left">ชื่อ-นามสกุล</th>
+              <th class="text-left">เบอร์โทร</th>
+              <th class="text-left">อีเมล</th>
+              <th class="text-left">ชื่อผลงาน</th>
+              <th class="text-left">สาขา</th>
+              <th class="text-left">ด้านบทคัดย่อ</th>
+              <th class="text-center">เช็คอิน</th>
+              <th class="text-center">รับประกาศ</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- skeleton rows -->
+            <tr><td colspan="10" class="py-10 text-center"><div class="flex flex-col items-center gap-3"><div class="skeleton h-4 w-3/4 mx-auto rounded"></div><div class="skeleton h-4 w-2/3 mx-auto rounded"></div><div class="skeleton h-4 w-1/2 mx-auto rounded"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="tableFooter" class="px-5 py-3 border-t border-slate-100 text-xs text-slate-400"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+// ── Config ──────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://jdujdpqihtknelmpqxhy.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_vqJAxA1o7ukOKtI4LIZflg_rCIL7XGu';
+
+const BRANCH_USERS = {
+  'rnd01':   { hash: 'b3d58ccf1b194bf8427d0d21512f8751995f883a333216fbf9d68c99c287aa5a', branchFilter: 'R&D สาขา 1',  label: 'R&D สาขา 1'  },
+  'rnd02':   { hash: '4c856123748899c7110166b59e42bedebd35fd0aa649f53844223e28c4dceb05', branchFilter: 'R&D สาขา 2',  label: 'R&D สาขา 2'  },
+  'rnd03':   { hash: '916ee5b874b0bf7e74c468d1b70d23abef2ba38583bb974c5efeb973cb460b1c', branchFilter: 'R&D สาขา 3',  label: 'R&D สาขา 3'  },
+  'rnd04':   { hash: '08a0c5f742eb0e1246d0711796339f978084353b2c1af0b1e474be172f34d607', branchFilter: 'R&D สาขา 4',  label: 'R&D สาขา 4'  },
+  'r2r01':   { hash: 'ddf41ce1280ee49f4005715ff7835004e0aa9033034239b149a1d584aa0706ff', branchFilter: 'R2R สาขา 1', label: 'R2R สาขา 1' },
+  'r2r02':   { hash: '0164ab60d8b06894c28756524c3ad6d0354db73e5fe4b693fbf4c291d4eba567', branchFilter: 'R2R สาขา 2', label: 'R2R สาขา 2' },
+  'admin01': { hash: '65c1313ef8fe1463232de830cb12d4e34a1e02dd0f1ca94780e939fd8185d859', branchFilter: null,          label: 'กองแผนงานและวิชาการ (ภาพรวม)' },
+};
+
+const BRANCH_ORDER = ['R&D สาขา 1','R&D สาขา 2','R&D สาขา 3','R&D สาขา 4','R2R สาขา 1','R2R สาขา 2'];
+const BRANCH_STYLE = {
+  'R&D สาขา 1': { color:'#3b82f6', light:'#eff6ff', icon:'🔬' },
+  'R&D สาขา 2': { color:'#6366f1', light:'#eef2ff', icon:'🧬' },
+  'R&D สาขา 3': { color:'#8b5cf6', light:'#f5f3ff', icon:'🧪' },
+  'R&D สาขา 4': { color:'#a855f7', light:'#faf5ff', icon:'🔭' },
+  'R2R สาขา 1': { color:'#10b981', light:'#ecfdf5', icon:'📋' },
+  'R2R สาขา 2': { color:'#14b8a6', light:'#f0fdfa', icon:'📊' },
+};
+
+// ── State ────────────────────────────────────────────────────
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let session = null;
+let allData  = [];
+let filteredData = [];
+let activeBranchFilter = null;
+
+// ── SHA-256 ──────────────────────────────────────────────────
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── Branch from code ─────────────────────────────────────────
+function getBranch(code) {
+  if (!code) return 'อื่นๆ';
+  const c = String(code).toUpperCase().trim();
+  if (c.startsWith('RP2')) return 'R2R สาขา 2';
+  if (c.startsWith('RP1')) return 'R2R สาขา 1';
+  if (c.startsWith('P4'))  return 'R&D สาขา 4';
+  if (c.startsWith('P3'))  return 'R&D สาขา 3';
+  if (c.startsWith('P2'))  return 'R&D สาขา 2';
+  if (c.startsWith('P1'))  return 'R&D สาขา 1';
+  return 'อื่นๆ';
+}
+
+// ── Init ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  const saved = sessionStorage.getItem('branchSession');
+  if (saved) {
+    try {
+      session = JSON.parse(saved);
+      showDashboard();
+    } catch { showLogin(); }
+  } else {
+    showLogin();
+  }
+});
+
+function showLogin() {
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('dashPage').classList.add('hidden');
+  lucide.createIcons();
+}
+
+function showDashboard() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('dashPage').classList.remove('hidden');
+  document.getElementById('roleLabel').textContent = session.label;
+  lucide.createIcons();
+  loadData();
+}
+
+// ── Login ─────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.add('hidden');
+
+  const userData = BRANCH_USERS[user];
+  if (!userData) { errEl.classList.remove('hidden'); return; }
+
+  const h = await sha256(pass);
+  if (h !== userData.hash) { errEl.classList.remove('hidden'); return; }
+
+  session = { username: user, branchFilter: userData.branchFilter, label: userData.label };
+  sessionStorage.setItem('branchSession', JSON.stringify(session));
+  showDashboard();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('branchSession');
+  session = null;
+  allData = [];
+  filteredData = [];
+  activeBranchFilter = null;
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').classList.add('hidden');
+  showLogin();
+}
+
+// ── Load Data ─────────────────────────────────────────────────
+async function loadData() {
+  showSkeletons();
+  try {
+    const { data, error } = await sb.from('eposter_works').select('*');
+    if (error) throw error;
+    allData = data || [];
+    // if branchFilter is set, keep only that branch globally
+    if (session.branchFilter) {
+      allData = allData.filter(r => getBranch(r['รหัสผลงาน']) === session.branchFilter);
+    }
+    activeBranchFilter = null;
+    document.getElementById('searchInput').value = '';
+    filteredData = [...allData];
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="10" class="py-10 text-center text-red-500">โหลดข้อมูลไม่สำเร็จ: ${e.message}</td></tr>`;
+  }
+}
+
+function showSkeletons() {
+  // stat cards skeleton
+  document.getElementById('statCards').innerHTML = [0,1,2,3].map(() => `
+    <div class="glass-card p-5 flex flex-col gap-2">
+      <div class="skeleton h-3.5 w-20 rounded"></div>
+      <div class="skeleton h-9 w-14 rounded mt-1"></div>
+      <div class="skeleton h-2.5 w-full rounded mt-1"></div>
+    </div>`).join('');
+  // branch cards skeleton
+  document.getElementById('branchCards').innerHTML = BRANCH_ORDER.map(() => `
+    <div class="glass-card p-4">
+      <div class="skeleton h-3 w-16 rounded mb-2"></div>
+      <div class="skeleton h-6 w-10 rounded mb-2"></div>
+      <div class="skeleton h-2 w-full rounded"></div>
+    </div>`).join('');
+  // table skeleton
+  document.getElementById('tableBody').innerHTML =
+    `<tr><td colspan="10" class="py-10 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <div class="skeleton h-4 w-3/4 mx-auto rounded"></div>
+        <div class="skeleton h-4 w-2/3 mx-auto rounded"></div>
+        <div class="skeleton h-4 w-1/2 mx-auto rounded"></div>
+      </div></td></tr>`;
+  document.getElementById('tableCaption').innerHTML =
+    `<div class="skeleton h-4 w-32 rounded"></div><div class="skeleton h-4 w-16 rounded"></div>`;
+  document.getElementById('tableFooter').textContent = '';
+}
+
+// ── Render All ────────────────────────────────────────────────
+function renderAll() {
+  renderStatCards();
+  renderBranchCards();
+  renderTable();
+}
+
+function renderStatCards() {
+  const d = filteredData;
+  const total    = d.length;
+  const checkin  = d.filter(r => r['Checkin'] === 'Y').length;
+  const nocheck  = total - checkin;
+  const reward   = d.filter(r => r['รับประกาศ'] === 'Y').length;
+
+  const cards = [
+    { label:'ผลงานทั้งหมด',    val: total,   icon:'layers',       color:'#2563eb', bg:'#eff6ff' },
+    { label:'มาเช็คอินแล้ว',   val: checkin, icon:'check-circle', color:'#059669', bg:'#ecfdf5' },
+    { label:'ขาดเช็คอิน',      val: nocheck, icon:'x-circle',     color:'#dc2626', bg:'#fef2f2' },
+    { label:'รับประกาศแล้ว',   val: reward,  icon:'award',        color:'#d97706', bg:'#fffbeb' },
+  ];
+
+  document.getElementById('statCards').innerHTML = cards.map((c,i) => `
+    <div class="glass-card p-5 fade-up" style="animation-delay:${i*0.05}s">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-slate-500">${c.label}</span>
+        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:${c.bg}">
+          <i data-lucide="${c.icon}" class="w-4 h-4" style="color:${c.color}"></i>
+        </div>
+      </div>
+      <div class="stat-num" style="color:${c.color}">${c.val}</div>
+      <div class="text-xs text-slate-400 mt-1">${total > 0 ? Math.round(c.val/total*100) : 0}% ของทั้งหมด</div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function renderBranchCards() {
+  // use allData (pre-filtered by login) for branch breakdown
+  const branchData = allData; // allData already respects login filter
+
+  // Build per-branch stats from allData
+  const stats = {};
+  BRANCH_ORDER.forEach(b => stats[b] = { total:0, checkin:0 });
+  branchData.forEach(r => {
+    const b = getBranch(r['รหัสผลงาน']);
+    if (stats[b]) {
+      stats[b].total++;
+      if (r['Checkin'] === 'Y') stats[b].checkin++;
+    }
+  });
+
+  const maxTotal = Math.max(1, ...BRANCH_ORDER.map(b => stats[b].total));
+
+  document.getElementById('branchCards').innerHTML = BRANCH_ORDER.map((b, i) => {
+    const s = stats[b];
+    const style = BRANCH_STYLE[b] || { color:'#64748b', light:'#f8fafc', icon:'📁' };
+    const pct = s.total > 0 ? Math.round(s.checkin / s.total * 100) : 0;
+    const barW = s.total > 0 ? Math.round(s.total / maxTotal * 100) : 0;
+    const isActive = activeBranchFilter === b;
+    return `
+      <div class="glass-card p-4 fade-up ${isActive ? 'active-card' : ''}" style="animation-delay:${i*0.04}s"
+           onclick="toggleBranchFilter('${b.replace(/'/g,"\\'")}')">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="text-base">${style.icon}</span>
+          <span class="text-xs font-semibold text-slate-600 leading-tight">${b}</span>
+        </div>
+        <div class="text-2xl font-bold mb-1" style="color:${style.color}">${s.total}</div>
+        <div class="kpi-bar mb-1">
+          <div class="kpi-bar-fill" style="width:${barW}%;background:${style.color}"></div>
+        </div>
+        <div class="text-xs text-slate-400">เช็คอิน ${s.checkin}/${s.total} (${pct}%)</div>
+      </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function toggleBranchFilter(branch) {
+  if (activeBranchFilter === branch) {
+    activeBranchFilter = null;
+  } else {
+    activeBranchFilter = branch;
+  }
+  applyFilter();
+  renderBranchCards(); // re-render to update active state
+}
+
+function applyFilter() {
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  let data = allData;
+  if (activeBranchFilter) {
+    data = data.filter(r => getBranch(r['รหัสผลงาน']) === activeBranchFilter);
+  }
+  if (q) {
+    data = data.filter(r => {
+      const name = [r['คำนำหน้า'], r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ').toLowerCase();
+      const code = (r['รหัสผลงาน'] || '').toLowerCase();
+      const title = (r['ชื่อผลงาน'] || '').toLowerCase();
+      return name.includes(q) || code.includes(q) || title.includes(q);
+    });
+  }
+  filteredData = data;
+  renderStatCards();
+  renderTable();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  activeBranchFilter = null;
+  filteredData = [...allData];
+  renderBranchCards();
+  renderStatCards();
+  renderTable();
+}
+
+function renderTable() {
+  const d = filteredData;
+  const caption = document.getElementById('tableCaption');
+  caption.innerHTML = `
+    <span class="text-sm font-semibold text-slate-700">รายการผลงาน</span>
+    <span class="text-xs text-slate-400">${d.length} รายการ</span>`;
+
+  if (d.length === 0) {
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="10" class="py-12 text-center text-slate-400 text-sm">ไม่พบข้อมูล</td></tr>`;
+    document.getElementById('tableFooter').textContent = '';
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = d.map((r, i) => {
+    const code   = r['รหัสผลงาน'] || '-';
+    const name   = [r['คำนำหน้า'], r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' ') || '-';
+    const phone  = r['เบอร์โทรศัพท์ส่วนตัว'] || '-';
+    const email  = r['อีเมลส่วนตัว'] || '-';
+    const title  = r['ชื่อผลงาน'] || '-';
+    const branch = r['สาขา'] || getBranch(code);
+    const side   = r['ด้านของบทคัดย่อ'] || '-';
+    const ci     = r['Checkin'] === 'Y';
+    const rw     = r['รับประกาศ'] === 'Y';
+    const rowBg  = i % 2 === 0 ? '' : 'style="background:#fafafa"';
+    return `<tr ${rowBg}>
+      <td class="text-slate-400 font-medium">${i+1}</td>
+      <td class="font-semibold text-slate-800">${escHtml(code)}</td>
+      <td>${escHtml(name)}</td>
+      <td class="text-slate-600">${escHtml(phone)}</td>
+      <td class="text-slate-600 max-w-[150px] truncate" title="${escHtml(email)}">${escHtml(email)}</td>
+      <td class="max-w-[200px]"><div class="truncate" title="${escHtml(title)}">${escHtml(title)}</div></td>
+      <td class="text-slate-600 whitespace-nowrap">${escHtml(branch)}</td>
+      <td class="text-slate-600 whitespace-nowrap">${escHtml(side)}</td>
+      <td class="text-center"><span class="${ci ? 'badge-yes' : 'badge-no'}">${ci ? 'เช็คอินแล้ว' : 'ยังไม่เช็คอิน'}</span></td>
+      <td class="text-center"><span class="${rw ? 'badge-yes' : 'badge-no'}">${rw ? 'รับแล้ว' : 'ยังไม่รับ'}</span></td>
+    </tr>`;
+  }).join('');
+
+  const ci  = d.filter(r => r['Checkin'] === 'Y').length;
+  const rw  = d.filter(r => r['รับประกาศ'] === 'Y').length;
+  document.getElementById('tableFooter').textContent =
+    `รวม ${d.length} ผลงาน · เช็คอินแล้ว ${ci} · รับประกาศแล้ว ${rw}`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Export Excel (CSV) ────────────────────────────────────────
+function exportExcel() {
+  const d = filteredData;
+  if (d.length === 0) { alert('ไม่มีข้อมูลที่จะส่งออก'); return; }
+  const headers = ['รหัสผลงาน','ชื่อ-นามสกุล','เบอร์โทรศัพท์','อีเมล','ชื่อผลงาน','สาขา','ด้านบทคัดย่อ','เช็คอิน','รับประกาศ'];
+  const rows = d.map(r => [
+    r['รหัสผลงาน'] || '',
+    [r['คำนำหน้า'], r['ชื่อ'], r['นามสกุล']].filter(Boolean).join(' '),
+    r['เบอร์โทรศัพท์ส่วนตัว'] || '',
+    r['อีเมลส่วนตัว'] || '',
+    r['ชื่อผลงาน'] || '',
+    r['สาขา'] || getBranch(r['รหัสผลงาน']),
+    r['ด้านของบทคัดย่อ'] || '',
+    r['Checkin'] === 'Y' ? 'เช็คอินแล้ว' : 'ยังไม่เช็คอิน',
+    r['รับประกาศ'] === 'Y' ? 'รับแล้ว' : 'ยังไม่รับ',
+  ]);
+
+  const csv = [headers, ...rows].map(row =>
+    row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `branch_data_${session.label}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
