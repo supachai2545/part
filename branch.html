@@ -216,7 +216,7 @@
               <th class="py-4 px-4 w-[10%]">รหัส</th>
               <th class="py-4 px-4 w-[19%]">ผู้นำเสนอ</th>
               <th class="py-4 px-4 w-[24%]">ชื่อผลงาน</th>
-              <th class="py-4 px-4 w-[13%]">สาขา / ด้าน</th>
+              <th class="py-4 px-4 w-[13%]">สาขา</th>
               <th class="py-4 px-4 w-[12%] text-center">ลำดับ / เวลา</th>
               <th class="py-4 px-4 w-[13%] text-center">สถานะเช็คอิน</th>
               <th class="py-4 px-4 w-[12%] text-center">ใบประกาศ</th>
@@ -413,9 +413,10 @@ function updateStats(){
   const total=allData.length, ci=allData.filter(r=>r['Checkin']==='Y').length, rw=allData.filter(r=>r['รับประกาศ']==='Y').length;
   const missed=allData.filter(r=>isMissedCheckin(r)).length;
   const pct=total>0?Math.round(ci/total*100):0;
+  const noCheckin=allData.filter(r=>r['Checkin']!=='Y'&&!isMissedCheckin(r)).length;
   document.getElementById('statTotal').textContent=total;
   document.getElementById('statCheckin').textContent=ci;
-  document.getElementById('statNoCheckin').textContent=total-ci;
+  document.getElementById('statNoCheckin').textContent=noCheckin;
   document.getElementById('statReward').textContent=rw;
   document.getElementById('statMissed').textContent=missed;
   const circle=document.getElementById('progressCircle'); if(circle) circle.style.strokeDashoffset=175.9-(pct/100)*175.9;
@@ -424,7 +425,7 @@ function updateStats(){
     const el=document.getElementById(elId); if(!el) return;
     let cnt=allData.filter(r=>getBranch(r['รหัสผลงาน'])===branch);
     if(filters.stat==='checkin')   cnt=cnt.filter(r=>r['Checkin']==='Y');
-    if(filters.stat==='nocheckin') cnt=cnt.filter(r=>r['Checkin']!=='Y');
+    if(filters.stat==='nocheckin') cnt=cnt.filter(r=>r['Checkin']!=='Y'&&!isMissedCheckin(r));
     if(filters.stat==='reward')    cnt=cnt.filter(r=>r['รับประกาศ']==='Y');
     if(filters.stat==='missed')    cnt=cnt.filter(r=>isMissedCheckin(r));
     el.textContent=cnt.length;
@@ -473,7 +474,7 @@ function applyFilters(){
   currentLimit=PAGE_SIZE;
   filteredData=allData.filter(r=>{
     if(filters.stat==='checkin'   && r['Checkin']!=='Y')    return false;
-    if(filters.stat==='nocheckin' && r['Checkin']==='Y')    return false;
+    if(filters.stat==='nocheckin' && (r['Checkin']==='Y'||isMissedCheckin(r))) return false;
     if(filters.stat==='reward'    && r['รับประกาศ']!=='Y') return false;
     if(filters.stat==='missed'    && !isMissedCheckin(r))   return false;
     if(filters.branch!=='ALL' && getBranch(r['รหัสผลงาน'])!==filters.branch) return false;
@@ -532,7 +533,7 @@ function renderTable(){
   slice.forEach(r=>{
     const code=r['รหัสผลงาน']||'-', name=[r['คำนำหน้า'],r['ชื่อ'],r['นามสกุล']].filter(Boolean).join(' ')||'-';
     const phone=r['เบอร์โทรศัพท์ส่วนตัว']||'-', email=r['อีเมลส่วนตัว']||'-';
-    const title=r['ชื่อผลงาน']||'-', branch=r['สาขา']||getBranch(code), side=r['ด้านของบทคัดย่อ']||'-';
+    const title=r['ชื่อผลงาน']||'-', branch=getBranch(code);
     const queue=r['ลำดับคิว']||'-', start=r['เวลาการนำเสนอ']||'-', end=r['หมดการนำเสนอ']||'-';
     const ci=r['Checkin']==='Y', rw=r['รับประกาศ']==='Y';
     // ลอง column ที่น่าจะมี timestamp เช็คอิน/รับประกาศ
@@ -542,14 +543,14 @@ function renderTable(){
     const isUpcoming=!ci&&mins!==null&&mins>=0&&mins<=15;
     const isOverdue=!ci&&mins!==null&&mins<0;
     const ciBadge=ci
-      ?`<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> เช็คอินแล้ว</span>${ciTime?`<div class="text-[10px] text-emerald-600 font-semibold mt-0.5">${esc(ciTime)}</div>`:''}`
+      ?`<div class="flex flex-col items-center gap-1"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> เช็คอินแล้ว</span>${ciTime?`<span class="text-[10px] text-emerald-600 font-semibold">${esc(ciTime)}</span>`:''}</div>`
       :isOverdue
         ?`<span class="bg-[#7f1d1d] text-red-100 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> ขาดการเช็คอิน</span>`
         :isUpcoming
           ?`<span class="bg-red-100 text-red-600 border border-red-300 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> ยังไม่เช็คอิน!</span>`
           :`<span class="bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ยังไม่เช็คอิน</span>`;
     const rwBadge=rw
-      ?`<span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="award" class="w-3 h-3"></i> รับใบประกาศแล้ว</span>${rwTime?`<div class="text-[10px] text-blue-600 font-semibold mt-0.5">${esc(rwTime)}</div>`:''}`
+      ?`<div class="flex flex-col items-center gap-1"><span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="award" class="w-3 h-3"></i> รับใบประกาศแล้ว</span>${rwTime?`<span class="text-[10px] text-blue-600 font-semibold">${esc(rwTime)}</span>`:''}</div>`
       :`<span class="bg-slate-100 text-slate-400 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center">ยังไม่รับประกาศ</span>`;
     const tr=document.createElement('tr'); tr.className='hover:bg-slate-50 transition-colors';
     tr.innerHTML=`
@@ -561,8 +562,7 @@ function renderTable(){
       </td>
       <td class="py-4 px-4 align-top"><div class="font-bold text-slate-800 text-[13px] leading-snug whitespace-normal">${esc(title)}</div></td>
       <td class="py-4 px-4 align-top">
-        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[11px] font-bold inline-block mb-1">${esc(shortBranch(branch))}</span>
-        <div class="text-[10px] text-slate-400 leading-tight mt-0.5">${esc(side)}</div>
+        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[11px] font-bold inline-block">${esc(shortBranch(branch))}</span>
       </td>
       <td class="py-4 px-4 align-top text-center">
         <div class="text-[13px] font-bold text-slate-700">คิวที่ ${esc(queue)}</div>
