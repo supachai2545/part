@@ -2396,9 +2396,8 @@
         }
 
         function initTrackingPage() {
-            const trackUrl = window.location.href.split('?')[0] + '?track=1';
-            const qrImg    = document.getElementById('mobileQrCode');
-            if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(trackUrl)}&bgcolor=ffffff&color=1e293b&margin=4`;
+            const qrImg = document.getElementById('mobileQrCode');
+            if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(LINE_LIFF_URL)}&bgcolor=ffffff&color=1e293b&margin=4`;
 
             if (new URLSearchParams(window.location.search).get('track') !== '1') return;
 
