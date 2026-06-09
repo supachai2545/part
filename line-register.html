@@ -196,7 +196,7 @@
             if (w) {
                 const name = [w['คำนำหน้า'], w['ชื่อ'], w['นามสกุล']].filter(Boolean).join(' ');
                 prev.className = 'rounded-xl px-4 py-2.5 text-xs mt-3 bg-indigo-50 border border-indigo-100 text-indigo-700';
-                prev.innerHTML = `✓ <b>${name || 'ไม่ระบุชื่อ'}</b><br>${w['ชื่อผลงาน'] || ''}<br>⏰ ${w['เวลาการนำเสนอ'] || '-'} น. · จอ ${w['จอที่'] || '-'}`;
+                prev.innerHTML = `✓ <b>${name || 'ไม่ระบุชื่อ'}</b><br>${w['ชื่อผลงาน'] || ''}<br>⏰ ${w['เวลาการนำเสนอ'] || '-'} น. · จอ ${w['จอที่'] || '-'}${w['ลำดับคิว'] ? ' · คิวที่ ' + w['ลำดับคิว'] : ''}`;
                 prev.classList.remove('hidden');
                 btn.disabled = false;
             } else {
@@ -271,7 +271,7 @@
                     🔔 รับแจ้งเตือนทาง LINE แล้ว
                 </span>
                 <div class="flex flex-col gap-1 text-xs mb-3">
-                    <span class="text-indigo-700 font-bold text-sm">นำเสนอจอที่ ${w['จอที่']||'-'} &nbsp; เวลา ${w['เวลาการนำเสนอ']||'-'}${w['หมดการนำเสนอ']?' – '+w['หมดการนำเสนอ']:''} น.</span>
+                    <span class="text-indigo-700 font-bold text-sm">นำเสนอจอที่ ${w['จอที่']||'-'} &nbsp; เวลา ${w['เวลาการนำเสนอ']||'-'}${w['หมดการนำเสนอ']?' – '+w['หมดการนำเสนอ']:''} น.${w['ลำดับคิว']?' &nbsp;<span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[11px]">คิวที่ '+w['ลำดับคิว']+'</span>':''}</span>
                     <span class="text-slate-600 font-medium"><span class="text-slate-400">ด้าน:</span> ${w['ด้านของบทคัดย่อ']||'-'}</span>
                     <span class="text-slate-600 font-medium"><span class="text-slate-400">สาขา:</span> ${w['สาขา']||'-'}</span>
                     <span class="text-slate-600 font-medium line-clamp-2"><span class="text-slate-400">เรื่อง:</span> ${w['ชื่อผลงาน']||'ไม่ระบุ'}</span>

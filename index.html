@@ -2526,64 +2526,7 @@
             trackingTimer = setInterval(() => refreshTrackingCards('poll'), 5000);
         }
 
-        function checkAndNotify(r) {
-            return;   // ปิด browser notification — ย้ายไปแจ้งเตือนผ่าน LINE OA แล้ว (กันเด้งซ้ำ)
-            if (!('Notification' in window) || Notification.permission !== 'granted') return;
-            const ICON = 'https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png';
-            const now        = getSyncedTime();
-            const start      = parseTime(r['เวลาการนำเสนอ'] || '');
-            const end        = parseTime(r['หมดการนำเสนอ']   || '');
-            const code       = r['รหัสผลงาน'] || '';
-            const isCheckedIn = r['Checkin']    === 'Y';
-            const isRewarded  = r['รับประกาศ'] === 'Y';
-
-            // 1. เช็คอินแล้ว
-            if (isCheckedIn && !notifSent[code+'_checkin']) {
-                notifSent[code+'_checkin'] = true;
-                new Notification('✅ เช็คอินสำเร็จแล้ว!', {
-                    body: `ผลงาน ${code} — เช็คอินเข้ารายงานตัวเรียบร้อยแล้ว`,
-                    icon: ICON
-                });
-            }
-
-            // 2–3. นับถอยหลังก่อนนำเสนอ (ยังไม่รับประกาศ)
-            if (start && !isRewarded) {
-                const diffMin = Math.round((start - now) / 60000);
-
-                if (diffMin <= 30 && diffMin > 15 && !notifSent[code+'_30']) {
-                    notifSent[code+'_30'] = true;
-                    new Notification('⏰ เตรียมตัวนำเสนอได้เลย', {
-                        body: `ผลงาน ${code} — อีก ${diffMin} นาที ถึงเวลานำเสนอ`,
-                        icon: ICON
-                    });
-                }
-                if (diffMin <= 15 && diffMin > 0 && !notifSent[code+'_15']) {
-                    notifSent[code+'_15'] = true;
-                    new Notification('🔴 เตรียมพร้อมนำเสนอ!', {
-                        body: `ผลงาน ${code} — อีก ${diffMin} นาที กรุณาไปรอ ณ จุดรอนำเสนอ ห้อง 205`,
-                        icon: ICON
-                    });
-                }
-            }
-
-            // 4. หมดเวลานำเสนอ → ไปรับรางวัล
-            if (end && isCheckedIn && !isRewarded && now > end && !notifSent[code+'_ended']) {
-                notifSent[code+'_ended'] = true;
-                new Notification('🏆 เวลานำเสนอสิ้นสุดแล้ว', {
-                    body: `ผลงาน ${code} — กรุณาไปรับรางวัลจากเจ้าหน้าที่`,
-                    icon: ICON
-                });
-            }
-
-            // 5. สแกนรับรางวัลเสร็จแล้ว
-            if (isRewarded && !notifSent[code+'_reward']) {
-                notifSent[code+'_reward'] = true;
-                new Notification('🎉 ขอบคุณที่ร่วมนำเสนอผลงาน!', {
-                    body: `ผลงาน ${code} — ขอให้เดินทางโดยสวัสดิภาพ แล้วเจอกันในการประชุมวิชาการวิทยาศาสตร์การแพทย์ครั้งที่ 35`,
-                    icon: ICON
-                });
-            }
-        }
+        function checkAndNotify(r) { /* แจ้งเตือนผ่าน LINE OA แล้ว */ }
 
         function removeTrackedCode(code) {
             const updated = getTrackedCodes().filter(c => c !== code);
