@@ -188,6 +188,19 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
             ctx.font = 'bold 83px "Sarabun", sans-serif';
             ctx.fillText(subId, 830, 385);
 
+            // ใช้ Intl.Segmenter แบ่งคำภาษาไทย (ไม่มีช่องว่าง) เพื่อหาจุดตัดบรรทัดที่ถูกต้อง
+            const thaiSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter)
+                ? new Intl.Segmenter('th', { granularity: 'word' })
+                : null;
+
+            function segmentIntoWords(str) {
+                if (thaiSegmenter) {
+                    return [...thaiSegmenter.segment(str)].map(s => s.segment).filter(Boolean);
+                }
+                // fallback: แบ่งด้วย whitespace เท่านั้น
+                return str.split(/(\s+)/).filter(Boolean);
+            }
+
             function tokenizeFormattedText(text) {
                 if (!text) return [];
                 // ถอด HTML entities ที่มาจาก richTextToHTML ใน GAS
@@ -211,8 +224,9 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
                     if (part.toLowerCase() === '<i>' || part.toLowerCase() === '<em>') { isItalicActive = true; }
                     else if (part.toLowerCase() === '</i>' || part.toLowerCase() === '</em>') { isItalicActive = false; }
                     else if (part) {
-                        for (let sp of part.split(/(\s+)/)) {
-                            if (sp) tokens.push({ text: sp, italic: isItalicActive });
+                        // แบ่งคำแต่ละ segment (รองรับทั้งภาษาไทยและอื่นๆ)
+                        for (let seg of segmentIntoWords(part)) {
+                            if (seg) tokens.push({ text: seg, italic: isItalicActive });
                         }
                     }
                 }
