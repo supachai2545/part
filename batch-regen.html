@@ -264,7 +264,7 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
                     // หยุดเมื่อ: ความสูงพอดี AND ไม่มี token ล้นขอบ → หรือถึง minFontSize แล้ว
                     if ((lines.length * (fontSize * lineHeightRatio) <= maxHeight && !hasOverflow)
                         || fontSize === minFontSize) break;
-                    fontSize -= 2;
+                    fontSize -= 1;
                 }
 
                 let lineHeight = fontSize * lineHeightRatio;
