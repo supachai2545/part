@@ -93,7 +93,7 @@
                 </div>
 
                 <!-- เพิ่มผลงาน -->
-                <div class="highlight-card rounded-[1.5rem] p-5 border-2 border-indigo-100">
+                <div id="addCodeBox" class="highlight-card rounded-[1.5rem] p-5 border-2 border-indigo-100">
                     <label class="text-sm font-bold text-slate-700 flex items-center gap-2 mb-3">
                         <i data-lucide="bell-plus" class="w-4 h-4 text-indigo-600"></i>
                         เพิ่มรหัสผลงานที่ต้องการรับแจ้งเตือน
@@ -163,44 +163,6 @@
                 const { data } = await sb.from('eposter_works').select('*');
                 (data || []).forEach(r => { if (r['รหัสผลงาน']) allWorks[String(r['รหัสผลงาน']).toUpperCase().trim()] = r; });
 
-                // ── ดึงรหัสที่ส่งมาจาก URL (?codes=A,B,C หรือ ?code=A)
-                const params = new URLSearchParams(location.search);
-                let incoming = [];
-                if (params.get('codes'))     incoming = params.get('codes').split(',');
-                else if (params.get('code')) incoming = [params.get('code')];
-                incoming = [...new Set(incoming.map(c => String(c).toUpperCase().trim()).filter(Boolean))];
-
-                // ── ถ้ามีรหัสส่งมา → ลงทะเบียนอัตโนมัติ แล้วปิดทันที (ไม่แสดงหน้า UI เลย)
-                if (incoming.length > 0) {
-                    let imported = 0;
-                    for (const c of incoming) {
-                        if (!allWorks[c]) continue;
-                        const { error } = await sb.from('line_links').upsert(
-                            { line_user_id: userId, code: c, display_name: userName },
-                            { onConflict: 'line_user_id,code' });
-                        if (!error) imported++;
-                    }
-                    // แสดงหน้าสำเร็จแบบเรียบง่าย แล้วปิดหน้าต่างอัตโนมัติ
-                    document.getElementById('loadingBox').innerHTML = `
-                        <div class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center pop">
-                            <div class="text-6xl">${imported > 0 ? '✅' : '⚠️'}</div>
-                            <p class="text-xl font-extrabold text-slate-800">
-                                ${imported > 0 ? 'ลงทะเบียนสำเร็จแล้ว!' : 'ไม่พบรหัสผลงาน'}
-                            </p>
-                            <p class="text-sm text-slate-500">
-                                ${imported > 0
-                                    ? `รับแจ้งเตือน ${imported} ผลงานผ่าน LINE เรียบร้อย`
-                                    : 'กรุณาตรวจสอบรหัสผลงานอีกครั้ง'}
-                            </p>
-                            <p class="text-xs text-slate-400">หน้านี้จะปิดอัตโนมัติใน 2 วินาที...</p>
-                        </div>`;
-                    setTimeout(() => {
-                        try { liff.closeWindow(); } catch(e) { window.close(); }
-                    }, 2000);
-                    return;
-                }
-
-                // ── ถ้าไม่มีรหัสส่งมา → แสดงหน้า UI ปกติให้กรอกเอง
                 document.getElementById('loadingBox').classList.add('hidden');
                 document.getElementById('contentBox').classList.remove('hidden');
                 loadMyCodes();
@@ -245,9 +207,18 @@
             }
         }
 
+        var MAX_CODES = 2;
+
         async function addCode() {
             const code = document.getElementById('codeInput').value.toUpperCase().trim();
             if (!code || !allWorks[code] || !userId) return;
+            // เช็ค limit ก่อนบันทึก
+            const { data: existing } = await sb.from('line_links').select('code').eq('line_user_id', userId);
+            const alreadyHas = (existing || []).some(d => d.code === code);
+            if (!alreadyHas && (existing || []).length >= MAX_CODES) {
+                toast(`⚠️ ลงทะเบียนได้สูงสุด ${MAX_CODES} ผลงานต่อ LINE`);
+                return;
+            }
             const { error } = await sb.from('line_links').upsert(
                 { line_user_id: userId, code: code, display_name: userName },
                 { onConflict: 'line_user_id,code' });
@@ -311,13 +282,21 @@
 
         async function loadMyCodes() {
             const { data } = await sb.from('line_links').select('*').eq('line_user_id', userId);
-            const box = document.getElementById('myCodes');
-            if (!data || data.length === 0) {
+            const box    = document.getElementById('myCodes');
+            const addBox = document.getElementById('addCodeBox');
+            const count  = (data || []).length;
+            // ซ่อนช่องกรอกเมื่อครบ limit แล้ว
+            if (addBox) addBox.classList.toggle('hidden', count >= MAX_CODES);
+            if (!data || count === 0) {
                 box.innerHTML = `<div class="highlight-card rounded-[1.5rem] p-6 border-2 border-dashed border-slate-200 text-center text-sm text-slate-400">ยังไม่มีผลงานที่ติดตาม<br>กรอกรหัสด้านบนเพื่อเริ่มรับแจ้งเตือน</div>`;
                 lucide.createIcons();
                 return;
             }
-            box.innerHTML = data.map(d => {
+            // แสดงจำนวนที่ลงทะเบียนแล้ว
+            const limitNote = count >= MAX_CODES
+                ? `<p class="text-xs text-center text-slate-400 mb-2">ลงทะเบียนครบ ${MAX_CODES} ผลงานแล้ว</p>`
+                : `<p class="text-xs text-center text-slate-400 mb-2">ลงทะเบียนแล้ว ${count}/${MAX_CODES} ผลงาน</p>`;
+            box.innerHTML = limitNote + data.map(d => {
                 const w = allWorks[String(d.code).toUpperCase().trim()] || {};
                 return buildCard(w, d.code);
             }).join('');
