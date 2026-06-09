@@ -163,26 +163,46 @@
                 const { data } = await sb.from('eposter_works').select('*');
                 (data || []).forEach(r => { if (r['รหัสผลงาน']) allWorks[String(r['รหัสผลงาน']).toUpperCase().trim()] = r; });
 
-                document.getElementById('loadingBox').classList.add('hidden');
-                document.getElementById('contentBox').classList.remove('hidden');
-
-                // ── ดึงรหัสที่ติดตามมาจากหน้าเว็บ (?codes=A,B,C หรือ ?code=A) แล้วลงทะเบียนให้อัตโนมัติ
+                // ── ดึงรหัสที่ส่งมาจาก URL (?codes=A,B,C หรือ ?code=A)
                 const params = new URLSearchParams(location.search);
                 let incoming = [];
                 if (params.get('codes'))     incoming = params.get('codes').split(',');
                 else if (params.get('code')) incoming = [params.get('code')];
                 incoming = [...new Set(incoming.map(c => String(c).toUpperCase().trim()).filter(Boolean))];
 
-                let imported = 0;
-                for (const c of incoming) {
-                    if (!allWorks[c]) continue;
-                    const { error } = await sb.from('line_links').upsert(
-                        { line_user_id: userId, code: c, display_name: userName },
-                        { onConflict: 'line_user_id,code' });
-                    if (!error) imported++;
+                // ── ถ้ามีรหัสส่งมา → ลงทะเบียนอัตโนมัติ แล้วปิดทันที (ไม่แสดงหน้า UI เลย)
+                if (incoming.length > 0) {
+                    let imported = 0;
+                    for (const c of incoming) {
+                        if (!allWorks[c]) continue;
+                        const { error } = await sb.from('line_links').upsert(
+                            { line_user_id: userId, code: c, display_name: userName },
+                            { onConflict: 'line_user_id,code' });
+                        if (!error) imported++;
+                    }
+                    // แสดงหน้าสำเร็จแบบเรียบง่าย แล้วปิดหน้าต่างอัตโนมัติ
+                    document.getElementById('loadingBox').innerHTML = `
+                        <div class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center pop">
+                            <div class="text-6xl">${imported > 0 ? '✅' : '⚠️'}</div>
+                            <p class="text-xl font-extrabold text-slate-800">
+                                ${imported > 0 ? 'ลงทะเบียนสำเร็จแล้ว!' : 'ไม่พบรหัสผลงาน'}
+                            </p>
+                            <p class="text-sm text-slate-500">
+                                ${imported > 0
+                                    ? `รับแจ้งเตือน ${imported} ผลงานผ่าน LINE เรียบร้อย`
+                                    : 'กรุณาตรวจสอบรหัสผลงานอีกครั้ง'}
+                            </p>
+                            <p class="text-xs text-slate-400">หน้านี้จะปิดอัตโนมัติใน 2 วินาที...</p>
+                        </div>`;
+                    setTimeout(() => {
+                        try { liff.closeWindow(); } catch(e) { window.close(); }
+                    }, 2000);
+                    return;
                 }
-                if (imported > 0) toast(`✅ นำ ${imported} ผลงานที่คุณติดตามมาให้แล้ว`);
 
+                // ── ถ้าไม่มีรหัสส่งมา → แสดงหน้า UI ปกติให้กรอกเอง
+                document.getElementById('loadingBox').classList.add('hidden');
+                document.getElementById('contentBox').classList.remove('hidden');
                 loadMyCodes();
                 lucide.createIcons();
 
