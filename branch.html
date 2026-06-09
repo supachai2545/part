@@ -105,8 +105,8 @@
       </div>
     </div>
 
-    <!-- 4 Stat Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-4">
+    <!-- 5 Stat Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-4">
       <div id="cardTotal" onclick="setStatFilter('all')" class="glass-card p-6 flex justify-between items-center ring-2 ring-[#166534]/10 bg-slate-50">
         <div>
           <p class="text-xs font-extrabold text-slate-400 uppercase mb-1">ผลงานทั้งหมด</p>
@@ -129,7 +129,7 @@
       </div>
       <div id="cardNoCheckin" onclick="setStatFilter('nocheckin')" class="glass-card p-6 flex justify-between items-center opacity-50">
         <div>
-          <p class="text-xs font-extrabold text-amber-600 uppercase mb-1">ขาดเช็คอิน</p>
+          <p class="text-xs font-extrabold text-amber-600 uppercase mb-1">ยังไม่มาเช็คอิน</p>
           <p class="text-4xl font-black text-amber-600" id="statNoCheckin">-</p>
         </div>
         <i data-lucide="clock" class="w-8 h-8 text-amber-300"></i>
@@ -140,6 +140,13 @@
           <p class="text-4xl font-black text-blue-600" id="statReward">-</p>
         </div>
         <i data-lucide="award" class="w-8 h-8 text-blue-300"></i>
+      </div>
+      <div id="cardMissed" onclick="setStatFilter('missed')" class="glass-card p-6 flex justify-between items-center opacity-50">
+        <div>
+          <p class="text-xs font-extrabold text-red-600 uppercase mb-1">ขาดการเช็คอิน</p>
+          <p class="text-4xl font-black text-red-600" id="statMissed">-</p>
+        </div>
+        <i data-lucide="alert-triangle" class="w-8 h-8 text-red-300"></i>
       </div>
     </div>
 
@@ -300,6 +307,21 @@ function formatTime(v){
   const hd=s.match(/^(\d{1,2})\.(\d{2})$/); if(hd) return `${hd[1].padStart(2,'0')}:${hd[2]} น.`;
   return '';
 }
+function parsePresTime(str){
+  const m=String(str||'').match(/(\d{1,2})[.:](\d{2})/);
+  if(!m) return null;
+  const now=new Date();
+  return new Date(now.getFullYear(),now.getMonth(),now.getDate(),parseInt(m[1]),parseInt(m[2]),0);
+}
+function minutesUntil(str){
+  const t=parsePresTime(str); if(!t) return null;
+  return (t.getTime()-Date.now())/60000;
+}
+function isMissedCheckin(r){
+  if(r['Checkin']==='Y') return false;
+  const mins=minutesUntil(r['เวลาการนำเสนอ']);
+  return mins!==null && mins<=15;
+}
 
 function showToast(msg,type='info'){
   const el=document.getElementById('toastMessage');
@@ -389,11 +411,13 @@ window.refreshData=async function(){
 
 function updateStats(){
   const total=allData.length, ci=allData.filter(r=>r['Checkin']==='Y').length, rw=allData.filter(r=>r['รับประกาศ']==='Y').length;
+  const missed=allData.filter(r=>isMissedCheckin(r)).length;
   const pct=total>0?Math.round(ci/total*100):0;
   document.getElementById('statTotal').textContent=total;
   document.getElementById('statCheckin').textContent=ci;
   document.getElementById('statNoCheckin').textContent=total-ci;
   document.getElementById('statReward').textContent=rw;
+  document.getElementById('statMissed').textContent=missed;
   const circle=document.getElementById('progressCircle'); if(circle) circle.style.strokeDashoffset=175.9-(pct/100)*175.9;
   const pt=document.getElementById('progressText'); if(pt) pt.textContent=pct+'%';
   Object.entries(BRANCH_KPI).forEach(([branch,elId])=>{
@@ -402,12 +426,13 @@ function updateStats(){
     if(filters.stat==='checkin')   cnt=cnt.filter(r=>r['Checkin']==='Y');
     if(filters.stat==='nocheckin') cnt=cnt.filter(r=>r['Checkin']!=='Y');
     if(filters.stat==='reward')    cnt=cnt.filter(r=>r['รับประกาศ']==='Y');
+    if(filters.stat==='missed')    cnt=cnt.filter(r=>isMissedCheckin(r));
     el.textContent=cnt.length;
   });
 }
 
 function resetStatCards(){
-  const m={all:'cardTotal',checkin:'cardCheckin',nocheckin:'cardNoCheckin',reward:'cardReward'};
+  const m={all:'cardTotal',checkin:'cardCheckin',nocheckin:'cardNoCheckin',reward:'cardReward',missed:'cardMissed'};
   Object.entries(m).forEach(([k,id])=>{
     const el=document.getElementById(id); if(!el) return;
     if(k==='all'){ el.classList.remove('opacity-50'); el.classList.add('ring-2','ring-[#166534]/10','bg-slate-50'); }
@@ -421,7 +446,7 @@ function resetBranchCards(){
 
 window.setStatFilter=function(stat){
   filters.stat=stat; filters.branch='ALL';
-  const m={all:'cardTotal',checkin:'cardCheckin',nocheckin:'cardNoCheckin',reward:'cardReward'};
+  const m={all:'cardTotal',checkin:'cardCheckin',nocheckin:'cardNoCheckin',reward:'cardReward',missed:'cardMissed'};
   Object.entries(m).forEach(([k,id])=>{
     const el=document.getElementById(id); if(!el) return;
     if(k===stat){ el.classList.remove('opacity-50'); el.classList.add('ring-2','ring-[#166534]/10','bg-slate-50'); }
@@ -450,6 +475,7 @@ function applyFilters(){
     if(filters.stat==='checkin'   && r['Checkin']!=='Y')    return false;
     if(filters.stat==='nocheckin' && r['Checkin']==='Y')    return false;
     if(filters.stat==='reward'    && r['รับประกาศ']!=='Y') return false;
+    if(filters.stat==='missed'    && !isMissedCheckin(r))   return false;
     if(filters.branch!=='ALL' && getBranch(r['รหัสผลงาน'])!==filters.branch) return false;
     if(filters.search){
       const txt=[r['รหัสผลงาน'],r['คำนำหน้า'],r['ชื่อ'],r['นามสกุล'],r['ชื่อผลงาน']].filter(Boolean).join(' ').toLowerCase();
@@ -457,6 +483,38 @@ function applyFilters(){
     }
     return true;
   });
+  // Sort per filter type
+  if(filters.stat==='checkin'){
+    filteredData.sort((a,b)=>{
+      const at=a['เวลาเช็คอิน']||a['CheckinTime']||'';
+      const bt=b['เวลาเช็คอิน']||b['CheckinTime']||'';
+      return bt.localeCompare(at);
+    });
+  } else if(filters.stat==='reward'){
+    filteredData.sort((a,b)=>{
+      const at=a['เวลารับประกาศ']||a['RewardTime']||'';
+      const bt=b['เวลารับประกาศ']||b['RewardTime']||'';
+      return bt.localeCompare(at);
+    });
+  } else if(filters.stat==='nocheckin'){
+    filteredData.sort((a,b)=>{
+      const aq=parseInt(a['ลำดับคิว'])||999, bq=parseInt(b['ลำดับคิว'])||999;
+      if(aq!==bq) return aq-bq;
+      const at=a['เวลาการนำเสนอ']||'', bt=b['เวลาการนำเสนอ']||'';
+      if(at!==bt) return at.localeCompare(bt);
+      return getBranch(a['รหัสผลงาน']).localeCompare(getBranch(b['รหัสผลงาน']));
+    });
+  } else if(filters.stat==='missed'){
+    filteredData.sort((a,b)=>{
+      const ma=minutesUntil(a['เวลาการนำเสนอ']), mb=minutesUntil(b['เวลาการนำเสนอ']);
+      const aOver=ma!==null&&ma<0, bOver=mb!==null&&mb<0;
+      if(!aOver&&bOver) return -1;
+      if(aOver&&!bOver) return 1;
+      if(!aOver&&!bOver) return (ma??999)-(mb??999);
+      // both overdue: most recently missed first (least negative = closest to 0)
+      return (mb??0)-(ma??0);
+    });
+  }
   updateStats(); renderTable();
 }
 
@@ -480,9 +538,16 @@ function renderTable(){
     // ลอง column ที่น่าจะมี timestamp เช็คอิน/รับประกาศ
     const ciTime = formatTime(r['เวลาเช็คอิน']||r['CheckinTime']||r['checkin_time']||r['เวลา_checkin']||'');
     const rwTime = formatTime(r['เวลารับประกาศ']||r['RewardTime']||r['reward_time']||r['เวลา_รับประกาศ']||'');
+    const mins=!ci?minutesUntil(r['เวลาการนำเสนอ']):null;
+    const isUpcoming=!ci&&mins!==null&&mins>=0&&mins<=15;
+    const isOverdue=!ci&&mins!==null&&mins<0;
     const ciBadge=ci
       ?`<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> เช็คอินแล้ว</span>${ciTime?`<div class="text-[10px] text-emerald-600 font-semibold mt-0.5">${esc(ciTime)}</div>`:''}`
-      :`<span class="bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ยังไม่เช็คอิน</span>`;
+      :isOverdue
+        ?`<span class="bg-[#7f1d1d] text-red-100 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> ขาดการเช็คอิน</span>`
+        :isUpcoming
+          ?`<span class="bg-red-100 text-red-600 border border-red-300 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> ยังไม่เช็คอิน!</span>`
+          :`<span class="bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ยังไม่เช็คอิน</span>`;
     const rwBadge=rw
       ?`<span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="award" class="w-3 h-3"></i> รับใบประกาศแล้ว</span>${rwTime?`<div class="text-[10px] text-blue-600 font-semibold mt-0.5">${esc(rwTime)}</div>`:''}`
       :`<span class="bg-slate-100 text-slate-400 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center">ยังไม่รับประกาศ</span>`;
