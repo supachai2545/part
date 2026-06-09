@@ -120,6 +120,23 @@ const HEADER_IMG_BASE64_R2R ="data:image/jpeg;base64,/9j/4QC8RXhpZgAASUkqAAgAAAA
         </div>
     </div>
 
+    <!-- Test: specific IDs -->
+    <div class="bg-white rounded-2xl shadow-sm border border-violet-100 p-7">
+        <h2 class="text-base font-extrabold text-slate-700 mb-1">🧪 ทดสอบเฉพาะรหัส</h2>
+        <p class="text-xs text-slate-400 mb-4">ใส่รหัสผลงานที่ต้องการทดสอบ (สูงสุด 10 รหัส) คั่นด้วย Enter หรือ comma</p>
+        <textarea id="testIds"
+            class="w-full border border-slate-200 rounded-xl p-3 font-mono text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-violet-400"
+            rows="5"
+            placeholder="P1-1&#10;P2-5&#10;RP1-3"></textarea>
+        <div class="flex gap-3 mt-3 items-center">
+            <button id="testRunBtn" onclick="startTest()"
+                class="batch-btn bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                🧪 รันทดสอบ
+            </button>
+            <span class="text-xs text-slate-400">ไม่เกิน 10 รหัสต่อครั้ง</span>
+        </div>
+    </div>
+
     <!-- Log -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-7">
         <div class="flex justify-between items-center mb-4">
@@ -502,6 +519,72 @@ function stopBatch() {
     isStopped = true;
     document.getElementById('stopBtn').disabled = true;
     addLog('⏹ กำลังหยุด...', 'warning');
+}
+
+// =========================================================
+// TEST MODE — ทดสอบรหัสเฉพาะ (สูงสุด 10 รหัส)
+// =========================================================
+async function startTest() {
+    if (!getApiUrl()) { alert('กรุณาใส่ API URL'); return; }
+
+    const raw = document.getElementById('testIds').value.trim();
+    if (!raw) { alert('กรุณาใส่รหัสผลงาน'); return; }
+
+    const ids = raw.split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+
+    if (ids.length === 0) { alert('ไม่พบรหัสผลงาน'); return; }
+
+    isStopped = false;
+    setBatchRunning(true);
+    document.getElementById('progressSection').classList.remove('hidden');
+    addLog(`🧪 ทดสอบ ${ids.length} รหัส: ${ids.join(', ')}`, 'info');
+
+    let successes = 0, errors = 0;
+    const startTime = Date.now();
+
+    for (let i = 0; i < ids.length; i++) {
+        if (isStopped) { addLog('⏹ หยุดโดยผู้ใช้', 'warning'); break; }
+
+        const id = ids[i];
+        document.getElementById('progressGroup').textContent = `🧪 ทดสอบ ${i + 1} / ${ids.length}`;
+        document.getElementById('progressLabel').textContent = id;
+
+        try {
+            const res = await apiGet({ action: 'getWorkById', submissionId: id });
+            if (res.status !== 'success') throw new Error(res.message);
+            await processOneWork(res.data);
+            successes++;
+            addLog(`✅ [${i+1}/${ids.length}] ${id} – ${res.data.fullName}`, 'success');
+        } catch (err) {
+            errors++;
+            addLog(`❌ [${i+1}/${ids.length}] ${id} – ${err.message}`, 'error');
+        }
+
+        const pct = Math.round(((i + 1) / ids.length) * 100);
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressCount').textContent = `${i + 1} / ${ids.length}`;
+        document.getElementById('progressStats').textContent = `✅ ${successes}  ❌ ${errors}`;
+
+        const elapsed = (Date.now() - startTime) / 1000;
+        const remaining = Math.round((elapsed / (i + 1)) * (ids.length - i - 1));
+        document.getElementById('progressEta').textContent =
+            remaining > 60 ? `เหลืออีกประมาณ ${Math.round(remaining / 60)} นาที`
+            : remaining > 0 ? `เหลืออีกประมาณ ${remaining} วินาที` : 'เกือบเสร็จแล้ว...';
+
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    const summary = isStopped
+        ? `⏹ หยุด — สำเร็จ ${successes} | ล้มเหลว ${errors}`
+        : `🎉 เสร็จ — สำเร็จ ${successes} | ล้มเหลว ${errors}`;
+    document.getElementById('progressGroup').textContent = summary;
+    document.getElementById('progressLabel').textContent = '';
+    document.getElementById('progressEta').textContent = '';
+    addLog(summary, 'info');
+    setBatchRunning(false);
 }
 
 // =========================================================
