@@ -188,19 +188,6 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
             ctx.font = 'bold 83px "Sarabun", sans-serif';
             ctx.fillText(subId, 830, 385);
 
-            // ใช้ Intl.Segmenter แบ่งคำภาษาไทย (ไม่มีช่องว่าง) เพื่อหาจุดตัดบรรทัดที่ถูกต้อง
-            const thaiSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter)
-                ? new Intl.Segmenter('th', { granularity: 'word' })
-                : null;
-
-            function segmentIntoWords(str) {
-                if (thaiSegmenter) {
-                    return [...thaiSegmenter.segment(str)].map(s => s.segment).filter(Boolean);
-                }
-                // fallback: แบ่งด้วย whitespace เท่านั้น
-                return str.split(/(\s+)/).filter(Boolean);
-            }
-
             function tokenizeFormattedText(text) {
                 if (!text) return [];
                 // ถอด HTML entities ที่มาจาก richTextToHTML ใน GAS
@@ -224,9 +211,9 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
                     if (part.toLowerCase() === '<i>' || part.toLowerCase() === '<em>') { isItalicActive = true; }
                     else if (part.toLowerCase() === '</i>' || part.toLowerCase() === '</em>') { isItalicActive = false; }
                     else if (part) {
-                        // แบ่งคำแต่ละ segment (รองรับทั้งภาษาไทยและอื่นๆ)
-                        for (let seg of segmentIntoWords(part)) {
-                            if (seg) tokens.push({ text: seg, italic: isItalicActive });
+                        // แบ่งที่ช่องว่างเท่านั้น — ไม่ฉีกคำภาษาไทย
+                        for (let sp of part.split(/(\s+)/)) {
+                            if (sp) tokens.push({ text: sp, italic: isItalicActive });
                         }
                     }
                 }
@@ -243,17 +230,23 @@ function generateHeaderWithText(subId, title, name, domain, headerNames) {
                 while (fontSize >= minFontSize) {
                     lines = [];
                     let currentLine = [], currentLineWidth = 0;
+                    let hasOverflow = false;  // token ใดกว้างเกิน maxWidth ไหม
                     for (let token of tokens) {
                         ctx.font = token.italic ? `italic bold ${fontSize}px "Sarabun", sans-serif` : `bold ${fontSize}px "Sarabun", sans-serif`;
                         let tokenWidth = ctx.measureText(token.text).width;
                         if (currentLineWidth + tokenWidth > maxWidth) {
                             if (currentLine.length > 0) lines.push(currentLine);
                             if (token.text.trim() === '') { currentLine = []; currentLineWidth = 0; }
-                            else { currentLine = [token]; currentLineWidth = tokenWidth; }
+                            else {
+                                if (tokenWidth > maxWidth) hasOverflow = true;
+                                currentLine = [token]; currentLineWidth = tokenWidth;
+                            }
                         } else { currentLine.push(token); currentLineWidth += tokenWidth; }
                     }
                     if (currentLine.length > 0) lines.push(currentLine);
-                    if (lines.length * (fontSize * lineHeightRatio) <= maxHeight || fontSize === minFontSize) break;
+                    // หยุดเมื่อ: ความสูงพอดี AND ไม่มี token ล้นขอบ → หรือถึง minFontSize แล้ว
+                    if ((lines.length * (fontSize * lineHeightRatio) <= maxHeight && !hasOverflow)
+                        || fontSize === minFontSize) break;
                     fontSize -= 2;
                 }
 
