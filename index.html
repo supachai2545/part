@@ -743,10 +743,10 @@
                 const idStr  = id.toUpperCase();
                 const folder = getFolderFromId(id);
 
-                // สร้าง URL ไฟล์จาก Storage — แยกโฟลเดอร์ตามสาขา (RND1-4, R2R1-2)
+                // สร้าง URL ไฟล์จาก Storage — ไฟล์อยู่ในโฟลเดอร์สาขาโดยตรง (ไม่มี JPG/PDF ซับโฟลเดอร์)
                 const base   = folder ? `${STORAGE_BASE}/${folder}` : STORAGE_BASE;
-                const pdfUrl = `${base}/PDF/${id}.pdf`;
-                const jpgUrl = `${base}/JPG/${id}.jpg`;
+                const pdfUrl = `${base}/${id}.pdf`;
+                const jpgUrl = `${base}/${id}.jpg`;
 
                 const mappedItem = {
                     id:     id,
