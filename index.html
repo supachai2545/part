@@ -248,7 +248,6 @@
         <div id="scoreBadgeText" class="badge-expanded overflow-hidden whitespace-nowrap">
             <p class="text-[9px] sm:text-[10px] font-black text-amber-600 uppercase tracking-widest leading-none mb-0.5">พาสปอร์ตสะสมแต้ม</p>
             <p class="text-[18px] sm:text-[22px] font-black text-gray-800 leading-none"><span id="scoreBadgePoints">0</span><span class="text-[12px] sm:text-[14px] text-orange-500 ml-1">PT</span></p>
-            <p class="text-[9px] font-bold text-gray-400 leading-none mt-0.5">ดูแล้ว <span id="scoreBadgeViewed">0</span> ผลงาน</p>
         </div>
     </div>
 
@@ -1186,6 +1185,16 @@
                     (document.exitFullscreen || document.webkitExitFullscreen).call(document);
                 }
             } catch (e) {}
+            // reset ปุ่มดูเต็มจอ → เต็ม opacity แล้วจาง 50% ใหม่หลัง 5 วิ
+            resetFsBtn();
+        }
+
+        function resetFsBtn() {
+            var fb = document.getElementById('viewerFsBtn');
+            if (!fb) return;
+            fb.style.opacity = '1';
+            clearTimeout(fb._fadeTimer);
+            fb._fadeTimer = setTimeout(function() { if (fb.parentNode) fb.style.opacity = '0.5'; }, 5000);
         }
 
         // ออกจาก native fullscreen ด้วย gesture ระบบ → ปิด overlay ตาม
@@ -1330,12 +1339,12 @@
                 fb.style.cssText = 'position:absolute;top:10px;left:10px;z-index:30;display:flex;align-items:center;gap:5px;background:rgba(15,23,42,0.82);color:#fff;border:none;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:1;transition:opacity 0.8s ease;';
                 fb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>ดูเต็มจอ';
                 fb.addEventListener('click', function(e){ e.stopPropagation(); openFullscreen(); });
-                // จางลงหลัง 5 วิ แต่ยังคลิกได้
-                setTimeout(function() { if (fb.parentNode) fb.style.opacity = '0.5'; }, 5000);
-                // แตะ/hover → ชัดขึ้นชั่วคราว
-                fb.addEventListener('mouseenter', function() { fb.style.opacity = '1'; });
-                fb.addEventListener('mouseleave', function() { fb.style.opacity = '0.5'; });
-                fb.addEventListener('touchstart', function() { fb.style.opacity = '1'; setTimeout(function() { fb.style.opacity = '0.5'; }, 2000); }, { passive: true });
+                // จางลงหลัง 5 วิ (ใช้ resetFsBtn เพื่อ reuse logic เดียวกัน)
+                setTimeout(function() { resetFsBtn(); }, 0);
+                // แตะ/hover → ชัดขึ้นชั่วคราวแล้วนับใหม่
+                fb.addEventListener('mouseenter', function() { fb.style.opacity = '1'; clearTimeout(fb._fadeTimer); });
+                fb.addEventListener('mouseleave', function() { fb._fadeTimer = setTimeout(function() { fb.style.opacity = '0.5'; }, 5000); });
+                fb.addEventListener('touchstart', function() { fb.style.opacity = '1'; clearTimeout(fb._fadeTimer); fb._fadeTimer = setTimeout(function() { fb.style.opacity = '0.5'; }, 5000); }, { passive: true });
                 container.appendChild(fb);
             } else {
                 container.innerHTML = '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์</p></div>';
@@ -1431,8 +1440,6 @@
             const badge = document.getElementById('scoreBadgePoints');
             if (badge) {
                 badge.innerText = userPoints;
-                const viewedEl = document.getElementById('scoreBadgeViewed');
-                if (viewedEl) viewedEl.innerText = viewedPosters.length;
                 const container = document.getElementById('scoreBadge');
                 container.classList.add('score-pop');
                 setTimeout(function() { container.classList.remove('score-pop'); }, 400);
