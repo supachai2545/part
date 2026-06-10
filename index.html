@@ -145,6 +145,9 @@
         .spine-shadow-right { background: linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 15%); }
         .spine-shadow-left { background: linear-gradient(to left, rgba(0,0,0,0.15) 0%, transparent 15%); }
 
+        .card-thumb { filter: blur(8px); transform: scale(1.12); transition: filter 0s, transform 0s; }
+        .card-thumb.loaded { filter: blur(8px); transform: scale(1.12); }
+
         .stamp-mark {
             opacity: 0;
             transform: rotate(var(--rotate-angle)) translateY(-45px) scaleX(1.9) scaleY(1.9);
@@ -971,9 +974,9 @@
                         </div>
                         <div class="relative w-full aspect-[4/3] bg-gray-200 overflow-hidden border-b border-white/60 rounded-t-[18px]">
                             <img src="${item.jpgUrl}" draggable="false" loading="lazy" decoding="async"
-                                 onerror="this.onerror=null; this.src='https://placehold.co/800x600/f8fafc/ef4444?text=No+Image'; this.classList.remove('opacity-0')"
-                                 onload="this.classList.remove('opacity-0')"
-                                 class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 opacity-0">
+                                 onerror="this.onerror=null; this.src='https://placehold.co/800x600/f8fafc/ef4444?text=No+Image'; this.classList.remove('opacity-0'); this.classList.remove('card-thumb');"
+                                 onload="this.classList.remove('opacity-0');"
+                                 class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 opacity-0 card-thumb">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-6">
                                 <div class="bg-white/90 text-gray-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-black text-xs sm:text-sm shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
                                     <i data-lucide="maximize-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2"></i> แตะเพื่อรับชม
