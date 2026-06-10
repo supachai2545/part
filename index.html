@@ -237,7 +237,7 @@
         </span>
     </div>
 
-    <button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" class="hidden fixed bottom-[5.5rem] right-6 sm:bottom-[6.5rem] sm:right-8 z-[59] bg-white/95 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.13)] border border-gray-200 transition-all duration-300 hover:scale-110 hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]" title="กลับด้านบน">
+    <button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" class="hidden fixed bottom-6 left-6 sm:bottom-8 sm:left-8 z-[59] bg-white/95 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.13)] border border-gray-200 transition-all duration-300 hover:scale-110 hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]" title="กลับด้านบน">
         <i data-lucide="arrow-up" class="w-4 h-4 text-gray-500"></i>
     </button>
 
@@ -1323,6 +1323,8 @@
             body.classList.add('no-scroll');
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = '0'; sb.style.pointerEvents = 'none'; }
+            var stb = document.getElementById('scrollTopBtn');
+            if (stb) stb.classList.add('hidden');
             updateNavBtns();
             startViewerTimer(id);
         }
@@ -1338,6 +1340,7 @@
             clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null;
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
+            if (window.scrollY >= 320) { var stb = document.getElementById('scrollTopBtn'); if (stb) stb.classList.remove('hidden'); }
         }
 
         // =============================================================
@@ -1517,11 +1520,8 @@
             // Reset pages ก่อนแสดง
             turnPage(3, 'close', false); turnPage(2, 'close', false); turnPage(1, 'close', false);
 
-            // Clear stamps ทุกดวงก่อนเสมอ — จะ animate ใหม่ทุกครั้งที่เปิด
-            [2,3,4,5].forEach(function(n) {
-                var m = document.getElementById('stamp-' + n);
-                if (m) m.classList.remove('revealed');
-            });
+            // Reset stamps ทุกดวงก่อนเสมอ (คืน border, text, revealed) — จะ animate ใหม่
+            [2,3,4,5].forEach(function(n) { toggleStamp(n, false, false); });
 
             modal.classList.remove('hidden', 'opacity-0');
             setTimeout(function() { modal.style.opacity = '1'; }, 10);
@@ -1538,10 +1538,7 @@
             // Spread 1 — stamp 2 (page2.front มองเห็นหลัง page1 flip)
             if (level >= 2) {
                 (function(d) {
-                    setTimeout(function() {
-                        var m = document.getElementById('stamp-2');
-                        if (m) { m.classList.add('revealed'); playSound('stamp'); }
-                    }, d);
+                    setTimeout(function() { toggleStamp(2, true, false); playSound('stamp'); }, d);
                 })(delay);
                 delay += sGap;
             }
@@ -1550,17 +1547,11 @@
                 // พลิก page2
                 setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += gap;
 
-                // Spread 2 — stamp 3 (page2.back) + stamp 4 (page3.front) สลับกัน 200ms
+                // Spread 2 — stamp 3 (page2.back) + stamp 4 (page3.front) สลับกัน 220ms
                 (function(d) {
-                    setTimeout(function() {
-                        var m = document.getElementById('stamp-3');
-                        if (m) { m.classList.add('revealed'); playSound('stamp'); }
-                    }, d);
+                    setTimeout(function() { toggleStamp(3, true, false); playSound('stamp'); }, d);
                     if (level >= 4) {
-                        setTimeout(function() {
-                            var m = document.getElementById('stamp-4');
-                            if (m) { m.classList.add('revealed'); playSound('stamp'); }
-                        }, d + 220);
+                        setTimeout(function() { toggleStamp(4, true, false); playSound('stamp'); }, d + 220);
                     }
                 })(delay);
                 delay += (level >= 4 ? 220 : 0) + sGap;
@@ -1572,10 +1563,7 @@
 
                 // Spread 3 — stamp 5 (page3.back)
                 (function(d, cin) {
-                    setTimeout(function() {
-                        var m = document.getElementById('stamp-5');
-                        if (m) { m.classList.add('revealed'); playSound('stamp-master'); if (cin) { setTimeout(function() { playSound('success'); }, 600); } }
-                    }, d);
+                    setTimeout(function() { toggleStamp(5, true, false); playSound('stamp-master'); if (cin) { setTimeout(function() { playSound('success'); }, 600); } }, d);
                 })(delay, isCinematic);
                 delay += sGap;
             }
