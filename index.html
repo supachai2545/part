@@ -1118,26 +1118,53 @@
                 lastTap = now;
             }, { passive: false });
 
-            // pinch-to-zoom (สองนิ้ว — ติดตามนิ้วลื่นแบบ native)
-            var pd = 0, pz = 1, pmx = 0, pmy = 0, pl = 0, pt = 0;
+            // pinch-to-zoom (สองนิ้ว) + แพนนิ้วเดียวอิสระทุกทิศ (ลากตรงไหนก็ได้)
+            var pd = 0, pz = 1, pmx = 0, pmy = 0, pl = 0, pt = 0;       // pinch state
+            var panOn = false, pStartX = 0, pStartY = 0, pSL = 0, pST = 0; // pan state
             scrollBox.addEventListener('touchstart', function(e){
                 if (e.touches.length === 2) {
+                    panOn = false;
                     if (animH) { cancelAnimationFrame(animH); animH = null; }
                     pd = dist(e.touches); pz = zoom; pl = scrollBox.scrollLeft; pt = scrollBox.scrollTop;
                     var r = scrollBox.getBoundingClientRect();
                     pmx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
                     pmy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+                } else if (e.touches.length === 1) {
+                    panOn = true;
+                    pStartX = e.touches[0].clientX; pStartY = e.touches[0].clientY;
+                    pSL = scrollBox.scrollLeft; pST = scrollBox.scrollTop;
                 }
             }, { passive: true });
             scrollBox.addEventListener('touchmove', function(e){
                 if (e.touches.length === 2 && pd) {
                     e.preventDefault();
                     applyAt(pz * (dist(e.touches) / pd), pmx, pmy, pz, pl, pt);
+                } else if (e.touches.length === 1 && panOn) {
+                    e.preventDefault();
+                    scrollBox.scrollLeft = pSL - (e.touches[0].clientX - pStartX);
+                    scrollBox.scrollTop  = pST - (e.touches[0].clientY - pStartY);
                 }
             }, { passive: false });
             scrollBox.addEventListener('touchend', function(e){
                 if (e.touches.length < 2) pd = 0;
+                if (e.touches.length === 0) panOn = false;
             }, { passive: true });
+
+            // desktop: ลากเมาส์เพื่อแพนอิสระ (ผูกกับ scrollBox ป้องกัน listener รั่ว)
+            var mDown = false, mX = 0, mY = 0, mSL = 0, mST = 0;
+            function endDrag(){ if (mDown) { mDown = false; img.style.cursor = 'grab'; } }
+            scrollBox.addEventListener('mousedown', function(e){
+                mDown = true; mX = e.clientX; mY = e.clientY;
+                mSL = scrollBox.scrollLeft; mST = scrollBox.scrollTop;
+                img.style.cursor = 'grabbing'; e.preventDefault();
+            });
+            scrollBox.addEventListener('mousemove', function(e){
+                if (!mDown) return;
+                scrollBox.scrollLeft = mSL - (e.clientX - mX);
+                scrollBox.scrollTop  = mST - (e.clientY - mY);
+            });
+            scrollBox.addEventListener('mouseup', endDrag);
+            scrollBox.addEventListener('mouseleave', endDrag);
 
             // desktop: ctrl/⌘ + scroll wheel
             scrollBox.addEventListener('wheel', function(e){
@@ -1154,7 +1181,7 @@
             return `<div id="${prefix}Box" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;">
                         <div style="min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;">
                             <img id="${prefix}Img" alt="poster"
-                                 style="width:100%;height:auto;display:block;touch-action:pan-x pan-y;"
+                                 style="width:100%;height:auto;display:block;touch-action:none;cursor:grab;-webkit-user-drag:none;user-select:none;"
                                  decoding="async" />
                             <div id="${prefix}Err" style="display:none;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;padding:2rem;text-align:center;min-height:200px;width:100%;">
                                 <p style="font-weight:800;font-size:1rem;">ไม่พบไฟล์รูปภาพ</p>
@@ -1315,15 +1342,18 @@
                 countdownCircle.style.strokeDashoffset = '0';
             }
 
-            // แสดงรูป JPG — โหลด thumbnail ก่อนแล้วค่อยสลับเป็นรูปเต็ม (เปิดไว) + ปุ่มดูเต็มจอ
+            // แสดงรูป JPG — โหลด thumbnail ก่อนแล้วค่อยสลับเป็นรูปเต็ม (เปิดไว) + ปุ่มดูเต็มจอลอยเหนือรูป
             const container = document.getElementById('viewerContentContainer');
             if (activePoster.jpgUrl) {
-                const fsBtn = '<div style="position:sticky;top:10px;left:0;float:left;margin-left:10px;z-index:20;">' +
-                    '<button id="viewerFsBtn" style="display:flex;align-items:center;gap:5px;background:rgba(15,23,42,0.82);color:#fff;border:none;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>ดูเต็มจอ</button></div>';
-                container.innerHTML = scrollImageMarkup('poster', fsBtn);
+                container.innerHTML = scrollImageMarkup('poster');
                 wireScrollImage('poster', activePoster.jpgUrl, activePoster.thumbUrl);
-                document.getElementById('viewerFsBtn').addEventListener('click', function(e){ e.stopPropagation(); openFullscreen(); });
+                // ปุ่มลอย absolute เหนือรูป — เห็นตลอดไม่ว่าจะเลื่อนแค่ไหน
+                const fb = document.createElement('button');
+                fb.id = 'viewerFsBtn';
+                fb.style.cssText = 'position:absolute;top:10px;left:10px;z-index:30;display:flex;align-items:center;gap:5px;background:rgba(15,23,42,0.82);color:#fff;border:none;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer;-webkit-tap-highlight-color:transparent;';
+                fb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>ดูเต็มจอ';
+                fb.addEventListener('click', function(e){ e.stopPropagation(); openFullscreen(); });
+                container.appendChild(fb);
             } else {
                 container.innerHTML = '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์</p></div>';
             }
