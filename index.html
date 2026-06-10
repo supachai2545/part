@@ -236,6 +236,28 @@
         @media print {
             body { display: none !important; }
         }
+
+        /* ===== MOBILE PERFORMANCE ===== */
+        @media (max-width: 640px) {
+            /* backdrop-filter: blur บน 24 card พร้อมกัน = ตัวร้ายหลักบนมือถือ */
+            .glass-panel {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                background: rgba(255, 255, 255, 0.97) !important;
+            }
+            /* ลด GPU compositing layers — will-change + preserve-3d สร้าง layer ทุก card */
+            .card-3d-wrap { perspective: none; }
+            .poster-card { transform-style: flat; will-change: auto; }
+            /* ลบ 3D translateZ ออก ไม่มีผลบนมือถืออยู่แล้ว */
+            .pop-out { transform: none !important; transition: none !important; }
+            /* ไม่ต้อง stagger animation — show ทันที ลด CPU paint */
+            .stagger-fade-in { animation: none !important; opacity: 1 !important; }
+            /* dot pattern บน body เพิ่ม paint cost ตอน scroll */
+            .bg-pattern {
+                background-image: none !important;
+                background: linear-gradient(135deg, #f0fdf4 0%, #e2e8f0 100%) !important;
+            }
+        }
     </style>
 </head>
 <body class="antialiased min-h-screen bg-pattern flex flex-col relative select-none" oncontextmenu="return false;" ondragstart="return false;">
@@ -714,7 +736,7 @@
         // =============================================================
         async function loadPostersFromSupabase() {
             try {
-                const { data, error } = await sbClient.from(TABLE_NAME).select('*');
+                const { data, error } = await sbClient.from(TABLE_NAME).select('รหัสผลงาน, ชื่อผลงาน, คำนำหน้า, ชื่อ, นามสกุล, ชื่อหน่วยงาน, เวลาการนำเสนอ, แสดงจอที่');
                 if (error) throw error;
                 onDataLoaded(data || []);
             } catch (err) {
@@ -970,14 +992,14 @@
                 <div class="card-3d-wrap w-full stagger-fade-in" style="animation-delay: ${delay}s">
                     <div class="poster-card glass-panel flex flex-col group cursor-pointer relative h-full bg-white/70" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(event, this)" onclick="openViewer('${item.id}')">
                         <div class="absolute top-3 sm:top-4 left-3 sm:left-4 z-20">
-                            ${isViewed ? `<div class="bg-emerald-500/90 text-white backdrop-blur-md px-2 py-1.5 rounded-full flex items-center justify-center shadow-sm border border-white/50">
+                            ${isViewed ? `<div class="bg-emerald-500 text-white px-2 py-1.5 rounded-full flex items-center justify-center shadow-sm border border-white/50">
                                 <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i></div>` : ''}
                         </div>
                         <div class="relative w-full aspect-[4/3] bg-slate-200 animate-pulse overflow-hidden border-b border-white/60 rounded-t-[18px]">
                             <img src="${item.thumbUrl}" draggable="false" loading="lazy" decoding="async"
                                  onerror="this.onerror=null; this.src='https://placehold.co/800x600/f8fafc/ef4444?text=No+Image'; this.classList.remove('opacity-0'); this.parentElement.classList.remove('animate-pulse');"
                                  onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('animate-pulse');"
-                                 class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 opacity-0">
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-[opacity,transform] duration-300 opacity-0">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-6">
                                 <div class="bg-white/90 text-gray-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-black text-xs sm:text-sm shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
                                     <i data-lucide="maximize-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2"></i> แตะเพื่อรับชม
