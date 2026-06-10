@@ -1274,9 +1274,6 @@
             lucide.createIcons({ nodes: Array.from(viewerModal.querySelectorAll('[data-lucide]')) });
             viewerModal.classList.remove('hidden');
             body.classList.add('no-scroll');
-            if (_badgeFadeTimer) { clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null; }
-            var sb = document.getElementById('scoreBadge');
-            if (sb) { sb.style.opacity = '0.1'; sb.style.pointerEvents = 'none'; }
             startViewerTimer(id);
         }
 
@@ -1288,9 +1285,6 @@
             document.getElementById('viewerContentContainer').innerHTML = '';
             activePoster = null;
             stopViewerTimer();
-            if (_badgeFadeTimer) { clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null; }
-            var sb = document.getElementById('scoreBadge');
-            if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
         }
 
         // =============================================================
@@ -1336,14 +1330,12 @@
             localStorage.setItem('posterPoints', userPoints);
             var newLevel = getLevel(userPoints);
             _passportJustEarned = (newLevel > oldLevel);
-            // Update score silently — no badge animation while viewer is open
             updateScoreBadge();
+            expandBadge();
             const viewedIndicator = document.getElementById('viewedIndicator');
             if (viewedIndicator) { viewedIndicator.classList.remove('hidden'); viewedIndicator.classList.add('flex'); }
             filterPosters(false, true);
             updatePassportUI(true);
-            // Auto-open passport book 5 seconds after earning points
-            setTimeout(function() { openRewardModal(); }, 5000);
         }
 
         // =============================================================
