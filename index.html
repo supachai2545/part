@@ -1155,6 +1155,12 @@
             }, { passive: false });
             scrollBox.addEventListener('touchend', function(e){
                 if (e.touches.length < 2) pd = 0;
+                if (e.touches.length === 1) {
+                    // after lifting one finger from pinch → let remaining finger pan
+                    panOn = true;
+                    pStartX = e.touches[0].clientX; pStartY = e.touches[0].clientY;
+                    pSL = scrollBox.scrollLeft; pST = scrollBox.scrollTop;
+                }
                 if (e.touches.length === 0) panOn = false;
             }, { passive: true });
 
@@ -1174,19 +1180,17 @@
             scrollBox.addEventListener('mouseup', endDrag);
             scrollBox.addEventListener('mouseleave', endDrag);
 
-            // desktop: ctrl/⌘ + scroll wheel
+            // desktop: scroll wheel zooms (no Ctrl required); trackpad pinch also captured here
             scrollBox.addEventListener('wheel', function(e){
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    var r = scrollBox.getBoundingClientRect();
-                    zoomTo(zoom * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX - r.left, e.clientY - r.top, false);
-                }
+                e.preventDefault();
+                var r = scrollBox.getBoundingClientRect();
+                zoomTo(zoom * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX - r.left, e.clientY - r.top, false);
             }, { passive: false });
         }
 
         // สร้าง markup กล่องรูปแบบ scroll+zoom (prefix ใช้ตั้ง id ให้ไม่ชนกัน)
         function scrollImageMarkup(prefix, extraBtns) {
-            return `<div id="${prefix}Box" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;">
+            return `<div id="${prefix}Box" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;touch-action:none;user-select:none;">
                         <div style="min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;">
                             <img id="${prefix}Img" alt="poster"
                                  style="width:100%;height:auto;display:block;touch-action:none;cursor:grab;-webkit-user-drag:none;user-select:none;"
