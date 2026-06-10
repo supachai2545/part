@@ -73,6 +73,13 @@
             will-change: transform;
             border-radius: 20px;
         }
+        /* backdrop-filter + border-radius on same element causes implicit clipping of children
+           in many desktop browsers — disable blur specifically on cards, keep on other UI elements */
+        .poster-card.glass-panel {
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            background: rgba(255, 255, 255, 0.88);
+        }
 
         .stagger-fade-in {
             animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1007,7 +1014,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="p-2.5 sm:p-6 flex flex-col flex-grow relative pop-out">
+                        <div class="p-2.5 sm:p-6 flex flex-col flex-grow relative">
                             <div class="absolute -top-3.5 sm:-top-5 right-2 sm:right-5 ${item.locationColor} text-white px-2 py-0.5 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[13px] shadow-lg border-2 border-white">
                                 <i data-lucide="map-pin" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 mr-0.5 sm:mr-1.5 inline-block"></i> จอที่ ${item.screen}
                             </div>
