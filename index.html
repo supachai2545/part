@@ -318,6 +318,7 @@
                 <div class="px-3 pt-3 pb-1 overflow-y-auto" style="max-height:35vh; -webkit-overflow-scrolling:touch;">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wider"></span>
+                        <span id="viewerQueue" class="hidden text-violet-700 font-bold text-[12px] items-center bg-violet-50 px-2.5 py-0.5 rounded-md border border-violet-200"></span>
                         <span id="viewerLocation" class="font-bold text-[12px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
                         <span id="viewerZone" class="font-bold text-[12px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
                         <span id="viewerTime" class="text-indigo-600 font-bold text-[12px] flex items-center bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100"></span>
@@ -1222,7 +1223,14 @@
             activePoster = globalPosterData.find(function(item) { return item.id === id; });
             if (!activePoster) return;
 
-            document.getElementById('viewerCode').innerText        = activePoster.id;
+            document.getElementById('viewerCode').innerText = activePoster.id;
+            const queueEl = document.getElementById('viewerQueue');
+            if (activePoster.queue) {
+                queueEl.innerText = `ลำดับการนำเสนอที่ ${activePoster.queue}`;
+                queueEl.classList.remove('hidden'); queueEl.classList.add('flex');
+            } else {
+                queueEl.classList.add('hidden'); queueEl.classList.remove('flex');
+            }
             const timeStr = formatPresentTime(activePoster.time, activePoster.timeEnd);
             const timeEl  = document.getElementById('viewerTime');
             timeEl.innerText = timeStr;
