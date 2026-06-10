@@ -726,16 +726,27 @@
             }
         }
 
+        function getFolderFromId(id) {
+            const s = id.toUpperCase();
+            const rp = s.match(/^RP(\d+)-/);
+            const p  = s.match(/^P(\d+)-/);
+            if (rp) return `R2R${rp[1]}`;
+            if (p)  return `RND${p[1]}`;
+            return '';
+        }
+
         function onDataLoaded(data) {
             if (!data || data.length === 0) { onDataError("ไม่พบข้อมูลในตาราง"); return; }
 
             globalPosterData = data.map(function(item) {
-                const id    = item['รหัสผลงาน'] || '';
-                const idStr = id.toUpperCase();
+                const id     = item['รหัสผลงาน'] || '';
+                const idStr  = id.toUpperCase();
+                const folder = getFolderFromId(id);
 
-                // สร้าง URL ไฟล์จาก Storage — ชื่อไฟล์ตรงกับรหัสผลงาน
-                const pdfUrl = `${STORAGE_BASE}/PDF/${id}.pdf`;
-                const jpgUrl = `${STORAGE_BASE}/JPG/${id}.jpg`;
+                // สร้าง URL ไฟล์จาก Storage — แยกโฟลเดอร์ตามสาขา (RND1-4, R2R1-2)
+                const base   = folder ? `${STORAGE_BASE}/${folder}` : STORAGE_BASE;
+                const pdfUrl = `${base}/PDF/${id}.pdf`;
+                const jpgUrl = `${base}/JPG/${id}.jpg`;
 
                 const mappedItem = {
                     id:     id,
