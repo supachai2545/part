@@ -1517,70 +1517,70 @@
             // Reset pages ก่อนแสดง
             turnPage(3, 'close', false); turnPage(2, 'close', false); turnPage(1, 'close', false);
 
-            if (isCinematic) {
-                // โหมด Cinematic: ยังไม่ set stamps — จะ animate ทีละหน้า
-                // ต้อง clear revealed ทั้งหมดก่อน แล้วค่อย animate
-                [2,3,4,5].forEach(function(n) {
-                    var m = document.getElementById('stamp-' + n);
-                    if (m) m.classList.remove('revealed');
-                });
-            } else {
-                // โหมดปกติ: set stamps ทันที (ไม่ animate)
-                updatePassportUI(true);
-            }
+            // Clear stamps ทุกดวงก่อนเสมอ — จะ animate ใหม่ทุกครั้งที่เปิด
+            [2,3,4,5].forEach(function(n) {
+                var m = document.getElementById('stamp-' + n);
+                if (m) m.classList.remove('revealed');
+            });
 
             modal.classList.remove('hidden', 'opacity-0');
             setTimeout(function() { modal.style.opacity = '1'; }, 10);
 
             const level = getLevel(userPoints);
+            // cinematic: ช้า + เสียง success; normal: เร็ว ไม่มี success
+            var gap   = isCinematic ? 750 : 520;
+            var sGap  = isCinematic ? 700 : 450;
             let delay = 200;
 
-            if (isCinematic) {
-                // --- CINEMATIC: เปิดปก → flip หน้า → ปั๊มทีละดวง ---
-                setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 750;
+            // เปิดปก
+            setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += gap;
 
-                if (level >= 2) {
-                    // stamp 2 อยู่ page2.front (หลังเปิด page1)
+            // Spread 1 — stamp 2 (page2.front มองเห็นหลัง page1 flip)
+            if (level >= 2) {
+                (function(d) {
                     setTimeout(function() {
                         var m = document.getElementById('stamp-2');
-                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
-                    }, delay); delay += 750;
-                }
-                if (level >= 3) {
-                    // เปิด page2 → stamp 3 (page2.back) + stamp 4 (page3.front)
-                    setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += 750;
+                        if (m) { m.classList.add('revealed'); playSound('stamp'); }
+                    }, d);
+                })(delay);
+                delay += sGap;
+            }
+
+            if (level >= 3) {
+                // พลิก page2
+                setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += gap;
+
+                // Spread 2 — stamp 3 (page2.back) + stamp 4 (page3.front) สลับกัน 200ms
+                (function(d) {
                     setTimeout(function() {
                         var m = document.getElementById('stamp-3');
-                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
-                    }, delay); delay += 700;
-                }
-                if (level >= 4) {
-                    setTimeout(function() {
-                        var m = document.getElementById('stamp-4');
-                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp'); }, 50); }
-                    }, delay); delay += 700;
-                }
-                if (level >= 5) {
-                    // เปิด page3 → stamp 5 (page3.back)
-                    setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 750;
+                        if (m) { m.classList.add('revealed'); playSound('stamp'); }
+                    }, d);
+                    if (level >= 4) {
+                        setTimeout(function() {
+                            var m = document.getElementById('stamp-4');
+                            if (m) { m.classList.add('revealed'); playSound('stamp'); }
+                        }, d + 220);
+                    }
+                })(delay);
+                delay += (level >= 4 ? 220 : 0) + sGap;
+            }
+
+            if (level >= 5) {
+                // พลิก page3
+                setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += gap;
+
+                // Spread 3 — stamp 5 (page3.back)
+                (function(d, cin) {
                     setTimeout(function() {
                         var m = document.getElementById('stamp-5');
-                        if (m) { m.classList.remove('revealed'); setTimeout(function() { m.classList.add('revealed'); playSound('stamp-master'); setTimeout(function() { playSound('success'); }, 600); }, 50); }
-                    }, delay); delay += 800;
-                }
-                setTimeout(function() { updatePassportUIButtons(); }, delay);
-            } else {
-                // --- NORMAL: smooth-navigate to the spread showing the highest earned stamps ---
-                const level = getLevel(userPoints);
-                setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 700;
-                if (level >= 3) {
-                    setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += 700;
-                }
-                if (level >= 5) {
-                    setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 700;
-                }
-                setTimeout(function() { updatePassportUIButtons(); }, delay);
+                        if (m) { m.classList.add('revealed'); playSound('stamp-master'); if (cin) { setTimeout(function() { playSound('success'); }, 600); } }
+                    }, d);
+                })(delay, isCinematic);
+                delay += sGap;
             }
+
+            setTimeout(function() { updatePassportUIButtons(); }, delay);
         }
 
         function closeRewardModal() {
