@@ -243,22 +243,19 @@
             body { display: none !important; }
         }
 
-        /* ===== MOBILE PERFORMANCE ===== */
-        @media (max-width: 640px) {
-            /* backdrop-filter: blur บน 24 card พร้อมกัน = ตัวร้ายหลักบนมือถือ */
+        /* ===== MOBILE + TABLET PERFORMANCE =====
+           (hover:none) = touch devices (iPhone, iPad) ทุกขนาด
+           backdrop-filter + border-radius บน card = implicit clip ทำให้ text ซ่อน */
+        @media (max-width: 640px), (hover: none) {
             .glass-panel {
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
                 background: rgba(255, 255, 255, 0.97) !important;
             }
-            /* ลด GPU compositing layers — will-change + preserve-3d สร้าง layer ทุก card */
             .card-3d-wrap { perspective: none; }
             .poster-card { transform-style: flat; will-change: auto; }
-            /* ลบ 3D translateZ ออก ไม่มีผลบนมือถืออยู่แล้ว */
             .pop-out { transform: none !important; transition: none !important; }
-            /* ไม่ต้อง stagger animation — show ทันที ลด CPU paint */
             .stagger-fade-in { animation: none !important; opacity: 1 !important; }
-            /* dot pattern บน body เพิ่ม paint cost ตอน scroll */
             .bg-pattern {
                 background-image: none !important;
                 background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%) !important;
@@ -1119,7 +1116,12 @@
                     e.preventDefault();
                     var r = scrollBox.getBoundingClientRect();
                     var t = (e.changedTouches && e.changedTouches[0]) || null;
-                    zoomTo(zoom > 1 ? 1 : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
+                    // double-tap ใน viewer → เปิดเต็มจอ; double-tap ขณะเต็มจออยู่แล้ว → zoom toggle
+                    if (scrollBox.id === 'posterBox' && typeof openFullscreen === 'function') {
+                        openFullscreen();
+                    } else {
+                        zoomTo(zoom > 1 ? 1 : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
+                    }
                 }
                 lastTap = now;
             }, { passive: false });
