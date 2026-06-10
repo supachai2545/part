@@ -237,6 +237,10 @@
         </span>
     </div>
 
+    <button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" class="hidden fixed bottom-[5.5rem] right-6 sm:bottom-[6.5rem] sm:right-8 z-[59] bg-white/95 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.13)] border border-gray-200 transition-all duration-300 hover:scale-110 hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]" title="กลับด้านบน">
+        <i data-lucide="arrow-up" class="w-4 h-4 text-gray-500"></i>
+    </button>
+
     <div id="scoreBadge" onclick="openRewardModal()" class="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[60] bg-white rounded-full p-1.5 shadow-[0_10px_25px_rgba(245,158,11,0.3)] cursor-pointer flex items-center border-2 border-amber-300 group hover:scale-105 transition-all duration-500 shine-effect">
         <div class="bg-gradient-to-r from-amber-400 to-orange-500 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-inner relative flex-shrink-0">
             <i data-lucide="book" class="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow-md"></i>
@@ -244,6 +248,7 @@
         <div id="scoreBadgeText" class="badge-expanded overflow-hidden whitespace-nowrap">
             <p class="text-[9px] sm:text-[10px] font-black text-amber-600 uppercase tracking-widest leading-none mb-0.5">พาสปอร์ตสะสมแต้ม</p>
             <p class="text-[18px] sm:text-[22px] font-black text-gray-800 leading-none"><span id="scoreBadgePoints">0</span><span class="text-[12px] sm:text-[14px] text-orange-500 ml-1">PT</span></p>
+            <p class="text-[9px] font-bold text-gray-400 leading-none mt-0.5">ดูแล้ว <span id="scoreBadgeViewed">0</span> ผลงาน</p>
         </div>
     </div>
 
@@ -339,7 +344,13 @@
                             <i data-lucide="check" class="w-4 h-4 mr-1 font-black"></i><span>รับแต้มแล้ว</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5">
+                        <button id="viewerPrevBtn" onclick="navigateViewer(-1)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold w-9 h-9 rounded-xl transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed" title="ผลงานก่อนหน้า">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <button id="viewerNextBtn" onclick="navigateViewer(1)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold w-9 h-9 rounded-xl transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed" title="ผลงานถัดไป">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
                         <button onclick="closeViewer()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-xl transition-all shadow-md text-sm flex items-center">
                             <i data-lucide="x" class="w-4 h-4 mr-1.5"></i>ปิด
                         </button>
@@ -873,9 +884,13 @@
             if (currentFilteredData.length === 0) {
                 document.getElementById('resultCount').innerText = 'ไม่พบข้อมูล';
                 grid.innerHTML = `
-                    <div class="col-span-full text-center py-16 sm:py-20 text-gray-500 glass-panel rounded-3xl">
+                    <div class="col-span-full text-center py-16 sm:py-20 text-gray-400 glass-panel rounded-3xl">
                         <i data-lucide="search-x" class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-300"></i>
-                        <p class="font-black text-lg sm:text-xl">ไม่พบผลงาน</p>
+                        <p class="font-black text-lg sm:text-xl text-gray-700">ไม่พบผลงาน</p>
+                        <p class="text-sm mt-1 mb-5 text-gray-400">ลองเปลี่ยนคำค้นหา หรือล้างตัวกรอง</p>
+                        <button onclick="clearAllFilters()" class="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-full font-bold text-sm transition-all shadow-md hover:scale-105">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> ล้างตัวกรอง
+                        </button>
                     </div>`;
                 if (loadMoreBtn) { loadMoreBtn.classList.remove('flex'); loadMoreBtn.classList.add('hidden'); }
                 lucide.createIcons({ nodes: Array.from(grid.querySelectorAll('[data-lucide]')) });
@@ -914,7 +929,7 @@
                         </div>
                         <div class="p-2.5 sm:p-6 flex flex-col flex-grow relative">
                             <div class="absolute -top-3.5 sm:-top-5 right-2 sm:right-5 ${item.locationColor} text-white px-2 py-0.5 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[13px] shadow-lg border-2 border-white">
-                                <i data-lucide="map-pin" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 mr-0.5 sm:mr-1.5 inline-block"></i> จอที่ ${item.screen}
+                                <i data-lucide="monitor" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 mr-0.5 sm:mr-1.5 inline-block"></i> นำเสนอจอที่ ${item.screen}
                             </div>
                             <div class="flex flex-wrap items-center gap-1 sm:gap-2 mb-1 sm:mb-2 mt-0.5">
                                 <span class="text-[9px] sm:text-[11px] font-black ${item.zoneColor} px-1.5 py-0.5 rounded-md uppercase leading-tight">${item.displayZone}</span>
@@ -1217,7 +1232,7 @@
             orgEl.classList.toggle('flex', !!orgText);
 
             const locBadge = document.getElementById('viewerLocation');
-            locBadge.innerText = activePoster.screen ? `จอที่ ${activePoster.screen}` : '';
+            locBadge.innerText = activePoster.screen ? `นำเสนอจอที่ ${activePoster.screen}` : '';
             locBadge.className = "text-gray-700 font-bold text-[12px] sm:text-[13px] flex items-center bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200";
 
             const zoneBadge = document.getElementById('viewerZone');
@@ -1276,6 +1291,7 @@
             body.classList.add('no-scroll');
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = '0'; sb.style.pointerEvents = 'none'; }
+            updateNavBtns();
             startViewerTimer(id);
         }
 
@@ -1357,6 +1373,8 @@
             const badge = document.getElementById('scoreBadgePoints');
             if (badge) {
                 badge.innerText = userPoints;
+                const viewedEl = document.getElementById('scoreBadgeViewed');
+                if (viewedEl) viewedEl.innerText = viewedPosters.length;
                 const container = document.getElementById('scoreBadge');
                 container.classList.add('score-pop');
                 setTimeout(function() { container.classList.remove('score-pop'); }, 400);
@@ -1564,13 +1582,50 @@
         }
 
         // =============================================================
+        // ◀▶ VIEWER NAVIGATION
+        // =============================================================
+        function navigateViewer(dir) {
+            if (!activePoster) return;
+            const idx = currentFilteredData.findIndex(function(p) { return p.id === activePoster.id; });
+            if (idx === -1) return;
+            const next = idx + dir;
+            if (next < 0 || next >= currentFilteredData.length) return;
+            openViewer(currentFilteredData[next].id);
+        }
+
+        function updateNavBtns() {
+            if (!activePoster) return;
+            const idx  = currentFilteredData.findIndex(function(p) { return p.id === activePoster.id; });
+            var prevBtn = document.getElementById('viewerPrevBtn');
+            var nextBtn = document.getElementById('viewerNextBtn');
+            if (prevBtn) prevBtn.disabled = (idx <= 0);
+            if (nextBtn) nextBtn.disabled = (idx >= currentFilteredData.length - 1);
+        }
+
+        // =============================================================
+        // 🔍 CLEAR ALL FILTERS
+        // =============================================================
+        function clearAllFilters() {
+            document.getElementById('searchInput').value = '';
+            setZoneFilter('All');
+        }
+
+        // =============================================================
         // 🔑 EVENT LISTENERS
         // =============================================================
         viewerModal.addEventListener('click', function(e) { if (e.target === viewerModal) closeViewer(); });
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') { closeViewer(); closeRewardModal(); closeClaimPopup(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); }
+            if (activePoster) {
+                if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateViewer(-1); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); navigateViewer(1);  }
+            }
         });
+        window.addEventListener('scroll', function() {
+            var btn = document.getElementById('scrollTopBtn');
+            if (btn) { btn.classList.toggle('hidden', window.scrollY < 320); }
+        }, { passive: true });
         window.addEventListener('beforeprint', function(e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
 
         // =============================================================
