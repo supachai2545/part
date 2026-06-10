@@ -204,41 +204,6 @@
         .stamp-4.revealed { animation: stampGlow4 2s ease-in-out infinite; }
         .stamp-5.revealed { animation: stampGlow5 1.5s ease-in-out infinite; }
 
-        .floorplan-container {
-            aspect-ratio: 5 / 3;
-            background-color: #f1f5f9;
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
-            border: 8px solid #1e293b;
-            border-radius: 12px;
-            position: relative;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.05), 0 20px 40px -10px rgba(0,0,0,0.2);
-        }
-
-        .kiosk-unit-pro {
-            width: 5%; height: 11%;
-            background: #1e293b; position: absolute; border-radius: 2px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.35);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex; align-items: flex-start; justify-content: center;
-            padding-top: 2%;
-            font-size: 5.5px; font-weight: 900; color: rgba(255,255,255,0.85);
-            line-height: 1; z-index: 1;
-        }
-        .kiosk-unit-pro::after {
-            content: ''; position: absolute; top: 30%; left: 10%; width: 80%; height: 62%;
-            background: #0ea5e9; opacity: 0.6; border-radius: 0.5px; z-index: 0;
-        }
-
-        .kiosk-unit-pro.active-target {
-            background: #15803d; box-shadow: 0 0 14px #22c55e, 0 0 0 2px rgba(34,197,94,0.4);
-            transform: scale(1.7); z-index: 40; color: #fff; font-size: 6.5px;
-        }
-        .kiosk-unit-pro.active-target::after { background: #4ade80; opacity: 1; }
-
-        #mapPin { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); z-index: 50; }
-        #mapPin i { color: #ef4444; fill: #ef4444; }
-
         @media print {
             body { display: none !important; }
         }
@@ -375,9 +340,6 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="openMap()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-3 py-2 rounded-xl transition-all flex items-center shadow-sm text-sm">
-                            <i data-lucide="map" class="w-4 h-4 mr-1.5"></i>แผนที่
-                        </button>
                         <button onclick="closeViewer()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-xl transition-all shadow-md text-sm flex items-center">
                             <i data-lucide="x" class="w-4 h-4 mr-1.5"></i>ปิด
                         </button>
@@ -572,66 +534,6 @@
         </div>
     </div>
 
-    <!-- แผนผังตำแหน่งจอ -->
-    <div id="mapModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/80 sm:p-8 modal-enter backdrop-blur-md">
-        <button onclick="closeMap()" class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-gray-800/50 sm:bg-white/10 hover:bg-white/30 text-white rounded-full p-2.5 transition-colors z-[80] focus:outline-none">
-            <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-        <div class="relative w-full h-full sm:h-auto max-w-3xl image-enter bg-white sm:rounded-[28px] overflow-hidden shadow-2xl flex flex-col border-0 sm:border border-white">
-            <div class="p-4 sm:p-6 bg-slate-50 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                    <h3 class="font-black text-lg sm:text-2xl text-gray-800 flex items-center"><i data-lucide="map" class="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-rose-500"></i> ตำแหน่งจอแสดงผล</h3>
-                    <p class="text-[11px] sm:text-[13px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Medical Science Hall</p>
-                </div>
-                <span id="mapTargetLabel" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[13px] sm:text-[15px] font-bold border border-emerald-200 shadow-sm flex items-center">
-                    <i data-lucide="target" class="w-4 h-4 mr-1.5"></i> จอที่ระบุ
-                </span>
-            </div>
-
-            <div class="relative w-full p-4 sm:p-14 bg-slate-200 overflow-auto flex items-center justify-center h-full min-h-[50vh]">
-                <div class="floorplan-container w-full min-w-[280px] max-w-[600px]">
-                    <!-- Top waiting area — gap on right for IT desk -->
-                    <div style="position:absolute;left:8%;right:12%;top:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-                        <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
-                    </div>
-                    <!-- Bottom waiting area — gap on left for Check-in -->
-                    <div style="position:absolute;left:12%;right:8%;bottom:4%;height:13%;background:rgba(203,213,225,0.35);border:1.5px dashed #94a3b8;border-radius:3px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-                        <span style="font-size:7px;font-weight:900;color:#94a3b8;letter-spacing:0.12em;">พื้นที่รอนำเสนอ</span>
-                    </div>
-                    <!-- Check-in (left wall, bottom — no overlap with waiting area) -->
-                    <div style="position:absolute;left:0;bottom:4%;width:10%;height:13%;background:rgba(251,191,36,0.4);border:2px solid #f59e0b;border-radius:0 3px 3px 0;display:flex;align-items:center;justify-content:center;z-index:5;">
-                        <span style="font-size:6px;font-weight:900;color:#92400e;text-align:center;line-height:1.4;">Check<br>-in</span>
-                    </div>
-                    <!-- Entrance (left wall, center) -->
-                    <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:10;">
-                        <div style="background:#15803d;color:#fff;padding:4px 8px 4px 3px;border-radius:0 6px 6px 0;box-shadow:2px 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;gap:3px;white-space:nowrap;">
-                            <span style="font-size:9px;font-weight:900;letter-spacing:0.05em;">▶ ทางเข้า</span>
-                        </div>
-                    </div>
-                    <!-- IT Desk (right wall, top — no overlap with waiting area) -->
-                    <div style="position:absolute;right:0;top:4%;width:10%;height:13%;background:rgba(147,197,253,0.4);border:2px solid #60a5fa;border-radius:3px 0 0 3px;display:flex;align-items:center;justify-content:center;z-index:5;">
-                        <span style="font-size:6px;font-weight:900;color:#1d4ed8;text-align:center;line-height:1.4;">โต๊ะ<br>IT</span>
-                    </div>
-                    <!-- Kiosk screens — filled by drawKiosksOnMap() -->
-                    <div id="kiosks-grid" class="absolute inset-0"></div>
-                    <!-- Map pin -->
-                    <div id="mapPin" class="absolute w-5 h-5 -ml-2.5 -mt-5 transition-all duration-700" style="left:0%;top:0%;opacity:0;">
-                        <i data-lucide="map-pin" class="w-5 h-5 text-rose-600 fill-rose-500"></i>
-                        <div class="absolute inset-0 bg-rose-500 rounded-full animate-ping opacity-40"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 sm:p-5 bg-white border-t border-gray-100 flex flex-wrap items-center justify-between">
-                <div class="flex flex-wrap gap-3 sm:gap-6 text-[10px] sm:text-[12px] font-bold text-gray-500">
-                    <div class="flex items-center"><div class="w-3 h-1.5 sm:w-4 bg-slate-800 rounded-sm mr-1.5"></div> จอภาพ</div>
-                    <div class="flex items-center"><div class="w-3 h-1.5 sm:w-4 bg-emerald-600 rounded-sm mr-1.5"></div> เป้าหมาย</div>
-                    <div class="flex items-center"><div class="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-rose-500 rounded-full mr-1.5"></div> หมุด</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
         // =============================================================
         // 🔧 CONFIG — Supabase
@@ -735,7 +637,6 @@
                 }
             }, 5000);
 
-            drawKiosksOnMap();
             updateScoreBadge();
             autoCollapseBadge();
             document.body.addEventListener('click', initAudio, { once: true });
@@ -1663,60 +1564,11 @@
         }
 
         // =============================================================
-        // 🗺️ MAP
-        // =============================================================
-        function drawKiosksOnMap() {
-            const grid = document.getElementById('kiosks-grid');
-            grid.innerHTML = '';
-            // 6 columns left→right, 4 rows bottom→top per column
-            // Screen 1 = col 1 bottom (near Check-in), 4 per column going up, then col 2 starts at 5 …
-            // Col 1 starts at 11% so it never overlaps the left-wall labels (0–9%)
-            const colLefts = [11, 26, 41, 56, 71, 86];  // % left edge per column
-            const rowTops  = [69, 53, 37, 21];           // % top edge: index 0=bottom(screen 1), 3=top(screen 4)
-            for (let s = 1; s <= 24; s++) {
-                const col        = Math.floor((s - 1) / 4);   // 0–5
-                const rowFromBot = (s - 1) % 4;               // 0=bottom … 3=top
-                const k = document.createElement('div');
-                k.id = `map-screen-${s}`; k.className = 'kiosk-unit-pro';
-                k.style.left = colLefts[col] + '%';
-                k.style.top  = rowTops[rowFromBot] + '%';
-                k.textContent = s;   // screen number label
-                grid.appendChild(k);
-            }
-        }
-
-        function openMap() {
-            if (!activePoster) return;
-            const screenNo = parseInt(activePoster.screen) || 1;
-            document.getElementById('mapTargetLabel').innerText = `จอเป้าหมาย: ${activePoster.screen}`;
-            document.getElementById('mapModal').classList.remove('hidden');
-            document.querySelectorAll('.kiosk-unit-pro').forEach(function(el) { el.classList.remove('active-target'); });
-            const pin         = document.getElementById('mapPin');
-            pin.style.opacity = '1';
-            const targetKiosk = document.getElementById(`map-screen-${screenNo}`);
-            if (targetKiosk) {
-                targetKiosk.classList.add('active-target');
-                requestAnimationFrame(function() {
-                    const rect          = targetKiosk.getBoundingClientRect();
-                    const containerRect = document.querySelector('.floorplan-container').getBoundingClientRect();
-                    const posX = ((rect.left + rect.width / 2) - containerRect.left) / containerRect.width * 100;
-                    const posY = ((rect.top  + rect.height / 2) - containerRect.top)  / containerRect.height * 100;
-                    pin.style.left = `${posX}%`;
-                    pin.style.top  = `${posY}%`;
-                });
-            }
-            lucide.createIcons();
-        }
-
-        function closeMap() { document.getElementById('mapModal').classList.add('hidden'); }
-
-        // =============================================================
         // 🔑 EVENT LISTENERS
         // =============================================================
         viewerModal.addEventListener('click', function(e) { if (e.target === viewerModal) closeViewer(); });
-        document.getElementById('mapModal').addEventListener('click', function(e) { if (e.target === document.getElementById('mapModal')) closeMap(); });
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') { closeMap(); closeViewer(); closeRewardModal(); closeClaimPopup(); }
+            if (e.key === 'Escape') { closeViewer(); closeRewardModal(); closeClaimPopup(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); }
         });
         window.addEventListener('beforeprint', function(e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
