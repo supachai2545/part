@@ -1160,6 +1160,15 @@
             wireScrollImage('fs', activePoster.jpgUrl, activePoster.thumbUrl);
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
+
+            // Hint: แตะ 2 ครั้งเพื่อออกจากจอเต็ม — แสดง 2 วิแล้วหาย
+            var fsHint = document.createElement('div');
+            fsHint.style.cssText = 'position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:120;pointer-events:none;';
+            fsHint.innerHTML = '<div id="fsHintInner" style="background:rgba(0,0,0,0.55);color:rgba(255,255,255,0.95);padding:9px 20px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;opacity:0;transition:opacity 0.4s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">แตะ 2 ครั้งเพื่อออกจากจอเต็ม</div>';
+            overlay.appendChild(fsHint);
+            var fsInner = fsHint.querySelector('#fsHintInner');
+            setTimeout(function() { if (fsInner) fsInner.style.opacity = '1'; }, 200);
+            setTimeout(function() { if (fsInner) { fsInner.style.opacity = '0'; setTimeout(function() { if (fsHint.parentNode) fsHint.parentNode.removeChild(fsHint); }, 500); } }, 2200);
             // พยายามเข้า fullscreen จริงบนอุปกรณ์ที่รองรับ (iPad/desktop) — ไม่รองรับก็ใช้ overlay เต็มจอแทน
             try {
                 const req = overlay.requestFullscreen || overlay.webkitRequestFullscreen;
@@ -1322,11 +1331,11 @@
                 fb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>ดูเต็มจอ';
                 fb.addEventListener('click', function(e){ e.stopPropagation(); openFullscreen(); });
                 // จางลงหลัง 5 วิ แต่ยังคลิกได้
-                setTimeout(function() { if (fb.parentNode) fb.style.opacity = '0.18'; }, 5000);
+                setTimeout(function() { if (fb.parentNode) fb.style.opacity = '0.5'; }, 5000);
                 // แตะ/hover → ชัดขึ้นชั่วคราว
                 fb.addEventListener('mouseenter', function() { fb.style.opacity = '1'; });
-                fb.addEventListener('mouseleave', function() { fb.style.opacity = '0.18'; });
-                fb.addEventListener('touchstart', function() { fb.style.opacity = '1'; setTimeout(function() { fb.style.opacity = '0.18'; }, 2000); }, { passive: true });
+                fb.addEventListener('mouseleave', function() { fb.style.opacity = '0.5'; });
+                fb.addEventListener('touchstart', function() { fb.style.opacity = '1'; setTimeout(function() { fb.style.opacity = '0.5'; }, 2000); }, { passive: true });
                 container.appendChild(fb);
             } else {
                 container.innerHTML = '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์</p></div>';
