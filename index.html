@@ -627,7 +627,7 @@
         // =============================================================
         const SUPABASE_URL  = "https://xerrcodpzwlshidwnzim.supabase.co";
         const SUPABASE_KEY  = "sb_publishable_ZoFrDEzKG0n1aHta7SQdeg_3gPdotsO";
-        const TABLE_NAME    = "E-Poster วันงาน";
+        const TABLE_NAME    = "E-Posterhub";
         const STORAGE_BASE  = `${SUPABASE_URL}/storage/v1/object/public/Poster`;
         const THUMB_BASE    = `${SUPABASE_URL}/storage/v1/render/image/public/Poster`;
 
@@ -736,7 +736,7 @@
         // =============================================================
         async function loadPostersFromSupabase() {
             try {
-                const { data, error } = await sbClient.from(TABLE_NAME).select('รหัสผลงาน, ชื่อผลงาน, คำนำหน้า, ชื่อ, นามสกุล, ชื่อหน่วยงาน, เวลาการนำเสนอ, แสดงจอที่');
+                const { data, error } = await sbClient.from(TABLE_NAME).select('รหัสผลงาน, ชื่อผลงาน, คำนำหน้า, ชื่อ, นามสกุล, ชื่อหน่วยงาน, ด้านของบทคัดย่อ, สาขา, เลือกรูปแบบการนำเสนอ, จอที่, ลำดับคิว, เวลาการนำเสนอ, หมดการนำเสนอ');
                 if (error) throw error;
                 onDataLoaded(data || []);
             } catch (err) {
@@ -769,48 +769,43 @@
                 const jpgUrl   = `${base}/${id}.jpg`;
                 const thumbUrl = `${thumbBase}/${id}.jpg?width=480&quality=65&resize=contain`;
 
-                const mappedItem = {
-                    id:     id,
-                    title:  item['ชื่อผลงาน']       || '',
-                    author: [((item['คำนำหน้า'] || '') + (item['ชื่อ'] || '')).trim(), item['นามสกุล']].filter(Boolean).join(' ').trim(),
-                    org:    item['ชื่อหน่วยงาน']    || '',
-                    time:   item['เวลาการนำเสนอ']   || '',
-                    screen: String(item['แสดงจอที่'] || ''),
-                    pdfUrl: pdfUrl,
-                    jpgUrl: jpgUrl,
-                    thumbUrl: thumbUrl,
-                };
+                const rawZone   = String(item['ด้านของบทคัดย่อ'] || '');
+                const rawBranch = String(item['สาขา'] || '');
 
-                // คำนวณ zone/branch จากรหัสผลงาน
+                // ใช้ค่าจากคอลัมน์โดยตรง หาก detect ไม่ได้ fallback ไปหา regex จาก ID
                 const matchRP = idStr.match(/^RP(\d+)-/);
                 const matchP  = idStr.match(/^P(\d+)-/);
+                const zoneUpper = rawZone.toUpperCase();
+                const isR2R = zoneUpper.includes('R2R') || !!matchRP;
+                const isRND = zoneUpper.includes('R&D') || zoneUpper.includes('RND') || !!matchP;
 
-                if (matchRP) {
-                    mappedItem.calcZone      = 'R2R';
-                    mappedItem.calcBranch    = matchRP[1];
-                    mappedItem.locationColor = 'bg-emerald-600';
-                    mappedItem.zoneColor     = 'text-emerald-700 bg-emerald-100/80';
-                    mappedItem.displayZone   = `R2R สาขา ${matchRP[1]}`;
-                } else if (matchP) {
-                    mappedItem.calcZone      = 'R&D';
-                    mappedItem.calcBranch    = matchP[1];
-                    mappedItem.locationColor = 'bg-blue-600';
-                    mappedItem.zoneColor     = 'text-blue-700 bg-blue-100/80';
-                    mappedItem.displayZone   = `R&D สาขา ${matchP[1]}`;
-                } else {
-                    const zone   = item['ด้านของบทคัดย่อ'] || 'อื่นๆ';
-                    const branch = String(item['สาขา'] || '');
-                    mappedItem.calcZone      = zone;
-                    mappedItem.calcBranch    = branch || 'All';
-                    mappedItem.locationColor = 'bg-gray-500';
-                    mappedItem.zoneColor     = 'text-gray-600 bg-gray-100';
-                    mappedItem.displayZone   = branch ? `${zone} สาขา ${branch}` : zone;
-                }
+                const branch = rawBranch || (matchRP ? matchRP[1] : (matchP ? matchP[1] : ''));
+
+                const mappedItem = {
+                    id:       id,
+                    title:    item['ชื่อผลงาน']               || '',
+                    author:   [((item['คำนำหน้า'] || '') + (item['ชื่อ'] || '')).trim(), item['นามสกุล']].filter(Boolean).join(' ').trim(),
+                    org:      item['ชื่อหน่วยงาน']            || '',
+                    time:     item['เวลาการนำเสนอ']           || '',
+                    timeEnd:  item['หมดการนำเสนอ']            || '',
+                    screen:   String(item['จอที่']            || ''),
+                    queue:    String(item['ลำดับคิว']         || ''),
+                    format:   item['เลือกรูปแบบการนำเสนอ']   || '',
+                    pdfUrl:   pdfUrl,
+                    jpgUrl:   jpgUrl,
+                    thumbUrl: thumbUrl,
+                    calcZone:      isR2R ? 'R2R' : (isRND ? 'R&D' : (rawZone || 'อื่นๆ')),
+                    calcBranch:    branch || 'All',
+                    locationColor: isR2R ? 'bg-emerald-600' : (isRND ? 'bg-blue-600' : 'bg-gray-500'),
+                    zoneColor:     isR2R ? 'text-emerald-700 bg-emerald-100/80' : (isRND ? 'text-blue-700 bg-blue-100/80' : 'text-gray-600 bg-gray-100'),
+                    displayZone:   isR2R ? `R2R${branch ? ' สาขา ' + branch : ''}` : (isRND ? `R&D${branch ? ' สาขา ' + branch : ''}` : (rawZone || 'อื่นๆ')),
+                };
 
                 return mappedItem;
             });
 
             filterPosters(true);
+
         }
 
         function onDataError(error) {
