@@ -736,7 +736,7 @@
         // =============================================================
         async function loadPostersFromSupabase() {
             try {
-                const { data, error } = await sbClient.from(TABLE_NAME).select('รหัสผลงาน, ชื่อผลงาน, คำนำหน้า, ชื่อ, นามสกุล, ชื่อหน่วยงาน, ด้านของบทคัดย่อ, สาขา, เลือกรูปแบบการนำเสนอ, จอที่, ลำดับคิว, เวลาการนำเสนอ, หมดการนำเสนอ');
+                const { data, error } = await sbClient.from(TABLE_NAME).select('*');
                 if (error) throw error;
                 onDataLoaded(data || []);
             } catch (err) {
