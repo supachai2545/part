@@ -70,7 +70,6 @@
         .card-3d-wrap { perspective: 1200px; }
         .poster-card {
             transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
-            transform-style: preserve-3d;
             will-change: transform;
             border-radius: 20px;
         }
@@ -998,8 +997,8 @@
                                 <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i></div>` : ''}
                         </div>
                         <div class="relative w-full aspect-[4/3] bg-slate-200 animate-pulse overflow-hidden border-b border-white/60 rounded-t-[18px]">
-                            <img src="${item.thumbUrl}" draggable="false" loading="lazy" decoding="async"
-                                 onerror="this.onerror=null; this.src='https://placehold.co/800x600/f8fafc/ef4444?text=No+Image'; this.classList.remove('opacity-0'); this.parentElement.classList.remove('animate-pulse');"
+                            <img src="${item.thumbUrl}" data-jpg="${item.jpgUrl}" draggable="false" loading="lazy" decoding="async"
+                                 onerror="if(this.src!==this.dataset.jpg){this.src=this.dataset.jpg}else{this.onerror=null; this.classList.remove('opacity-0'); this.parentElement.classList.remove('animate-pulse');}"
                                  onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('animate-pulse');"
                                  class="w-full h-full object-cover group-hover:scale-105 transition-[opacity,transform] duration-300 opacity-0">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-6">
