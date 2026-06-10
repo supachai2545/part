@@ -1287,6 +1287,7 @@
             document.getElementById('viewerContentContainer').innerHTML = '';
             activePoster = null;
             stopViewerTimer();
+            clearTimeout(_badgeFadeTimer); _badgeFadeTimer = null;
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
         }
@@ -1338,11 +1339,15 @@
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = '1'; sb.style.pointerEvents = 'auto'; }
             expandBadge();
+            clearTimeout(_badgeFadeTimer);
+            _badgeFadeTimer = setTimeout(function() {
+                var sb2 = document.getElementById('scoreBadge');
+                if (sb2) { sb2.style.opacity = '0'; sb2.style.pointerEvents = 'none'; }
+            }, 5000);
             const viewedIndicator = document.getElementById('viewedIndicator');
             if (viewedIndicator) { viewedIndicator.classList.remove('hidden'); viewedIndicator.classList.add('flex'); }
             filterPosters(false, true);
             updatePassportUI(true);
-            setTimeout(function() { openRewardModal(); }, 5000);
         }
 
         // =============================================================
@@ -1515,9 +1520,16 @@
                 }
                 setTimeout(function() { updatePassportUIButtons(); }, delay);
             } else {
-                // --- NORMAL: เปิดปกธรรมดา stamp แสดงเลยทันที ไม่ auto-flip ไม่ animate ---
-                setTimeout(function() { turnPage(1, 'open', true); }, delay);
-                setTimeout(function() { updatePassportUIButtons(); }, delay + 600);
+                // --- NORMAL: smooth-navigate to the spread showing the highest earned stamps ---
+                const level = getLevel(userPoints);
+                setTimeout(function() { turnPage(1, 'open', true); }, delay); delay += 700;
+                if (level >= 3) {
+                    setTimeout(function() { turnPage(2, 'open', true); }, delay); delay += 700;
+                }
+                if (level >= 5) {
+                    setTimeout(function() { turnPage(3, 'open', true); }, delay); delay += 700;
+                }
+                setTimeout(function() { updatePassportUIButtons(); }, delay);
             }
         }
 
