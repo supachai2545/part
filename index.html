@@ -741,7 +741,8 @@
                 onDataLoaded(data || []);
             } catch (err) {
                 console.error("Supabase Error:", err);
-                onDataError("ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " + (err.message || err));
+                const detail = err.code ? ` [${err.code}]` : '';
+                onDataError(`${err.message || err}${detail}`);
             }
         }
 
