@@ -338,11 +338,11 @@
     <div id="imageViewerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 sm:bg-gray-900/90 p-0 sm:p-8 modal-enter sm:backdrop-blur-xl">
         <div class="relative w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-full flex flex-col image-enter bg-white sm:rounded-[28px] overflow-hidden shadow-none sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-0 sm:border sm:border-gray-700/50">
 
-            <div id="viewerContentContainer" class="flex-shrink-0 relative bg-slate-100 flex items-center justify-center h-[58vh] sm:min-h-[70vh] w-full overflow-hidden"></div>
+            <div id="viewerContentContainer" class="flex-shrink-0 relative bg-slate-100 flex items-center justify-center h-[48vh] sm:min-h-[70vh] w-full overflow-hidden"></div>
 
             <!-- Info area: scrollable text only -->
             <div class="bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 flex flex-col sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:gap-4 overflow-hidden">
-                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:22vh; -webkit-overflow-scrolling:touch;">
+                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:34vh; -webkit-overflow-scrolling:touch;">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] sm:text-[12px] font-bold tracking-wider"></span>
                         <span id="viewerLocation" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
@@ -382,6 +382,14 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- โหมดดูโปสเตอร์เต็มจอ -->
+    <div id="fullscreenOverlay" class="hidden fixed inset-0 z-[95] bg-black items-center justify-center">
+        <div id="fsContent" class="w-full h-full"></div>
+        <button onclick="closeFullscreen()" class="absolute top-3 right-3 z-[110] bg-white/15 hover:bg-white/30 text-white rounded-full w-11 h-11 flex items-center justify-center shadow-lg backdrop-blur-sm" title="ปิดเต็มจอ">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
     </div>
 
     <!-- สมุดสะสมแต้มพาสปอร์ต -->
@@ -780,7 +788,9 @@
                 const isR2R = zoneUpper.includes('R2R') || !!matchRP;
                 const isRND = zoneUpper.includes('R&D') || zoneUpper.includes('RND') || !!matchP;
 
-                const branch = rawBranch || (matchRP ? matchRP[1] : (matchP ? matchP[1] : ''));
+                // ตัดคำว่า "สาขา"/"สาขาที่" ที่อาจติดมาในข้อมูลออก เหลือแค่เลข/ชื่อสาขา
+                let branchRaw = rawBranch || (matchRP ? matchRP[1] : (matchP ? matchP[1] : ''));
+                const branch = String(branchRaw).replace(/^สาขา\s*(ที่)?\s*/i, '').trim();
 
                 const mappedItem = {
                     id:       id,
@@ -1053,15 +1063,207 @@
         }
 
         // =============================================================
+        // 🔍 IMAGE ZOOM (ใช้ร่วมกันทั้ง viewer และโหมดเต็มจอ)
+        // =============================================================
+        // zoom แบบลื่น + รักษาจุดศูนย์กลาง + pinch + double-tap + ปุ่ม +/-
+        function setupImageZoom(scrollBox, img, inBtn, outBtn) {
+            var zoom = 1, MIN = 1, MAX = 6, animH = null;
+            img.style.transition = 'none';
+
+            // ตั้ง zoom + เลื่อน scroll ให้จุดโฟกัส (fx,fy บนพื้นที่มอง) อยู่กับที่ — อ้างอิงจากสถานะ ref
+            function applyAt(z, fx, fy, refZoom, refL, refT) {
+                z = Math.min(Math.max(z, MIN), MAX);
+                var ratio = z / refZoom;
+                zoom = z;
+                img.style.width    = z <= 1 ? '100%' : (z * 100) + '%';
+                img.style.maxWidth = z <= 1 ? ''     : 'none';
+                void img.offsetWidth; // บังคับ reflow ให้ scroll range อัปเดตก่อนตั้งค่า scroll (กัน clamp)
+                scrollBox.scrollLeft = (refL + fx) * ratio - fx;
+                scrollBox.scrollTop  = (refT + fy) * ratio - fy;
+            }
+
+            // animate=true → tween ลื่น (ปุ่ม/double-tap), false → ทันที (pinch/wheel ติดตามนิ้ว 1:1)
+            function zoomTo(target, fx, fy, animate) {
+                target = Math.min(Math.max(target, MIN), MAX);
+                if (fx == null) fx = scrollBox.clientWidth / 2;
+                if (fy == null) fy = scrollBox.clientHeight / 2;
+                if (animH) { cancelAnimationFrame(animH); animH = null; }
+                if (!animate || Math.abs(target - zoom) < 0.001) {
+                    applyAt(target, fx, fy, zoom, scrollBox.scrollLeft, scrollBox.scrollTop);
+                    return;
+                }
+                var z0 = zoom, l0 = scrollBox.scrollLeft, t0 = scrollBox.scrollTop, t1 = performance.now();
+                (function step(now) {
+                    var p = Math.min((now - t1) / 240, 1);
+                    var e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+                    applyAt(z0 + (target - z0) * e, fx, fy, z0, l0, t0);
+                    if (p < 1) animH = requestAnimationFrame(step);
+                })(t1);
+            }
+
+            if (inBtn)  inBtn.addEventListener('click',  function(e){ e.stopPropagation(); zoomTo(zoom + 0.8, null, null, true); });
+            if (outBtn) outBtn.addEventListener('click', function(e){ e.stopPropagation(); zoomTo(zoom - 0.8, null, null, true); });
+
+            function dist(t){ return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+
+            // double-tap zoom (โฟกัสจุดที่แตะ)
+            var lastTap = 0;
+            scrollBox.addEventListener('touchend', function(e){
+                if (e.touches.length > 0) return;
+                var id = (e.target && e.target.id) || '';
+                if (id.indexOf('In') > -1 || id.indexOf('Out') > -1 || id.indexOf('Fs') > -1) return;
+                var now = Date.now();
+                if (now - lastTap < 280) {
+                    e.preventDefault();
+                    var r = scrollBox.getBoundingClientRect();
+                    var t = (e.changedTouches && e.changedTouches[0]) || null;
+                    zoomTo(zoom > 1 ? 1 : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
+                }
+                lastTap = now;
+            }, { passive: false });
+
+            // pinch-to-zoom (สองนิ้ว — ติดตามนิ้วลื่นแบบ native)
+            var pd = 0, pz = 1, pmx = 0, pmy = 0, pl = 0, pt = 0;
+            scrollBox.addEventListener('touchstart', function(e){
+                if (e.touches.length === 2) {
+                    if (animH) { cancelAnimationFrame(animH); animH = null; }
+                    pd = dist(e.touches); pz = zoom; pl = scrollBox.scrollLeft; pt = scrollBox.scrollTop;
+                    var r = scrollBox.getBoundingClientRect();
+                    pmx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+                    pmy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+                }
+            }, { passive: true });
+            scrollBox.addEventListener('touchmove', function(e){
+                if (e.touches.length === 2 && pd) {
+                    e.preventDefault();
+                    applyAt(pz * (dist(e.touches) / pd), pmx, pmy, pz, pl, pt);
+                }
+            }, { passive: false });
+            scrollBox.addEventListener('touchend', function(e){
+                if (e.touches.length < 2) pd = 0;
+            }, { passive: true });
+
+            // desktop: ctrl/⌘ + scroll wheel
+            scrollBox.addEventListener('wheel', function(e){
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    var r = scrollBox.getBoundingClientRect();
+                    zoomTo(zoom * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX - r.left, e.clientY - r.top, false);
+                }
+            }, { passive: false });
+        }
+
+        // สร้าง markup กล่องรูปแบบ scroll+zoom (prefix ใช้ตั้ง id ให้ไม่ชนกัน)
+        function scrollImageMarkup(prefix, extraBtns) {
+            return `<div id="${prefix}Box" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;">
+                        <div style="min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;">
+                            <img id="${prefix}Img" alt="poster"
+                                 style="width:100%;height:auto;display:block;touch-action:pan-x pan-y;"
+                                 decoding="async" />
+                            <div id="${prefix}Err" style="display:none;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;padding:2rem;text-align:center;min-height:200px;width:100%;">
+                                <p style="font-weight:800;font-size:1rem;">ไม่พบไฟล์รูปภาพ</p>
+                            </div>
+                        </div>
+                        ${extraBtns || ''}
+                        <div style="position:sticky;bottom:12px;right:0;float:right;margin-right:12px;display:flex;flex-direction:column;gap:8px;z-index:20;">
+                            <button id="${prefix}In"  style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:24px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">+</button>
+                            <button id="${prefix}Out" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:28px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">−</button>
+                        </div>
+                     </div>`;
+        }
+
+        // โหลด thumbnail ก่อน (เร็ว/แคชไว้) แล้วค่อยสลับเป็นรูปเต็มเมื่อโหลดเสร็จ → เปิดไว ไม่ค้าง
+        function wireScrollImage(prefix, fullSrc, thumbSrc) {
+            var box = document.getElementById(prefix + 'Box');
+            var img = document.getElementById(prefix + 'Img');
+            var err = document.getElementById(prefix + 'Err');
+            function fail(){ img.style.display = 'none'; if (err) err.style.display = 'flex'; }
+            function ok(){ img.style.display = 'block'; if (err) err.style.display = 'none'; }
+
+            // โหลดรูปเต็มเบื้องหลังเสมอ — สำเร็จค่อยสลับมาแสดง
+            var full = new Image();
+            full.onload  = function(){ ok(); img.src = fullSrc; };
+            full.onerror = function(){ if (img.src === fullSrc || !thumbSrc) fail(); }; // เต็มโหลดไม่ได้ + ไม่มี thumb = error จริง
+            full.src = fullSrc;
+
+            if (thumbSrc && thumbSrc !== fullSrc) {
+                img.onerror = function(){ img.src = fullSrc; }; // thumb พัง → ลองรูปเต็มทันที
+                img.src = thumbSrc;
+            } else {
+                img.onerror = fail;
+                img.src = fullSrc;
+            }
+            setupImageZoom(box, img, document.getElementById(prefix + 'In'), document.getElementById(prefix + 'Out'));
+        }
+
+        // =============================================================
+        // 🖼️ โหมดดูเต็มจอ
+        // =============================================================
+        function openFullscreen() {
+            if (!activePoster || !activePoster.jpgUrl) return;
+            const overlay = document.getElementById('fullscreenOverlay');
+            const content = document.getElementById('fsContent');
+            content.innerHTML = scrollImageMarkup('fs');
+            wireScrollImage('fs', activePoster.jpgUrl, activePoster.thumbUrl);
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            // พยายามเข้า fullscreen จริงบนอุปกรณ์ที่รองรับ (iPad/desktop) — ไม่รองรับก็ใช้ overlay เต็มจอแทน
+            try {
+                const req = overlay.requestFullscreen || overlay.webkitRequestFullscreen;
+                if (req) req.call(overlay);
+            } catch (e) {}
+        }
+
+        function closeFullscreen() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+            document.getElementById('fsContent').innerHTML = '';
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                }
+            } catch (e) {}
+        }
+
+        // ออกจาก native fullscreen ด้วย gesture ระบบ → ปิด overlay ตาม
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(function(ev){
+            document.addEventListener(ev, function(){
+                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                    const ov = document.getElementById('fullscreenOverlay');
+                    if (ov && !ov.classList.contains('hidden')) closeFullscreen();
+                }
+            });
+        });
+
+        // =============================================================
         // 👁️ VIEWER
         // =============================================================
+        // จัดรูปแบบเวลานำเสนอ → "เวลานำเสนอ 13.42 - 13.49 น."
+        function formatPresentTime(start, end) {
+            function clean(s) {
+                s = String(s || '').trim();
+                if (!s) return '';
+                var m = s.match(/(\d{1,2})[:.](\d{2})/); // เก็บเฉพาะ HH:MM / HH.MM ตัดวินาทีออก
+                return m ? (m[1] + '.' + m[2]) : s;
+            }
+            var s = clean(start), e = clean(end);
+            if (s && e) return `เวลานำเสนอ ${s} - ${e} น.`;
+            if (s)      return `เวลานำเสนอ ${s} น.`;
+            return '';
+        }
+
         function openViewer(id) {
             initAudio();
             activePoster = globalPosterData.find(function(item) { return item.id === id; });
             if (!activePoster) return;
 
             document.getElementById('viewerCode').innerText        = activePoster.id;
-            document.getElementById('viewerTime').innerText        = `นำเสนอเวลา: ${activePoster.time}`;
+            const timeStr = formatPresentTime(activePoster.time, activePoster.timeEnd);
+            const timeEl  = document.getElementById('viewerTime');
+            timeEl.innerText = timeStr;
+            timeEl.classList.toggle('hidden', !timeStr);
+            timeEl.classList.toggle('flex', !!timeStr);
             document.getElementById('viewerTitle').innerText       = activePoster.title;
             document.getElementById('viewerAuthorText').innerText  = activePoster.author;
             const orgEl = document.getElementById('viewerOrg');
@@ -1109,65 +1311,15 @@
                 countdownCircle.style.strokeDashoffset = '0';
             }
 
-            // แสดงรูป JPG (รองรับ pinch-to-zoom บนมือถือ)
+            // แสดงรูป JPG — โหลด thumbnail ก่อนแล้วค่อยสลับเป็นรูปเต็ม (เปิดไว) + ปุ่มดูเต็มจอ
             const container = document.getElementById('viewerContentContainer');
             if (activePoster.jpgUrl) {
-                container.innerHTML =
-                    `<div id="imgScrollBox" style="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:#f1f5f9;position:relative;">
-                        <div style="min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;">
-                            <img id="posterImg" src="${activePoster.jpgUrl}"
-                                 style="width:100%;height:auto;display:block;touch-action:pan-x pan-y pinch-zoom;transition:width 0.2s ease;"
-                                 decoding="async"
-                                 onerror="this.style.display='none'; document.getElementById('imgError').style.display='flex';" />
-                            <div id="imgError" style="display:none;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;padding:2rem;text-align:center;min-height:200px;width:100%;">
-                                <p style="font-weight:800;font-size:1rem;">ไม่พบไฟล์รูปภาพ</p>
-                            </div>
-                        </div>
-                        <!-- Zoom buttons -->
-                        <div style="position:sticky;bottom:12px;right:0;float:right;margin-right:12px;display:flex;flex-direction:column;gap:8px;z-index:20;">
-                            <button id="btnZoomIn"
-                                style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:24px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">+</button>
-                            <button id="btnZoomOut"
-                                style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.96);border:1px solid rgba(0,0,0,0.14);box-shadow:0 3px 10px rgba(0,0,0,0.22);font-size:28px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1f2937;-webkit-tap-highlight-color:transparent;user-select:none;">−</button>
-                        </div>
-                     </div>`;
-
-                // Zoom logic
-                var zoomLevel = 1;
-                var img = document.getElementById('posterImg');
-                var scrollBox = document.getElementById('imgScrollBox');
-
-                function applyZoom(newZoom) {
-                    zoomLevel = Math.min(Math.max(newZoom, 0.5), 5);
-                    if (zoomLevel <= 1) {
-                        img.style.width = '100%';
-                        img.style.maxWidth = '';
-                    } else {
-                        img.style.width = (zoomLevel * 100) + '%';
-                        img.style.maxWidth = 'none';
-                    }
-                }
-
-                document.getElementById('btnZoomIn').addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    applyZoom(zoomLevel + 0.5);
-                });
-                document.getElementById('btnZoomOut').addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    applyZoom(zoomLevel - 0.5);
-                });
-
-                // Double-tap to zoom
-                var lastTap = 0;
-                scrollBox.addEventListener('touchend', function(e) {
-                    if (e.target.id === 'btnZoomIn' || e.target.id === 'btnZoomOut') return;
-                    var now = Date.now();
-                    if (now - lastTap < 280) {
-                        e.preventDefault();
-                        applyZoom(zoomLevel > 1 ? 1 : 2);
-                    }
-                    lastTap = now;
-                }, { passive: false });
+                const fsBtn = '<div style="position:sticky;top:10px;left:0;float:left;margin-left:10px;z-index:20;">' +
+                    '<button id="viewerFsBtn" style="display:flex;align-items:center;gap:5px;background:rgba(15,23,42,0.82);color:#fff;border:none;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer;-webkit-tap-highlight-color:transparent;">' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>ดูเต็มจอ</button></div>';
+                container.innerHTML = scrollImageMarkup('poster', fsBtn);
+                wireScrollImage('poster', activePoster.jpgUrl, activePoster.thumbUrl);
+                document.getElementById('viewerFsBtn').addEventListener('click', function(e){ e.stopPropagation(); openFullscreen(); });
             } else {
                 container.innerHTML = '<div class="text-gray-400 text-center p-8"><p class="font-bold text-base sm:text-lg">ไม่พบไฟล์</p></div>';
             }
@@ -1182,6 +1334,8 @@
         }
 
         function closeViewer() {
+            const fsOv = document.getElementById('fullscreenOverlay');
+            if (fsOv && !fsOv.classList.contains('hidden')) closeFullscreen();
             viewerModal.classList.add('hidden');
             body.classList.remove('no-scroll');
             document.getElementById('viewerContentContainer').innerHTML = '';
