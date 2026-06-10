@@ -1018,14 +1018,14 @@
                         if (p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1) pages.push(p);
                         else if (pages[pages.length - 1] !== '...') pages.push('...');
                     }
-                    loadMoreBtn.innerHTML = '<div class="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">' +
-                        '<button onclick="goToPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '') + ' class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm">‹</button>' +
+                    loadMoreBtn.innerHTML = '<div class="flex items-center gap-1 flex-wrap justify-center">' +
+                        '<button onclick="goToPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '') + ' class="w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-xs">‹</button>' +
                         pages.map(function(pg) {
-                            if (pg === '...') return '<span class="text-gray-400 font-bold px-1">…</span>';
+                            if (pg === '...') return '<span class="text-gray-400 font-bold px-0.5 text-xs">…</span>';
                             var active = pg === currentPage;
-                            return '<button onclick="goToPage(' + pg + ')" class="w-9 h-9 rounded-full border-2 font-extrabold text-sm transition-all ' + (active ? 'bg-emerald-600 border-emerald-600 text-white shadow-md scale-110' : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-600') + '">' + pg + '</button>';
+                            return '<button onclick="goToPage(' + pg + ')" class="w-7 h-7 rounded-full border font-extrabold text-xs transition-all ' + (active ? 'bg-emerald-600 border-emerald-600 text-white shadow scale-105' : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-600') + '">' + pg + '</button>';
                         }).join('') +
-                        '<button onclick="goToPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '') + ' class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm">›</button>' +
+                        '<button onclick="goToPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '') + ' class="w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-xs">›</button>' +
                         '</div>';
                 } else {
                     loadMoreBtn.classList.add('hidden'); loadMoreBtn.classList.remove('flex');
