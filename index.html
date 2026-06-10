@@ -779,18 +779,13 @@
                 const thumbUrl = `${thumbBase}/${id}.jpg?width=480&quality=65&resize=contain`;
 
                 const rawZone   = String(item['ด้านของบทคัดย่อ'] || '');
-                const rawBranch = String(item['สาขา'] || '');
 
-                // ใช้ค่าจากคอลัมน์โดยตรง หาก detect ไม่ได้ fallback ไปหา regex จาก ID
+                // คำนวณ zone/branch จาก ID เป็นหลัก — RP# = R2R, P# = R&D
                 const matchRP = idStr.match(/^RP(\d+)-/);
                 const matchP  = idStr.match(/^P(\d+)-/);
-                const zoneUpper = rawZone.toUpperCase();
-                const isR2R = zoneUpper.includes('R2R') || !!matchRP;
-                const isRND = zoneUpper.includes('R&D') || zoneUpper.includes('RND') || !!matchP;
-
-                // ตัดคำว่า "สาขา"/"สาขาที่" ที่อาจติดมาในข้อมูลออก เหลือแค่เลข/ชื่อสาขา
-                let branchRaw = rawBranch || (matchRP ? matchRP[1] : (matchP ? matchP[1] : ''));
-                const branch = String(branchRaw).replace(/^สาขา\s*(ที่)?\s*/i, '').trim();
+                const isR2R   = !!matchRP;
+                const isRND   = !!matchP;
+                const branch  = matchRP ? matchRP[1] : (matchP ? matchP[1] : '');
 
                 const mappedItem = {
                     id:       id,
@@ -809,7 +804,7 @@
                     calcBranch:    branch || 'All',
                     locationColor: isR2R ? 'bg-emerald-600' : (isRND ? 'bg-blue-600' : 'bg-gray-500'),
                     zoneColor:     isR2R ? 'text-emerald-700 bg-emerald-100/80' : (isRND ? 'text-blue-700 bg-blue-100/80' : 'text-gray-600 bg-gray-100'),
-                    displayZone:   isR2R ? `R2R${branch ? ' สาขา ' + branch : ''}` : (isRND ? `R&D${branch ? ' สาขา ' + branch : ''}` : (rawZone || 'อื่นๆ')),
+                    displayZone:   isR2R ? `R2R สาขา ${branch}` : (isRND ? `R&D สาขา ${branch}` : (rawZone || 'อื่นๆ')),
                 };
 
                 return mappedItem;
@@ -1245,7 +1240,9 @@
                 s = String(s || '').trim();
                 if (!s) return '';
                 var m = s.match(/(\d{1,2})[:.](\d{2})/); // เก็บเฉพาะ HH:MM / HH.MM ตัดวินาทีออก
-                return m ? (m[1] + '.' + m[2]) : s;
+                if (!m) return s;
+                var hh = m[1].length === 1 ? '0' + m[1] : m[1]; // zero-pad ชั่วโมง 9 → 09
+                return hh + '.' + m[2];
             }
             var s = clean(start), e = clean(end);
             if (s && e) return `เวลานำเสนอ ${s} - ${e} น.`;
