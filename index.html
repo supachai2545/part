@@ -338,48 +338,48 @@
     </footer>
 
     <!-- Modal Viewer -->
-    <div id="imageViewerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 sm:bg-gray-900/90 p-0 sm:p-8 modal-enter sm:backdrop-blur-xl">
-        <div class="relative w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-full flex flex-col image-enter bg-white sm:rounded-[28px] overflow-hidden shadow-none sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-0 sm:border sm:border-gray-700/50">
+    <div id="imageViewerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 sm:bg-gray-900/90 p-0 sm:p-6 modal-enter sm:backdrop-blur-xl">
+        <div class="relative w-full h-full sm:max-w-5xl sm:max-h-[92vh] sm:h-auto flex flex-col image-enter bg-white sm:rounded-[24px] overflow-hidden shadow-none sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-0 sm:border sm:border-gray-700/50">
 
-            <div id="viewerContentContainer" class="flex-1 min-h-0 sm:flex-none relative bg-slate-100 flex items-center justify-center sm:min-h-[70vh] w-full overflow-hidden"></div>
+            <div id="viewerContentContainer" class="flex-1 min-h-0 relative bg-slate-100 flex items-center justify-center w-full overflow-hidden"></div>
 
-            <!-- Info area: scrollable text only -->
-            <div class="flex-shrink-0 bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 flex flex-col sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:gap-4 overflow-hidden">
-                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:30vh; -webkit-overflow-scrolling:touch;">
+            <!-- Info panel — uniform layout on all devices -->
+            <div class="flex-shrink-0 bg-white border-t border-gray-200 flex flex-col">
+                <div class="px-3 pt-3 pb-1 overflow-y-auto" style="max-height:35vh; -webkit-overflow-scrolling:touch;">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
-                        <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] sm:text-[12px] font-bold tracking-wider"></span>
-                        <span id="viewerLocation" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
-                        <span id="viewerZone" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
-                        <span id="viewerTime" class="text-indigo-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100"></span>
+                        <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wider"></span>
+                        <span id="viewerLocation" class="font-bold text-[12px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
+                        <span id="viewerZone" class="font-bold text-[12px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
+                        <span id="viewerTime" class="text-indigo-600 font-bold text-[12px] flex items-center bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100"></span>
                     </div>
-                    <h3 id="viewerTitle" class="font-black text-[15px] sm:text-[18px] text-gray-900 leading-snug"></h3>
-                    <p id="viewerAuthor" class="text-gray-500 text-[13px] sm:text-[14px] font-semibold mt-1.5 flex items-center"><i data-lucide="user" class="w-3.5 h-3.5 mr-1.5"></i> <span id="viewerAuthorText"></span></p>
-                    <p id="viewerOrg" class="hidden text-gray-400 text-[11px] sm:text-[12px] font-semibold mt-1 flex items-center"><i data-lucide="building-2" class="w-3 h-3 mr-1.5 flex-shrink-0"></i> <span id="viewerOrgText"></span></p>
+                    <h3 id="viewerTitle" class="font-black text-[15px] text-gray-900 leading-snug"></h3>
+                    <p id="viewerAuthor" class="text-gray-500 text-[13px] font-semibold mt-1.5 flex items-center"><i data-lucide="user" class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"></i><span id="viewerAuthorText"></span></p>
+                    <p id="viewerOrg" class="hidden text-gray-400 text-[11px] font-semibold mt-1 flex items-center"><i data-lucide="building-2" class="w-3 h-3 mr-1.5 flex-shrink-0"></i><span id="viewerOrgText"></span></p>
                 </div>
 
-                <!-- Action bar: always visible, never scrolls -->
-                <div class="flex-shrink-0 border-t sm:border-0 border-gray-100 bg-white/90 sm:bg-transparent px-3 py-2 sm:p-0 flex flex-row sm:flex-col gap-2 items-center justify-between sm:justify-start w-full sm:w-auto">
+                <!-- Action bar -->
+                <div class="flex-shrink-0 border-t border-gray-100 bg-white/90 px-3 py-2 flex flex-row gap-2 items-center justify-between w-full">
                     <div class="flex items-center gap-2">
-                        <div id="countdownTimerContainer" class="hidden items-center justify-center relative w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] bg-white rounded-full shadow-sm border border-emerald-100 flex-shrink-0" title="ดูผลงานให้ครบเวลาเพื่อรับแต้ม">
+                        <div id="countdownTimerContainer" class="hidden items-center justify-center relative w-[44px] h-[44px] bg-white rounded-full shadow-sm border border-emerald-100 flex-shrink-0" title="ดูผลงานให้ครบเวลาเพื่อรับแต้ม">
                             <svg class="w-full h-full transform -rotate-90 absolute inset-0" viewBox="0 0 100 100">
                                 <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" class="text-emerald-50" />
                                 <circle id="countdownCircle" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="263.89" stroke-dashoffset="0" class="text-emerald-500 transition-all duration-1000 ease-linear" stroke-linecap="round" />
                             </svg>
                             <div class="absolute inset-0 flex flex-col items-center justify-center pt-[2px]">
-                                <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 leading-none mb-0.5">รับแต้มใน</span>
-                                <span id="countdownText" class="text-[9px] sm:text-[11px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:00</span>
+                                <span class="text-[6px] font-bold text-emerald-600/80 leading-none mb-0.5">รับแต้มใน</span>
+                                <span id="countdownText" class="text-[9px] font-black text-emerald-600 leading-none tracking-tighter" style="font-variant-numeric: tabular-nums;">01:00</span>
                             </div>
                         </div>
-                        <div id="viewedIndicator" class="hidden items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-3 py-2 rounded-xl shadow-sm text-[12px] sm:text-sm">
-                            <i data-lucide="check" class="w-4 h-4 mr-1 font-black"></i> <span>รับแต้มแล้ว</span>
+                        <div id="viewedIndicator" class="hidden items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-3 py-2 rounded-xl shadow-sm text-[12px]">
+                            <i data-lucide="check" class="w-4 h-4 mr-1 font-black"></i><span>รับแต้มแล้ว</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="openMap()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-3 py-2 rounded-xl transition-all flex items-center shadow-sm text-sm">
-                            <i data-lucide="map" class="w-4 h-4 sm:mr-1.5"></i><span class="hidden sm:inline">แผนที่</span>
+                            <i data-lucide="map" class="w-4 h-4 mr-1.5"></i>แผนที่
                         </button>
-                        <button onclick="closeViewer()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-xl transition-all shadow-md text-sm">
-                            <i data-lucide="x" class="w-4 h-4 sm:mr-1.5 inline-block"></i><span class="hidden sm:inline">ปิด</span><span class="sm:hidden">ปิด</span>
+                        <button onclick="closeViewer()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-xl transition-all shadow-md text-sm flex items-center">
+                            <i data-lucide="x" class="w-4 h-4 mr-1.5"></i>ปิด
                         </button>
                     </div>
                 </div>
