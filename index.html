@@ -1032,9 +1032,11 @@
                     e.preventDefault();
                     var r = scrollBox.getBoundingClientRect();
                     var t = (e.changedTouches && e.changedTouches[0]) || null;
-                    // double-tap ใน viewer → เปิดเต็มจอ; double-tap ขณะเต็มจออยู่แล้ว → zoom toggle
+                    // double-tap ใน viewer → เปิดเต็มจอ; double-tap ในเต็มจอ → ปิดเต็มจอ
                     if (scrollBox.id === 'posterBox' && typeof openFullscreen === 'function') {
                         openFullscreen();
+                    } else if (scrollBox.id === 'fsBox' && typeof closeFullscreen === 'function') {
+                        closeFullscreen();
                     } else {
                         zoomTo(zoom > 1 ? 1 : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
                     }
@@ -1148,6 +1150,9 @@
         // =============================================================
         function openFullscreen() {
             if (!activePoster || !activePoster.jpgUrl) return;
+            // ปิด hint ทันทีเมื่อเปิดเต็มจอ
+            var vc = document.getElementById('viewerContentContainer');
+            if (vc && vc._dismissHint) { vc._dismissHint(); vc._dismissHint = null; }
             const overlay = document.getElementById('fullscreenOverlay');
             const content = document.getElementById('fsContent');
             content.innerHTML = scrollImageMarkup('fs');
@@ -1275,6 +1280,33 @@
             if (activePoster.jpgUrl) {
                 container.innerHTML = scrollImageMarkup('poster');
                 wireScrollImage('poster', activePoster.jpgUrl, activePoster.thumbUrl);
+
+                // Hint: แตะ 2 ครั้งเพื่อดูเต็มจอ — จางๆ ค้าง 5 วิแล้วหาย
+                (function() {
+                    var hint = document.createElement('div');
+                    hint.id = 'doubleTapHint';
+                    hint.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:26;';
+                    hint.innerHTML = '<div id="dthInner" style="background:rgba(0,0,0,0.52);color:rgba(255,255,255,0.95);padding:10px 22px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:0.01em;opacity:0;transition:opacity 0.5s;white-space:nowrap;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none;">แตะ 2 ครั้งเพื่อดูเต็มจอ</div>';
+                    container.appendChild(hint);
+                    // fade-in หลัง 400ms (รอรูปเริ่มโหลด)
+                    var inner = hint.querySelector('#dthInner');
+                    setTimeout(function() { if (inner) inner.style.opacity = '1'; }, 400);
+                    // fade-out + remove หลัง 5 วิ
+                    var _hTimer = setTimeout(function() { dismissHint(); }, 5000);
+                    function dismissHint() {
+                        clearTimeout(_hTimer);
+                        var h = document.getElementById('doubleTapHint');
+                        if (!h) return;
+                        var inn = h.querySelector('#dthInner');
+                        if (inn) inn.style.opacity = '0';
+                        setTimeout(function() { if (h && h.parentNode) h.parentNode.removeChild(h); }, 600);
+                    }
+                    // หายทันทีเมื่อ user แตะ/คลิกที่รูป
+                    var box = document.getElementById('posterBox');
+                    if (box) { box.addEventListener('touchstart', dismissHint, { once: true, passive: true }); box.addEventListener('click', dismissHint, { once: true }); }
+                    container._dismissHint = dismissHint;
+                })();
+
                 // ปุ่มลอย absolute เหนือรูป — เห็นตลอดไม่ว่าจะเลื่อนแค่ไหน
                 const fb = document.createElement('button');
                 fb.id = 'viewerFsBtn';
