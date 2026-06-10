@@ -338,11 +338,11 @@
     <div id="imageViewerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 sm:bg-gray-900/90 p-0 sm:p-8 modal-enter sm:backdrop-blur-xl">
         <div class="relative w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-full flex flex-col image-enter bg-white sm:rounded-[28px] overflow-hidden shadow-none sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-0 sm:border sm:border-gray-700/50">
 
-            <div id="viewerContentContainer" class="flex-shrink-0 relative bg-slate-100 flex items-center justify-center h-[48vh] sm:min-h-[70vh] w-full overflow-hidden"></div>
+            <div id="viewerContentContainer" class="flex-1 min-h-0 sm:flex-none relative bg-slate-100 flex items-center justify-center sm:min-h-[70vh] w-full overflow-hidden"></div>
 
             <!-- Info area: scrollable text only -->
-            <div class="bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 flex flex-col sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:gap-4 overflow-hidden">
-                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:34vh; -webkit-overflow-scrolling:touch;">
+            <div class="flex-shrink-0 bg-white sm:glass-panel border-t border-gray-200 sm:border-white/40 flex flex-col sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:gap-4 overflow-hidden">
+                <div class="flex-1 w-full px-3 pt-3 pb-1 sm:p-0 sm:pr-4 overflow-y-auto" style="max-height:30vh; -webkit-overflow-scrolling:touch;">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span id="viewerCode" class="bg-gray-800 text-white shadow-sm px-2.5 py-0.5 rounded-md text-[11px] sm:text-[12px] font-bold tracking-wider"></span>
                         <span id="viewerLocation" class="font-bold text-[12px] sm:text-[13px] flex items-center px-2.5 py-0.5 rounded-md border"></span>
