@@ -280,13 +280,13 @@
                 </div>
             </div>
 
-            <div class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2.5 mt-6 sm:mt-8 relative z-20 overflow-x-auto hide-scrollbar pb-2 snap-x">
-                <button id="btnFilterAll" onclick="setZoneFilter('All')" class="snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-gray-800 border border-gray-800 text-white transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">ดูทั้งหมด</button>
-                <button id="btnFilterRND" onclick="setZoneFilter('R&D')" class="snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel text-gray-600 hover:bg-blue-50 border-white transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"><i class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></i>ด้าน R&D</button>
-                <button id="btnFilterR2R" onclick="setZoneFilter('R2R')" class="snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel text-gray-600 hover:bg-emerald-50 border-white transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"><i class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></i>ด้าน R2R</button>
+            <div class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2.5 mt-6 sm:mt-8 relative z-20 overflow-x-auto hide-scrollbar pb-2">
+                <button id="btnFilterAll" onclick="setZoneFilter('All')" class="whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-gray-800 border border-gray-800 text-white transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">ดูทั้งหมด</button>
+                <button id="btnFilterRND" onclick="setZoneFilter('R&D')" class="whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel text-gray-600 hover:bg-blue-50 border-white transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"><i class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></i>ด้าน R&D</button>
+                <button id="btnFilterR2R" onclick="setZoneFilter('R2R')" class="whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel text-gray-600 hover:bg-emerald-50 border-white transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"><i class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></i>ด้าน R2R</button>
             </div>
 
-            <div id="subTabsContainer" class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2 mt-2 hidden opacity-0 transition-all duration-300 relative z-10 overflow-x-auto hide-scrollbar pb-2 px-1 snap-x"></div>
+            <div id="subTabsContainer" class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2 mt-2 hidden opacity-0 transition-all duration-300 relative z-10 overflow-x-auto hide-scrollbar pb-2 px-1"></div>
         </div>
     </header>
 
@@ -823,7 +823,7 @@
         function createSubTabBtn(branch, text, colorPrefix) {
             const btn      = document.createElement('button');
             const isActive = (currentBranch === branch);
-            const base     = "snap-center whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-bold transition-all shadow-sm transform hover:-translate-y-0.5 border ";
+            const base     = "whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-bold transition-all shadow-sm transform hover:-translate-y-0.5 border ";
             btn.className  = isActive
                 ? base + (colorPrefix === 'blue' ? "bg-blue-100 text-blue-700 border-blue-200" : "bg-emerald-100 text-emerald-700 border-emerald-200")
                 : base + "bg-white text-gray-500 hover:bg-gray-50 border-gray-200";
@@ -870,11 +870,11 @@
             const btnRND = document.getElementById('btnFilterRND');
             const btnR2R = document.getElementById('btnFilterR2R');
             [btnAll, btnRND, btnR2R].forEach(function(btn) {
-                btn.className = "snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel transition-all border-white";
+                btn.className = "whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold glass-panel transition-all border-white";
             });
-            if      (zone === 'All') btnAll.className = "snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-gray-800 text-white transition-all shadow-lg";
-            else if (zone === 'R&D') btnRND.className = "snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-blue-600 text-white shadow-lg border-transparent";
-            else if (zone === 'R2R') btnR2R.className = "snap-center whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-emerald-600 text-white shadow-lg border-transparent";
+            if      (zone === 'All') btnAll.className = "whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-gray-800 text-white transition-all shadow-lg";
+            else if (zone === 'R&D') btnRND.className = "whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-blue-600 text-white shadow-lg border-transparent";
+            else if (zone === 'R2R') btnR2R.className = "whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] sm:text-[14px] font-bold bg-emerald-600 text-white shadow-lg border-transparent";
             filterPosters(true);
         }
 
@@ -1123,16 +1123,16 @@
                 }
                 if (e.touches.length === 0) {
                     panOn = false;
-                    // Fullscreen swipe-to-navigate
-                    if (scrollBox.id === 'fsBox' && _swT && e.changedTouches.length === 1) {
+                    // Viewer & Fullscreen swipe-to-navigate
+                    if ((scrollBox.id === 'fsBox' || scrollBox.id === 'posterBox') && _swT && e.changedTouches.length === 1) {
                         var _dx = e.changedTouches[0].clientX - _swX;
                         var _dy = e.changedTouches[0].clientY - _swY;
                         var _dt = Date.now() - _swT;
                         // ถ้าไม่ได้ zoom → ปัดง่าย; ถ้า zoom อยู่ → ต้องเร็วมาก (ป้องกัน pan)
-                        var isSwipe = zoom <= 1.05
+                        var isSwipe = zoom <= MIN + 0.05
                             ? (Math.abs(_dx) > 50 && Math.abs(_dx) > Math.abs(_dy) * 1.5)
                             : (Math.abs(_dx) > 110 && Math.abs(_dx) > Math.abs(_dy) * 3.5 && _dt < 280);
-                        if (isSwipe) navigateViewer(_dx < 0 ? 1 : -1);
+                        if (isSwipe && typeof navigateViewer === 'function') navigateViewer(_dx < 0 ? 1 : -1);
                     }
                     _swT = 0;
                 }
