@@ -984,19 +984,43 @@
         // =============================================================
         // zoom แบบลื่น + รักษาจุดศูนย์กลาง + pinch + double-tap + ปุ่ม +/-
         function setupImageZoom(scrollBox, img, inBtn, outBtn) {
-            var zoom = 1, MIN = 1, MAX = 6, animH = null;
+            var zoom = 1, MIN = 0.1, MAX = 6, animH = null;
             img.style.transition = 'none';
+
+            // คำนวณ zoom ที่แสดงรูปทั้งใบพอดีกับ container
+            function getFitZoom() {
+                if (!img.naturalWidth || !img.naturalHeight) return 1;
+                var imgHatZ1 = (img.naturalHeight / img.naturalWidth) * scrollBox.clientWidth;
+                return imgHatZ1 <= scrollBox.clientHeight ? 1 : scrollBox.clientHeight / imgHatZ1;
+            }
+            function applyFit() {
+                var f = getFitZoom();
+                MIN = Math.max(0.1, f);
+                zoomTo(f, null, null, false);
+            }
+            // apply เมื่อรูปโหลดเสร็จ (อาจโหลดไปแล้ว)
+            if (img.complete && img.naturalWidth) { applyFit(); }
+            else { img.addEventListener('load', applyFit, { once: true }); }
 
             // ตั้ง zoom + เลื่อน scroll ให้จุดโฟกัส (fx,fy บนพื้นที่มอง) อยู่กับที่ — อ้างอิงจากสถานะ ref
             function applyAt(z, fx, fy, refZoom, refL, refT) {
                 z = Math.min(Math.max(z, MIN), MAX);
                 var ratio = z / refZoom;
                 zoom = z;
-                img.style.width    = z <= 1 ? '100%' : (z * 100) + '%';
-                img.style.maxWidth = z <= 1 ? ''     : 'none';
-                void img.offsetWidth; // บังคับ reflow ให้ scroll range อัปเดตก่อนตั้งค่า scroll (กัน clamp)
-                scrollBox.scrollLeft = (refL + fx) * ratio - fx;
-                scrollBox.scrollTop  = (refT + fy) * ratio - fy;
+                var newW = scrollBox.clientWidth * z;
+                var newH = img.naturalWidth ? (img.naturalHeight / img.naturalWidth) * newW : scrollBox.clientHeight * z;
+                img.style.width    = newW + 'px';
+                img.style.height   = newH + 'px';
+                img.style.maxWidth = 'none';
+                void img.offsetWidth;
+                if (z >= 1) {
+                    scrollBox.scrollLeft = (refL + fx) * ratio - fx;
+                    scrollBox.scrollTop  = (refT + fy) * ratio - fy;
+                } else {
+                    // รูปเล็กกว่า container → center (flex wrapper จัดให้)
+                    scrollBox.scrollLeft = 0;
+                    scrollBox.scrollTop  = 0;
+                }
             }
 
             // animate=true → tween ลื่น (ปุ่ม/double-tap), false → ทันที (pinch/wheel ติดตามนิ้ว 1:1)
@@ -1040,7 +1064,7 @@
                     } else if (scrollBox.id === 'fsBox' && typeof closeFullscreen === 'function') {
                         closeFullscreen();
                     } else {
-                        zoomTo(zoom > 1 ? 1 : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
+                        zoomTo(zoom > MIN + 0.05 ? MIN : 2.5, t ? t.clientX - r.left : null, t ? t.clientY - r.top : null, true);
                     }
                 }
                 lastTap = now;
@@ -1148,17 +1172,25 @@
             function fail(){ img.style.display = 'none'; if (err) err.style.display = 'flex'; }
             function ok(){ img.style.display = 'block'; if (err) err.style.display = 'none'; }
 
-            // โหลดรูปเต็มเบื้องหลังเสมอ — สำเร็จค่อยสลับมาแสดง
-            var full = new Image();
-            full.onload  = function(){ ok(); img.src = fullSrc; };
-            full.onerror = function(){ if (img.src === fullSrc || !thumbSrc) fail(); }; // เต็มโหลดไม่ได้ + ไม่มี thumb = error จริง
-            full.src = fullSrc;
-
             if (thumbSrc && thumbSrc !== fullSrc) {
-                img.onerror = function(){ img.src = fullSrc; }; // thumb พัง → ลองรูปเต็มทันที
+                // โหลด thumb ก่อน แสดงทันที
+                img.onload  = function(){ ok(); };
+                img.onerror = function(){
+                    // thumb พัง → ลองรูปเต็ม
+                    img.onerror = function(){ img.onerror = null; fail(); };
+                    img.onload  = function(){ ok(); };
+                    img.src = fullSrc;
+                };
                 img.src = thumbSrc;
+                // โหลดรูปเต็มเบื้องหลัง แล้วค่อยสลับ (ไม่รอ)
+                var full = new Image();
+                full.onload = function(){
+                    if (img.src !== fullSrc) { img.src = fullSrc; }
+                };
+                full.src = fullSrc;
             } else {
-                img.onerror = fail;
+                img.onload  = function(){ ok(); };
+                img.onerror = function(){ img.onerror = null; fail(); };
                 img.src = fullSrc;
             }
             setupImageZoom(box, img, document.getElementById(prefix + 'In'), document.getElementById(prefix + 'Out'));
