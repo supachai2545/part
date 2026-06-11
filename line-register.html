@@ -118,6 +118,9 @@
                             style="background:#06C755">
                         บันทึกรับแจ้งเตือน
                     </button>
+                    <p id="friendNote" class="hidden text-center text-xs text-amber-600 mt-2 font-semibold">
+                        กรุณาเพิ่มเพื่อน OA ด้านบนก่อนจึงจะบันทึกได้
+                    </p>
                 </div>
 
                 <!-- การ์ดผลงานที่ลงทะเบียนแล้ว -->
@@ -136,32 +139,6 @@
 
     <!-- Toast -->
     <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg z-50 pop" style="background:#1e293b"></div>
-
-    <!-- Friend-warning dialog -->
-    <div id="friendWarnModal" class="hidden fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center px-5 font-sans">
-        <div class="bg-white w-full max-w-sm rounded-[1.75rem] p-6 shadow-2xl pop">
-            <div class="w-14 h-14 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="user-x" class="w-7 h-7 text-amber-500"></i>
-            </div>
-            <h3 class="text-lg font-extrabold text-slate-800 text-center mb-1">ยังไม่ได้เพิ่มเพื่อน OA</h3>
-            <p class="text-sm text-slate-500 text-center leading-relaxed mb-6">
-                หากยังไม่ได้เพิ่มเพื่อน <b class="text-slate-700">DMSc Conference #34</b><br>
-                ระบบจะ<b class="text-rose-600">ไม่สามารถส่งแจ้งเตือน</b>เข้า LINE ของคุณได้
-            </p>
-            <div class="flex flex-col gap-3">
-                <a href="#" onclick="closeFriendWarn();window.open(OA_ADD_FRIEND,'_blank');return false;"
-                   class="w-full py-3.5 text-white font-extrabold rounded-2xl text-center shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
-                   style="background:#06C755">
-                    <i data-lucide="user-plus" class="w-4 h-4"></i>
-                    เพิ่มเพื่อนก่อน (แนะนำ)
-                </a>
-                <button onclick="saveAnyway()"
-                        class="w-full py-3 text-slate-500 font-bold rounded-2xl text-sm bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all">
-                    บันทึกต่อไปเลย (ไม่รับแจ้งเตือน)
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Onboarding bottom-sheet -->
     <div id="onboardingOverlay" class="hidden fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-end justify-center font-sans">
@@ -215,12 +192,11 @@
     </div>
 
     <script>
-        var sb          = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        var userId      = null;
-        var userName    = '';
-        var allWorks    = {};
-        var isFriend    = false;
-        var pendingCode = null;
+        var sb       = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        var userId   = null;
+        var userName = '';
+        var allWorks = {};
+        var isFriend = null; // null=ยังไม่รู้, true=เป็นเพื่อน, false=ไม่ใช่เพื่อน
 
         function parseTime(s) {
             if (!s) return null;
@@ -312,10 +288,32 @@
             try {
                 const fs = await liff.getFriendship();
                 isFriend = !!fs.friendFlag;
-                const banner = document.getElementById('addFriendBanner');
-                if (banner) banner.classList.toggle('hidden', isFriend);
-                lucide.createIcons();
-            } catch (e) { /* getFriendship อาจไม่พร้อมถ้า channel ยังไม่ผูก OA */ }
+            } catch (e) {
+                isFriend = true; // ถ้าเช็คไม่ได้ให้ผ่านได้เลย (fail open)
+            }
+            const banner = document.getElementById('addFriendBanner');
+            if (banner) banner.classList.toggle('hidden', isFriend);
+            updateAddBtn();
+            lucide.createIcons();
+        }
+
+        function updateAddBtn() {
+            const btn  = document.getElementById('addBtn');
+            const note = document.getElementById('friendNote');
+            if (!btn) return;
+            if (isFriend === false) {
+                btn.disabled = true;
+                btn.textContent = 'เพิ่มเพื่อน OA ก่อนจึงจะบันทึกได้';
+                btn.style.background = '';
+                btn.classList.add('!bg-amber-100', '!text-amber-700', '!shadow-none');
+                if (note) note.classList.remove('hidden');
+            } else {
+                btn.textContent = 'บันทึกรับแจ้งเตือน';
+                btn.style.background = '#06C755';
+                btn.classList.remove('!bg-amber-100', '!text-amber-700', '!shadow-none');
+                if (note) note.classList.add('hidden');
+                onCodeInput(); // คืนสถานะปุ่มตาม input ปัจจุบัน
+            }
         }
 
         function onCodeInput() {
@@ -329,7 +327,7 @@
                 prev.className = 'rounded-xl px-4 py-2.5 text-xs mt-3 bg-indigo-50 border border-indigo-100 text-indigo-700';
                 prev.innerHTML = `✓ <b>${name || 'ไม่ระบุชื่อ'}</b><br>${w['ชื่อผลงาน'] || ''}<br>⏰ ${w['เวลาการนำเสนอ'] || '-'} น. · จอ ${w['จอที่'] || '-'}${w['ลำดับคิว'] ? ' · คิวที่ ' + w['ลำดับคิว'] : ''}`;
                 prev.classList.remove('hidden');
-                btn.disabled = false;
+                btn.disabled = (isFriend === false);
             } else {
                 prev.className = 'rounded-xl px-4 py-2.5 text-xs mt-3 bg-rose-50 border border-rose-100 text-rose-600';
                 prev.textContent = '✗ ไม่พบรหัสผลงานนี้ในระบบ';
@@ -343,16 +341,6 @@
         async function addCode() {
             const code = document.getElementById('codeInput').value.toUpperCase().trim();
             if (!code || !allWorks[code] || !userId) return;
-            if (!isFriend) {
-                pendingCode = code;
-                document.getElementById('friendWarnModal').classList.remove('hidden');
-                return;
-            }
-            await doSaveCode(code);
-        }
-
-        async function doSaveCode(code) {
-            // เช็ค limit ก่อนบันทึก
             const { data: existing } = await sb.from('line_links').select('code').eq('line_user_id', userId);
             const alreadyHas = (existing || []).some(d => d.code === code);
             if (!alreadyHas && (existing || []).length >= MAX_CODES) {
@@ -368,18 +356,6 @@
             document.getElementById('addBtn').disabled = true;
             toast('✅ บันทึกแล้ว จะได้รับแจ้งเตือนทาง LINE');
             loadMyCodes();
-        }
-
-        function closeFriendWarn() {
-            document.getElementById('friendWarnModal').classList.add('hidden');
-            pendingCode = null;
-        }
-
-        async function saveAnyway() {
-            document.getElementById('friendWarnModal').classList.add('hidden');
-            const code = pendingCode;
-            pendingCode = null;
-            if (code) await doSaveCode(code);
         }
 
         // การ์ดสไตล์เดียวกับหน้าติดตาม พร้อม countdown เหมือนหน้าหลัก
