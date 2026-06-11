@@ -499,10 +499,13 @@
                                 <ul class="list-disc pl-3 mt-0.5 space-y-0.5">
                                     <li>นับคะแนนให้อัตโนมัติเมื่อครบเวลา</li>
                                     <li>รางวัลมีจำกัด (มาก่อนได้ก่อน)</li>
-                                    <li>รับสิทธิ์วันที่ 25 มิ.ย. 2569 เท่านั้น</li>
+                                    <li>รับสิทธิ์วันที่ 25 มิ.ย. 2569 เวลา 09.00 - 15.00 น. เท่านั้น</li>
                                 </ul>
                             </div>
-                            <div class="mt-1.5 sm:mt-3 bg-amber-50 rounded p-1 sm:p-2 border border-amber-100 shadow-sm">
+                            <div class="mt-1 bg-blue-50 rounded p-1 sm:p-1.5 border border-blue-100">
+                                <p class="text-[5px] min-[375px]:text-[6px] sm:text-[8px] text-blue-700 font-bold text-center leading-tight"><i data-lucide="calendar-clock" class="w-2 h-2 sm:w-3 sm:h-3 inline-block mb-0.5"></i> เริ่มเก็บบันทึกคะแนน วันที่ 24 มิ.ย. 2569 เวลา 08.00 น. เป็นต้นไป</p>
+                            </div>
+                            <div class="mt-1 sm:mt-2 bg-amber-50 rounded p-1 sm:p-2 border border-amber-100 shadow-sm">
                                 <p class="text-[5px] min-[375px]:text-[6px] sm:text-[8px] text-amber-700 font-bold text-center leading-tight"><i data-lucide="lightbulb" class="w-2 h-2 sm:w-3 sm:h-3 inline-block mb-0.5"></i> ยิ่งชมมาก ยิ่งสะสมครบเร็วขึ้น!</p>
                             </div>
                         </div>
@@ -536,7 +539,7 @@
                     <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ติดต่อรับรางวัลได้ที่
                 </p>
                 <p class="text-[12px] sm:text-[14px] font-black text-blue-900">จุด Check-in</p>
-                <p class="text-[9px] sm:text-[11px] text-blue-600 font-bold mt-0.5">เฉพาะวันที่ 25 มิถุนายน 2569 เท่านั้น</p>
+                <p class="text-[9px] sm:text-[11px] text-blue-600 font-bold mt-0.5">เฉพาะวันที่ 25 มิถุนายน 2569 เวลา 09.00 - 15.00 น. เท่านั้น</p>
             </div>
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
                 <p class="text-[9px] sm:text-[10px] font-bold text-amber-700 leading-tight">
@@ -641,6 +644,8 @@
 
         const REQUIRED_TIME   = 60;   // วินาที (1 นาที)
         const POINTS_PER_VIEW = 10;
+        // เริ่มบันทึกคะแนนจริงตั้งแต่ 24 มิ.ย. 2569 (2026) เวลา 08.00 น. (UTC+7 = 01:00 UTC)
+        const SCORE_OPEN_DATE = new Date('2026-06-24T01:00:00Z');
         const TARGET_POINTS   = 100;
 
         // =============================================================
@@ -1466,11 +1471,16 @@
         function showPointsToast(pts) { /* disabled */ }
 
         function completeReading(id) {
-            viewedPosters.push(id);
-            localStorage.setItem('viewedPosters', JSON.stringify(viewedPosters));
+            var scoringActive = new Date() >= SCORE_OPEN_DATE;
+            if (scoringActive) {
+                viewedPosters.push(id);
+                localStorage.setItem('viewedPosters', JSON.stringify(viewedPosters));
+            }
             var oldLevel = getLevel(userPoints);
-            userPoints += POINTS_PER_VIEW;
-            localStorage.setItem('posterPoints', userPoints);
+            if (scoringActive) {
+                userPoints += POINTS_PER_VIEW;
+                localStorage.setItem('posterPoints', userPoints);
+            }
             var newLevel = getLevel(userPoints);
             _passportJustEarned = (newLevel > oldLevel);
             updateScoreBadge();
