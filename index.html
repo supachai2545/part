@@ -1438,11 +1438,12 @@
                 const iExp     = isExpired(iEnd);
                 const iRecord  = isCheckinSec ? item['เวลาCheckin'] : item['เวลารับประกาศ'];
 
+                const hasBadge = !!getCardCountdownBadge(iStart, iEnd);
                 listHtml += `
                     <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-start gap-4
                                 list-enter transition-all border ${st.border} shadow-sm
                                 hover:-translate-y-0.5 hover:shadow-md
-                                ${iExp ? 'expired-card' : ''}"
+                                ${iExp ? 'expired-card' : ''} ${hasBadge ? 'urgency-card' : ''}"
                          style="animation-delay:${Math.min(idx,20) * 0.06}s">
                         <!-- ID badge -->
                         <div class="bg-slate-100 px-2.5 py-1.5 rounded-lg flex items-center justify-center
@@ -1544,17 +1545,25 @@
         // ── cache scrollMax เพื่อไม่ให้ reflow ทุก frame ──────────────────
         var cachedScrollMax = { checkin: -1, reward: -1 };
 
-        // ── หาจุดหยุดสูงสุด: หยุดก่อน expired card แรก ─────────────────────
+        // ── หาจุดหยุดสูงสุด: หยุดหลังการ์ดสีอันสุดท้าย ─────────────────────
         function getScrollMax(listEl, sec) {
             if (cachedScrollMax[sec] >= 0) return cachedScrollMax[sec];
-            const expired = listEl.querySelectorAll('.expired-card');
+            const fullMax = listEl.scrollHeight - listEl.clientHeight;
             let max;
-            if (expired.length > 0) {
-                const boundary = expired[0].offsetTop - 24;
-                const fullMax  = listEl.scrollHeight - listEl.clientHeight;
+            const urgencyCards = listEl.querySelectorAll('.urgency-card');
+            if (urgencyCards.length > 0) {
+                // scroll ถึงการ์ดสีอันสุดท้าย แล้วหยุด
+                const last     = urgencyCards[urgencyCards.length - 1];
+                const boundary = last.offsetTop + last.offsetHeight + 16;
                 max = Math.max(0, Math.min(boundary, fullMax));
             } else {
-                max = listEl.scrollHeight - listEl.clientHeight;
+                // ไม่มีการ์ดสี — ใช้ขอบ expired-card เหมือนเดิม
+                const expired = listEl.querySelectorAll('.expired-card');
+                if (expired.length > 0) {
+                    max = Math.max(0, expired[0].offsetTop - 24);
+                } else {
+                    max = fullMax;
+                }
             }
             cachedScrollMax[sec] = max;
             return max;
