@@ -64,7 +64,7 @@ begin
 end;
 $fn$;
 
--- ── 4) ฟังก์ชันหลัก: วนทุกผลงานที่มีคนผูก LINE แล้วเช็ก 6 จังหวะ ─────────────
+-- ── 4) ฟังก์ชันหลัก: วนทุกผลงานที่มีคนผูก LINE แล้วเช็ก 4 จังหวะ ─────────────
 create or replace function public.line_send_notifications()
 returns void
 language plpgsql
@@ -73,14 +73,13 @@ set search_path = public, vault, net
 as $fn$
 declare
     v_token   text;
-    v_now     timestamp := now() at time zone 'Asia/Bangkok';   -- เวลาไทย (wall clock)
+    v_now     timestamp := now() at time zone 'Asia/Bangkok';
     v_start   timestamp;
     v_end     timestamp;
     v_diff    int;
     v_m       text[];
     r         record;
 begin
-    -- อ่าน Channel Access Token จาก Vault
     select decrypted_secret into v_token
     from vault.decrypted_secrets where name = 'LINE_CHANNEL_TOKEN' limit 1;
     if v_token is null then
@@ -103,8 +102,6 @@ begin
         from public.eposter_works w
         join public.line_links l on l.code = w."รหัสผลงาน"
     loop
-        -- แปลง "HH.MM" หรือ "HH:MM" → timestamp ของวันนี้ (เวลาไทย)
-        --   (จุด/โคลอน = ตัวคั่นนาที เช่น 11.07 = 11:07)
         v_start := null; v_end := null;
         v_m := regexp_match(r.start_str::text, '(\d{1,2})[.:](\d{2})');
         if v_m is not null then
@@ -118,52 +115,39 @@ begin
         -- (1) เช็คอินสำเร็จ
         if r.checkin = 'Y' then
             perform public.line_try_send(r.uid, r.code, 'checkin',
-                '✅ เช็คอินสำเร็จแล้ว!' || E'\n' ||
-                'ผลงาน ' || r.code ||
-                coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
-                ' — ระบบบันทึกการเช็คอินเรียบร้อยแล้ว', v_token);
+                '✅ เช็กอินสำเร็จ ผลงาน: ' || r.code || E'\n' ||
+                'ระบบได้ Check-in ของท่านเรียบร้อยแล้ว' || E'\n' ||
+                'กรุณามารอ ณ จุดนำเสนอ ก่อนเวลานำเสนออย่างน้อย 15 นาที',
+                v_token);
         end if;
 
-        -- (2-4) นับถอยหลังก่อนนำเสนอ (เฉพาะยังไม่รับประกาศ)
+        -- (2) แจ้งเตือนก่อนนำเสนอ 15 นาที (fire ครั้งเดียวเมื่อเข้าช่วง 1-16 นาที)
         if v_start is not null and coalesce(r.reward,'') <> 'Y' then
             v_diff := round(extract(epoch from (v_start - v_now)) / 60)::int;
-
-            if v_diff between 16 and 30 then
-                perform public.line_try_send(r.uid, r.code, 'lead30',
-                    '⏰ อีก ' || v_diff || ' นาที ถึงเวลานำเสนอ' || E'\n' ||
-                    'ผลงาน ' || r.code ||
-                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
-                    ' — เตรียมตัวให้พร้อมนะครับ', v_token);
-            elsif v_diff between 4 and 15 then
+            if v_diff between 1 and 16 then
                 perform public.line_try_send(r.uid, r.code, 'lead15',
-                    '🔔 อีก ' || v_diff || ' นาที ถึงเวลานำเสนอ' || E'\n' ||
-                    'ผลงาน ' || r.code ||
-                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
-                    ' — กรุณาไปรอที่จุดรอนำเสนอ ห้อง 205', v_token);
-            elsif v_diff between 1 and 3 then
-                perform public.line_try_send(r.uid, r.code, 'lead3',
-                    '🔴 อีก ' || v_diff || ' นาที จะถึงเวลานำเสนอแล้ว!' || E'\n' ||
-                    'ผลงาน ' || r.code ||
-                    coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
-                    ' — กรุณาไปที่ห้อง 205 ด่วน', v_token);
+                    '⏰ เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ' || E'\n' ||
+                    'กรุณามายังจุดรอนำเสนอ และรอเรียกตามลำดับคิวของท่าน',
+                    v_token);
             end if;
         end if;
 
-        -- (5) หมดเวลานำเสนอ → ไปรับใบประกาศ
+        -- (3) หมดเวลานำเสนอ → แจ้งรับใบประกาศ (เฉพาะคนที่เช็คอินแล้วและยังไม่รับประกาศ)
         if v_end is not null and r.checkin = 'Y'
            and coalesce(r.reward,'') <> 'Y' and v_now > v_end then
             perform public.line_try_send(r.uid, r.code, 'ended',
-                '🏆 หมดเวลานำเสนอแล้ว' || E'\n' ||
-                'ผลงาน ' || r.code ||
-                coalesce(' (คิวที่ ' || r.queue_no || ')', '') ||
-                ' — กรุณาไปรับใบประกาศจากเจ้าหน้าที่', v_token);
+                '📜 กรุณาติดต่อจุด Check-in เพื่อรับใบประกาศนียบัตร' || E'\n' ||
+                'กรุณาแสดงคูปองพร้อม QR Code ลงทะเบียนแก่เจ้าหน้าที่',
+                v_token);
         end if;
 
-        -- (6) รับใบประกาศแล้ว
+        -- (4) รับใบประกาศสำเร็จ → ขอบคุณและอำลา
         if r.reward = 'Y' then
             perform public.line_try_send(r.uid, r.code, 'reward',
-                '🎉 ขอบคุณที่ร่วมนำเสนอผลงาน!' || E'\n' ||
-                'ขอให้เดินทางโดยสวัสดิภาพ แล้วเจอกันในการประชุมวิชาการวิทยาศาสตร์การแพทย์ครั้งที่ 35', v_token);
+                '🙏 ขอบคุณที่ร่วมส่งผลงานนำเสนอ' || E'\n' ||
+                'ขอขอบคุณที่ร่วมเป็นส่วนหนึ่งของการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34' || E'\n' ||
+                'ขอให้เดินทางโดยสวัสดิภาพ และหวังเป็นอย่างยิ่งว่าจะได้พบกันอีกในการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 35',
+                v_token);
         end if;
     end loop;
 end;
