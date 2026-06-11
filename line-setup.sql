@@ -89,14 +89,10 @@ begin
 
     for r in
         select w."รหัสผลงาน"      as code,
-               w."คำนำหน้า"       as prefix,
-               w."ชื่อ"           as fname,
-               w."นามสกุล"        as lname,
                w."เวลาการนำเสนอ"  as start_str,
                w."หมดการนำเสนอ"   as end_str,
                w."Checkin"        as checkin,
                w."รับประกาศ"      as reward,
-               w."จอที่"          as screen,
                w."ลำดับคิว"       as queue_no,
                l.line_user_id     as uid
         from public.eposter_works w
@@ -121,31 +117,33 @@ begin
                 v_token);
         end if;
 
-        -- (2) แจ้งเตือนก่อนนำเสนอ 15 นาที (fire ที่ช่วง 14-16 นาที เพื่อความแม่นยำกับ cron รายนาที)
+        -- (2) แจ้งเตือนก่อนนำเสนอ ~15 นาที (fire ที่ช่วง 14-16 นาที)
         if v_start is not null and coalesce(r.reward,'') <> 'Y' then
             v_diff := round(extract(epoch from (v_start - v_now)) / 60)::int;
             if v_diff between 14 and 16 then
                 perform public.line_try_send(r.uid, r.code, 'lead15',
-                    '⏰ เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ' || E'\n' ||
-                    'กรุณามายังจุดรอนำเสนอ และรอเรียกตามลำดับคิวของท่าน',
+                    '⏰ ผลงาน: ' || r.code || ' เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ' || E'\n' ||
+                    'กรุณามายังจุดรอนำเสนอ และรอเรียกตามลำดับคิวของท่าน' || E'\n' ||
+                    'คิวของท่านคือ คิวที่ ' || coalesce(r.queue_no::text,'?') ||
+                    ' เวลาการนำเสนอ ' || coalesce(r.start_str,'-') || ' - ' || coalesce(r.end_str,'-') || ' น.',
                     v_token);
             end if;
         end if;
 
-        -- (3) หมดเวลานำเสนอ → แจ้งรับใบประกาศ (เฉพาะคนที่เช็คอินแล้วและยังไม่รับประกาศ)
+        -- (3) หมดเวลานำเสนอ → แจ้งรับใบประกาศ
         if v_end is not null and r.checkin = 'Y'
            and coalesce(r.reward,'') <> 'Y' and v_now > v_end then
             perform public.line_try_send(r.uid, r.code, 'ended',
-                '📜 กรุณาติดต่อจุด Check-in เพื่อรับใบประกาศนียบัตร' || E'\n' ||
-                'กรุณาแสดงคูปองพร้อม QR Code ลงทะเบียนแก่เจ้าหน้าที่',
+                '📜 ผลงาน: ' || r.code || E'\n' ||
+                'กรุณาติดต่อจุด Check-in เพื่อรับใบประกาศนียบัตร' || E'\n' ||
+                'และแสดงคูปองพร้อม QR Code ลงทะเบียนแก่เจ้าหน้าที่',
                 v_token);
         end if;
 
         -- (4) รับใบประกาศสำเร็จ → ขอบคุณและอำลา
         if r.reward = 'Y' then
             perform public.line_try_send(r.uid, r.code, 'reward',
-                '🙏 ขอบคุณที่ร่วมส่งผลงานนำเสนอ' || E'\n' ||
-                'ขอขอบคุณที่ร่วมเป็นส่วนหนึ่งของการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34' || E'\n' ||
+                '🙏 ขอบคุณที่ร่วมส่งผลงานและที่เป็นส่วนหนึ่งของการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34' || E'\n' ||
                 'ขอให้เดินทางโดยสวัสดิภาพ และหวังเป็นอย่างยิ่งว่าจะได้พบกันอีกในการประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 35',
                 v_token);
         end if;
