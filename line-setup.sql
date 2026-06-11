@@ -115,16 +115,16 @@ begin
         -- (1) เช็คอินสำเร็จ
         if r.checkin = 'Y' then
             perform public.line_try_send(r.uid, r.code, 'checkin',
-                '✅ เช็กอินสำเร็จ ผลงาน: ' || r.code || E'\n' ||
-                'ระบบได้ Check-in ของท่านเรียบร้อยแล้ว' || E'\n' ||
+                '✅ Check-in สำเร็จ ผลงาน: ' || r.code || E'\n' ||
+                'ระบบ ได้Check-in ของท่านเรียบร้อยแล้ว' || E'\n' ||
                 'กรุณามารอ ณ จุดนำเสนอ ก่อนเวลานำเสนออย่างน้อย 15 นาที',
                 v_token);
         end if;
 
-        -- (2) แจ้งเตือนก่อนนำเสนอ 15 นาที (fire ครั้งเดียวเมื่อเข้าช่วง 1-16 นาที)
+        -- (2) แจ้งเตือนก่อนนำเสนอ 15 นาที (fire ที่ช่วง 14-16 นาที เพื่อความแม่นยำกับ cron รายนาที)
         if v_start is not null and coalesce(r.reward,'') <> 'Y' then
             v_diff := round(extract(epoch from (v_start - v_now)) / 60)::int;
-            if v_diff between 1 and 16 then
+            if v_diff between 14 and 16 then
                 perform public.line_try_send(r.uid, r.code, 'lead15',
                     '⏰ เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ' || E'\n' ||
                     'กรุณามายังจุดรอนำเสนอ และรอเรียกตามลำดับคิวของท่าน',
