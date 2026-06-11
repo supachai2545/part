@@ -625,6 +625,14 @@
         let currentPage    = 1;
         let searchTimeout  = null;
 
+        // เปลี่ยนค่า SCORE_RESET_DATE เพื่อล้างคะแนนทุกเครื่องในการเปิดครั้งถัดไป
+        var SCORE_RESET_DATE = '2026-06-11';
+        if (localStorage.getItem('lastScoreReset') !== SCORE_RESET_DATE) {
+            localStorage.removeItem('posterPoints');
+            localStorage.removeItem('viewedPosters');
+            localStorage.setItem('lastScoreReset', SCORE_RESET_DATE);
+        }
+
         let userPoints    = parseInt(localStorage.getItem('posterPoints') || '0');
         let viewedPosters = JSON.parse(localStorage.getItem('viewedPosters') || '[]');
         let timerInterval = null;
