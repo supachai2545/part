@@ -633,6 +633,7 @@
         if (localStorage.getItem('lastScoreReset') !== SCORE_RESET_DATE) {
             localStorage.removeItem('posterPoints');
             localStorage.removeItem('viewedPosters');
+            localStorage.removeItem('posterRewardClaimed');
             localStorage.setItem('lastScoreReset', SCORE_RESET_DATE);
         }
 
@@ -1440,6 +1441,12 @@
         // =============================================================
         function startViewerTimer(id) {
             if (viewedPosters.indexOf(id) > -1) return;
+            // ยังไม่ถึงวันเปิดระบบ → ซ่อน timer ไม่นับ
+            if (new Date() < SCORE_OPEN_DATE) {
+                var ct = document.getElementById('countdownTimerContainer');
+                if (ct) { ct.classList.add('hidden'); ct.classList.remove('flex'); }
+                return;
+            }
             stopViewerTimer();
             timeElapsed = 0;
             const countdownText   = document.getElementById('countdownText');
@@ -1553,9 +1560,17 @@
         }
 
         function updatePassportUIButtons() {
-            const isClaimed = localStorage.getItem('posterRewardClaimed') === 'true';
+            const isClaimed      = localStorage.getItem('posterRewardClaimed') === 'true';
+            const scoringActive  = new Date() >= SCORE_OPEN_DATE;
             document.getElementById('passPoints').innerText = `${userPoints} / ${TARGET_POINTS} PT`;
             const btn = document.getElementById('passClaimBtn');
+            if (!scoringActive) {
+                btn.className = "w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-sm text-blue-700 bg-blue-50 border border-blue-200 cursor-default";
+                btn.innerHTML = '<i data-lucide="calendar-clock" class="w-3 h-3 sm:w-3.5 sm:h-3.5 inline-block mr-1"></i> เริ่มนับคะแนน 24 มิ.ย. 2569 เวลา 08.00 น.';
+                btn.onclick   = null;
+                lucide.createIcons();
+                return;
+            }
             if (isClaimed) {
                 btn.className = "w-[85%] mx-auto py-1 sm:py-2 rounded-md font-black text-[7.5px] min-[375px]:text-[8.5px] sm:text-[11px] shadow-sm text-white bg-gradient-to-r from-amber-500 to-yellow-500 cursor-pointer";
                 btn.innerHTML = '<i data-lucide="badge-check" class="w-3 h-3 sm:w-3.5 sm:h-3.5 inline-block mr-1"></i> แสดงหลักฐานสิทธิ์';
@@ -1683,6 +1698,7 @@
         }
 
         function openClaimPopup() {
+            if (new Date() < SCORE_OPEN_DATE) return;
             const popup   = document.getElementById('claimPopup');
             const content = document.getElementById('claimPopupContent');
             popup.classList.remove('hidden');
