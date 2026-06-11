@@ -27,8 +27,10 @@
             border: 1px solid rgba(255,255,255,.9);
             box-shadow: 0 10px 25px -5px rgba(0,0,0,.05), inset 0 1px 1px rgba(255,255,255,1);
         }
-        @keyframes slideInUp { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
-        .pop { animation: slideInUp .4s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes slideInUp   { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUpSheet { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+        .pop   { animation: slideInUp   .4s cubic-bezier(.16,1,.3,1) both; }
+        .sheet { animation: slideUpSheet .4s cubic-bezier(.16,1,.3,1) both; }
     </style>
 </head>
 <body>
@@ -55,9 +57,14 @@
                     <p class="text-[10px] text-slate-400 font-medium">ติดตามลำดับการนำเสนอผลงาน E-POSTER</p>
                 </div>
             </div>
-            <div id="profileChip" class="hidden items-center gap-2 bg-white/70 pl-1 pr-2.5 py-1 rounded-full border border-white shrink-0">
-                <img id="profilePic" src="" class="w-7 h-7 rounded-full object-cover bg-slate-200">
-                <span id="profileName" class="text-[11px] font-bold text-slate-600 max-w-[80px] truncate">-</span>
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="helpBtn" onclick="showOnboarding()" class="hidden w-8 h-8 bg-slate-100 hover:bg-indigo-100 text-slate-400 hover:text-indigo-600 rounded-full flex items-center justify-center transition-all active:scale-90" title="คำแนะนำการใช้งาน">
+                    <i data-lucide="circle-help" class="w-4 h-4"></i>
+                </button>
+                <div id="profileChip" class="hidden items-center gap-2 bg-white/70 pl-1 pr-2.5 py-1 rounded-full border border-white">
+                    <img id="profilePic" src="" class="w-7 h-7 rounded-full object-cover bg-slate-200">
+                    <span id="profileName" class="text-[11px] font-bold text-slate-600 max-w-[80px] truncate">-</span>
+                </div>
             </div>
         </header>
 
@@ -130,6 +137,57 @@
     <!-- Toast -->
     <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg z-50 pop" style="background:#1e293b"></div>
 
+    <!-- Onboarding bottom-sheet -->
+    <div id="onboardingOverlay" class="hidden fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-end justify-center font-sans">
+        <div class="bg-white w-full max-w-md rounded-t-[2rem] p-6 pb-10 shadow-2xl sheet">
+            <div class="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <!-- Icon + Title -->
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-green-100" style="background:#06C75515">
+                    <i data-lucide="bell-ring" class="w-8 h-8" style="color:#06C755"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">ยินดีต้อนรับ!</h2>
+                <p id="obUserName" class="text-sm text-slate-500 mt-1 font-medium">ระบบติดตามการนำเสนอผลงาน E-POSTER</p>
+            </div>
+            <!-- Steps -->
+            <div class="space-y-3 mb-6">
+                <div class="flex items-start gap-3 bg-slate-50 rounded-2xl p-4">
+                    <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                        <i data-lucide="user-plus" class="w-4 h-4 text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">① เพิ่มเพื่อน LINE OA</p>
+                        <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">เพิ่มเพื่อน <b>DMSc Conference #34</b> เพื่อให้ระบบส่งแจ้งเตือนเข้า LINE ของคุณได้</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 bg-slate-50 rounded-2xl p-4">
+                    <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                        <i data-lucide="keyboard" class="w-4 h-4 text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">② กรอกรหัสผลงาน</p>
+                        <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">พิมพ์รหัสผลงาน เช่น <b>P1-001</b> แล้วกด <b>บันทึก</b> ลงทะเบียนได้สูงสุด 2 ผลงาน</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 bg-slate-50 rounded-2xl p-4">
+                    <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                        <i data-lucide="bell" class="w-4 h-4 text-emerald-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">③ รับแจ้งเตือนอัตโนมัติ</p>
+                        <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">ระบบจะแจ้งเตือนเมื่อ <b>เช็คอินสำเร็จ · ก่อนนำเสนอ 15 นาที · หมดเวลา · รับใบประกาศ</b></p>
+                    </div>
+                </div>
+            </div>
+            <!-- CTA -->
+            <button onclick="closeOnboarding()"
+                    class="w-full py-4 text-white font-extrabold rounded-2xl text-base shadow-lg active:scale-95 transition-all"
+                    style="background:#06C755">
+                เข้าใจแล้ว เริ่มใช้งาน!
+            </button>
+        </div>
+    </div>
+
     <script>
         var sb       = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         var userId   = null;
@@ -167,6 +225,25 @@
             t._tm = setTimeout(() => t.classList.add('hidden'), 2400);
         }
 
+        function maybeShowOnboarding() {
+            if (localStorage.getItem('eq_ob_done')) return;
+            showOnboarding();
+        }
+        function showOnboarding() {
+            const el = document.getElementById('obUserName');
+            if (el && userName) el.textContent = 'สวัสดีคุณ ' + userName + ' 👋';
+            const overlay = document.getElementById('onboardingOverlay');
+            // re-trigger animation on re-open
+            const sheet = overlay.querySelector('.sheet');
+            if (sheet) { sheet.style.animation = 'none'; sheet.offsetHeight; sheet.style.animation = ''; }
+            overlay.classList.remove('hidden');
+            lucide.createIcons();
+        }
+        function closeOnboarding() {
+            localStorage.setItem('eq_ob_done', '1');
+            document.getElementById('onboardingOverlay').classList.add('hidden');
+        }
+
         async function boot() {
             try {
                 if (LIFF_ID === 'PUT-YOUR-LIFF-ID-HERE') { showError('ยังไม่ได้ตั้งค่า LIFF ID'); return; }
@@ -187,8 +264,11 @@
 
                 document.getElementById('loadingBox').classList.add('hidden');
                 document.getElementById('contentBox').classList.remove('hidden');
+                document.getElementById('helpBtn').classList.remove('hidden');
+                document.getElementById('helpBtn').classList.add('flex');
                 loadMyCodes();
                 lucide.createIcons();
+                maybeShowOnboarding();
 
                 // เช็คว่าเพิ่มเพื่อน OA แล้วหรือยัง + เช็คซ้ำทุกครั้งที่กลับมาหน้านี้ (หลังกดเพิ่มเพื่อน)
                 checkFriendship();
