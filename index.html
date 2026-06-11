@@ -1172,25 +1172,16 @@
             function fail(){ img.style.display = 'none'; if (err) err.style.display = 'flex'; }
             function ok(){ img.style.display = 'block'; if (err) err.style.display = 'none'; }
 
+            var full = new Image();
+            full.onload  = function(){ ok(); img.src = fullSrc; };
+            full.onerror = function(){ if (img.src === fullSrc || !thumbSrc) fail(); };
+            full.src = fullSrc;
+
             if (thumbSrc && thumbSrc !== fullSrc) {
-                // โหลด thumb ก่อน แสดงทันที
-                img.onload  = function(){ ok(); };
-                img.onerror = function(){
-                    // thumb พัง → ลองรูปเต็ม
-                    img.onerror = function(){ img.onerror = null; fail(); };
-                    img.onload  = function(){ ok(); };
-                    img.src = fullSrc;
-                };
+                img.onerror = function(){ img.src = fullSrc; };
                 img.src = thumbSrc;
-                // โหลดรูปเต็มเบื้องหลัง แล้วค่อยสลับ (ไม่รอ)
-                var full = new Image();
-                full.onload = function(){
-                    if (img.src !== fullSrc) { img.src = fullSrc; }
-                };
-                full.src = fullSrc;
             } else {
-                img.onload  = function(){ ok(); };
-                img.onerror = function(){ img.onerror = null; fail(); };
+                img.onerror = fail;
                 img.src = fullSrc;
             }
             setupImageZoom(box, img, document.getElementById(prefix + 'In'), document.getElementById(prefix + 'Out'));
