@@ -1545,25 +1545,21 @@
         // ── cache scrollMax เพื่อไม่ให้ reflow ทุก frame ──────────────────
         var cachedScrollMax = { checkin: -1, reward: -1 };
 
-        // ── หาจุดหยุดสูงสุด: หยุดหลังการ์ดสีอันสุดท้าย ─────────────────────
+        // ── หาจุดหยุดสูงสุด: หยุดเมื่อการ์ดสีอันสุดท้ายอยู่ล่างสุดของ viewport ──
         function getScrollMax(listEl, sec) {
             if (cachedScrollMax[sec] >= 0) return cachedScrollMax[sec];
             const fullMax = listEl.scrollHeight - listEl.clientHeight;
             let max;
             const urgencyCards = listEl.querySelectorAll('.urgency-card');
             if (urgencyCards.length > 0) {
-                // scroll ถึงการ์ดสีอันสุดท้าย แล้วหยุด
-                const last     = urgencyCards[urgencyCards.length - 1];
-                const boundary = last.offsetTop + last.offsetHeight + 16;
+                const last = urgencyCards[urgencyCards.length - 1];
+                // scrollTop ที่ทำให้ bottom ของการ์ดสีอยู่พอดีล่างสุด viewport
+                const boundary = last.offsetTop + last.offsetHeight - listEl.clientHeight + 24;
                 max = Math.max(0, Math.min(boundary, fullMax));
             } else {
-                // ไม่มีการ์ดสี — ใช้ขอบ expired-card เหมือนเดิม
+                // ไม่มีการ์ดสี — หยุดก่อน expired-card หรือไม่เลื่อนเลย
                 const expired = listEl.querySelectorAll('.expired-card');
-                if (expired.length > 0) {
-                    max = Math.max(0, expired[0].offsetTop - 24);
-                } else {
-                    max = fullMax;
-                }
+                max = expired.length > 0 ? Math.max(0, expired[0].offsetTop - 24) : 0;
             }
             cachedScrollMax[sec] = max;
             return max;
