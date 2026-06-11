@@ -994,6 +994,10 @@
                 return imgHatZ1 <= scrollBox.clientHeight ? 1 : scrollBox.clientHeight / imgHatZ1;
             }
             function applyFit() {
+                if (!scrollBox.clientWidth || !scrollBox.clientHeight) {
+                    requestAnimationFrame(applyFit);
+                    return;
+                }
                 var f = getFitZoom();
                 MIN = Math.max(0.1, f);
                 zoomTo(f, null, null, false);
@@ -1004,6 +1008,7 @@
 
             // ตั้ง zoom + เลื่อน scroll ให้จุดโฟกัส (fx,fy บนพื้นที่มอง) อยู่กับที่ — อ้างอิงจากสถานะ ref
             function applyAt(z, fx, fy, refZoom, refL, refT) {
+                if (!scrollBox.clientWidth) return;
                 z = Math.min(Math.max(z, MIN), MAX);
                 var ratio = z / refZoom;
                 zoom = z;
