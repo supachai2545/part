@@ -261,15 +261,15 @@
             let icon, title, cardCls, stepsDone, timeBadge;
 
             if (reward) {
-                icon='🏆'; title='รับใบประกาศแล้ว'; cardCls='border-amber-300 bg-amber-50/80'; stepsDone=3;
+                icon='🏆'; title='รับใบประกาศแล้ว'; cardCls='border-blue-400 bg-blue-50/80'; stepsDone=3;
                 timeBadge=`<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">🏆 เสร็จสิ้นแล้ว</span>`;
             } else if (live) {
                 icon='🔴'; title='กำลังนำเสนออยู่'; cardCls='border-rose-400 bg-rose-50/80'; stepsDone=2;
                 const left = endT ? Math.round((endT - now) / 60000) : null;
                 timeBadge=`<span class="inline-flex items-center gap-1.5 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>กำลังนำเสนออยู่${left!==null?' · เหลือ '+left+' นาที':''}</span>`;
             } else if (diffMin !== null && diffMin <= 0) {
-                icon='⏰'; title='เลยเวลานำเสนอ'; cardCls='border-rose-300 bg-rose-50/50'; stepsDone=checkin?1:0;
-                timeBadge=`<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>เลยเวลา ${Math.abs(diffMin)} นาที</span>`;
+                icon='✅'; title='นำเสนอเรียบร้อยแล้ว'; cardCls='border-emerald-300 bg-emerald-50/80'; stepsDone=2;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">✅ นำเสนอเรียบร้อยแล้ว</span>`;
             } else if (diffMin !== null && diffMin <= 15) {
                 icon='⏰'; title='ใกล้ถึงเวลานำเสนอ'; cardCls='border-rose-300 bg-rose-50/80'; stepsDone=checkin?1:0;
                 timeBadge=`<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>อีก ${diffMin} นาที!</span>`;
@@ -302,8 +302,9 @@
                 ${i<2?`<div class="flex-1 h-0.5 mb-5 ${stepsDone>i+1?'bg-blue-300':'bg-slate-200'}"></div>`:''}
             `).join('');
 
+            const useAnim = !cardCls.includes('border-slate-200');
             return `
-            <div class="highlight-card rounded-[1.5rem] p-5 border-2 ${cardCls} pop">
+            <div class="highlight-card rounded-[1.5rem] p-5 border-2 ${cardCls} ${useAnim?'pop':''}">
                 <div class="flex justify-between items-center mb-2">
                     <span class="bg-slate-800 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider">${code}</span>
                     <div class="flex items-center gap-2">
@@ -329,6 +330,7 @@
         }
 
         async function loadMyCodes() {
+            const savedY = window.scrollY || 0;
             const { data } = await sb.from('line_links').select('*').eq('line_user_id', userId);
             const box    = document.getElementById('myCodes');
             const addBox = document.getElementById('addCodeBox');
@@ -338,6 +340,7 @@
             if (!data || count === 0) {
                 box.innerHTML = `<div class="highlight-card rounded-[1.5rem] p-6 border-2 border-dashed border-slate-200 text-center text-sm text-slate-400">ยังไม่มีผลงานที่ติดตาม<br>กรอกรหัสด้านบนเพื่อเริ่มรับแจ้งเตือน</div>`;
                 lucide.createIcons();
+                requestAnimationFrame(() => window.scrollTo(0, savedY));
                 return;
             }
             // แสดงจำนวนที่ลงทะเบียนแล้ว
@@ -349,6 +352,7 @@
                 return buildCard(w, d.code);
             }).join('');
             lucide.createIcons();
+            requestAnimationFrame(() => window.scrollTo(0, savedY));
         }
 
         async function removeCode(code) {
