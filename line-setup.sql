@@ -94,6 +94,7 @@ begin
                w."Checkin"        as checkin,
                w."รับประกาศ"      as reward,
                w."ลำดับคิว"       as queue_no,
+               w."จอที่"           as screen_no,
                l.line_user_id     as uid
         from public.eposter_works w
         join public.line_links l on l.code = w."รหัสผลงาน"
@@ -126,6 +127,7 @@ begin
                     'ผลงาน: ' || r.code || E'\n' ||
                     'เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ กรุณามายังจุดรอนำเสนอและรอเรียกตามลำดับคิว' || E'\n' ||
                     'คิวของท่าน: ' || coalesce(r.queue_no::text,'?') || E'\n' ||
+                    'จอที่: ' || coalesce(r.screen_no::text,'?') || E'\n' ||
                     'เวลานำเสนอ: ' || coalesce(r.start_str,'-') || ' – ' || coalesce(r.end_str,'-') || ' น.',
                     v_token);
             end if;
