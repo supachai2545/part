@@ -131,6 +131,23 @@
         var userName = '';
         var allWorks = {};
 
+        function parseTime(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            let hh, mm;
+            const hm = s.match(/^(\d{1,2}):(\d{2})/);
+            if (hm) { hh = parseInt(hm[1]); mm = parseInt(hm[2]); }
+            else {
+                const num = parseFloat(s.replace(',', '.'));
+                if (isNaN(num)) return null;
+                hh = Math.floor(num);
+                mm = Math.round((num - hh) * 100);
+            }
+            const d = new Date();
+            d.setHours(hh, mm, 0, 0);
+            return d;
+        }
+
         function showError(msg) {
             document.getElementById('loadingBox').classList.add('hidden');
             document.getElementById('contentBox').classList.add('hidden');
@@ -230,15 +247,45 @@
             loadMyCodes();
         }
 
-        // การ์ดสไตล์เดียวกับหน้าติดตาม
+        // การ์ดสไตล์เดียวกับหน้าติดตาม พร้อม countdown เหมือนหน้าหลัก
         function buildCard(w, code) {
             const name   = [w['ชื่อ'], w['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
             const reward = w['รับประกาศ'] === 'Y';
             const checkin= w['Checkin'] === 'Y';
-            let icon, title, cardCls, stepsDone;
-            if (reward)       { icon='🏆'; title='รับใบประกาศแล้ว';  cardCls='border-amber-300 bg-amber-50/80'; stepsDone=3; }
-            else if (checkin) { icon='✅'; title='เช็คอินแล้ว';       cardCls='border-blue-300 bg-blue-50/80';  stepsDone=1; }
-            else              { icon='⏳'; title='รอเช็คอินเข้างาน';  cardCls='border-slate-200 bg-white/90';   stepsDone=0; }
+            const startT = parseTime(w['เวลาการนำเสนอ'] || '');
+            const endT   = parseTime(w['หมดการนำเสนอ'] || '');
+            const now    = new Date();
+            const live   = startT && endT && now >= startT && now < endT;
+            const diffMin= startT ? Math.round((startT - now) / 60000) : null;
+
+            let icon, title, cardCls, stepsDone, timeBadge;
+
+            if (reward) {
+                icon='🏆'; title='รับใบประกาศแล้ว'; cardCls='border-amber-300 bg-amber-50/80'; stepsDone=3;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">🏆 เสร็จสิ้นแล้ว</span>`;
+            } else if (live) {
+                icon='🔴'; title='กำลังนำเสนออยู่'; cardCls='border-rose-400 bg-rose-50/80'; stepsDone=2;
+                const left = endT ? Math.round((endT - now) / 60000) : null;
+                timeBadge=`<span class="inline-flex items-center gap-1.5 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>กำลังนำเสนออยู่${left!==null?' · เหลือ '+left+' นาที':''}</span>`;
+            } else if (diffMin !== null && diffMin <= 0) {
+                icon='⏰'; title='เลยเวลานำเสนอ'; cardCls='border-rose-300 bg-rose-50/50'; stepsDone=checkin?1:0;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>เลยเวลา ${Math.abs(diffMin)} นาที</span>`;
+            } else if (diffMin !== null && diffMin <= 15) {
+                icon='⏰'; title='ใกล้ถึงเวลานำเสนอ'; cardCls='border-rose-300 bg-rose-50/80'; stepsDone=checkin?1:0;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block"></span>อีก ${diffMin} นาที!</span>`;
+            } else if (diffMin !== null && diffMin <= 30) {
+                icon='🟠'; title='เตรียมพร้อมนำเสนอ'; cardCls='border-orange-300 bg-orange-50/80'; stepsDone=checkin?1:0;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full">🟠 อีก ${diffMin} นาที</span>`;
+            } else if (diffMin !== null) {
+                icon=checkin?'✅':'⏳'; title=checkin?'เช็คอินแล้ว':'รอเช็คอินเข้างาน';
+                cardCls=checkin?'border-blue-300 bg-blue-50/80':'border-slate-200 bg-white/90'; stepsDone=checkin?1:0;
+                timeBadge=`<span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-bold px-2.5 py-1 rounded-full">🕐 อีก ${diffMin} นาที</span>`;
+            } else {
+                if (reward)       { icon='🏆'; title='รับใบประกาศแล้ว';  cardCls='border-amber-300 bg-amber-50/80'; stepsDone=3; }
+                else if (checkin) { icon='✅'; title='เช็คอินแล้ว';       cardCls='border-blue-300 bg-blue-50/80';  stepsDone=1; }
+                else              { icon='⏳'; title='รอเช็คอินเข้างาน';  cardCls='border-slate-200 bg-white/90';   stepsDone=0; }
+                timeBadge='';
+            }
 
             const stepDefs = [
                 { label:'เช็คอิน',    icon:'clipboard-check', on:'bg-blue-500 text-white'  },
@@ -267,9 +314,10 @@
                     </div>
                 </div>
                 <h2 class="text-xl font-extrabold text-slate-800 leading-snug break-words mb-1">${name}</h2>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full mb-3" style="background:#06C7551a;color:#06C755">
-                    🔔 รับแจ้งเตือนทาง LINE แล้ว
-                </span>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    ${timeBadge}
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style="background:#06C7551a;color:#06C755">🔔 รับแจ้งเตือน LINE</span>
+                </div>
                 <div class="flex flex-col gap-1 text-xs mb-3">
                     <span class="text-indigo-700 font-bold text-sm">นำเสนอจอที่ ${w['จอที่']||'-'} &nbsp; เวลา ${w['เวลาการนำเสนอ']||'-'}${w['หมดการนำเสนอ']?' – '+w['หมดการนำเสนอ']:''} น.${w['ลำดับคิว']?' &nbsp;<span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[11px]">คิวที่ '+w['ลำดับคิว']+'</span>':''}</span>
                     <span class="text-slate-600 font-medium"><span class="text-slate-400">ด้าน:</span> ${w['ด้านของบทคัดย่อ']||'-'}</span>
@@ -310,6 +358,9 @@
         }
 
         boot();
+
+        // อัปเดต countdown ทุก 30 วินาที
+        setInterval(() => { if (userId) loadMyCodes(); }, 30000);
     </script>
 </body>
 </html>
