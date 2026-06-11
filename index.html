@@ -111,6 +111,7 @@
         @keyframes imageScaleUp { from { transform: scale(0.9) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
 
         .no-scroll { overflow: hidden; }
+        #posterGrid, .card-3d-wrap { touch-action: pan-y; }
         .score-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
@@ -1048,9 +1049,10 @@
             // pinch-to-zoom (สองนิ้ว) + แพนนิ้วเดียวอิสระทุกทิศ (ลากตรงไหนก็ได้)
             var pd = 0, pz = 1, pmx = 0, pmy = 0, pl = 0, pt = 0;       // pinch state
             var panOn = false, pStartX = 0, pStartY = 0, pSL = 0, pST = 0; // pan state
+            var _swX = 0, _swY = 0, _swT = 0;                              // swipe-nav tracking
             scrollBox.addEventListener('touchstart', function(e){
                 if (e.touches.length === 2) {
-                    panOn = false;
+                    panOn = false; _swT = 0;
                     if (animH) { cancelAnimationFrame(animH); animH = null; }
                     pd = dist(e.touches); pz = zoom; pl = scrollBox.scrollLeft; pt = scrollBox.scrollTop;
                     var r = scrollBox.getBoundingClientRect();
@@ -1060,6 +1062,7 @@
                     panOn = true;
                     pStartX = e.touches[0].clientX; pStartY = e.touches[0].clientY;
                     pSL = scrollBox.scrollLeft; pST = scrollBox.scrollTop;
+                    _swX = e.touches[0].clientX; _swY = e.touches[0].clientY; _swT = Date.now();
                 }
             }, { passive: true });
             scrollBox.addEventListener('touchmove', function(e){
@@ -1079,8 +1082,21 @@
                     panOn = true;
                     pStartX = e.touches[0].clientX; pStartY = e.touches[0].clientY;
                     pSL = scrollBox.scrollLeft; pST = scrollBox.scrollTop;
+                    _swT = 0;
                 }
-                if (e.touches.length === 0) panOn = false;
+                if (e.touches.length === 0) {
+                    panOn = false;
+                    // Fullscreen swipe-to-navigate: fast horizontal flick
+                    if (scrollBox.id === 'fsBox' && _swT && e.changedTouches.length === 1) {
+                        var _dx = e.changedTouches[0].clientX - _swX;
+                        var _dy = e.changedTouches[0].clientY - _swY;
+                        var _dt = Date.now() - _swT;
+                        if (Math.abs(_dx) > 85 && Math.abs(_dx) > Math.abs(_dy) * 2.5 && _dt < 380) {
+                            navigateViewer(_dx < 0 ? 1 : -1);
+                        }
+                    }
+                    _swT = 0;
+                }
             }, { passive: true });
 
             // desktop: ลากเมาส์เพื่อแพนอิสระ (ผูกกับ scrollBox ป้องกัน listener รั่ว)
@@ -1665,6 +1681,25 @@
         // 🔑 EVENT LISTENERS
         // =============================================================
         viewerModal.addEventListener('click', function(e) { if (e.target === viewerModal) closeViewer(); });
+
+        // Swipe left/right บน info panel ของ viewer → เปลี่ยนโปสเตอร์
+        (function() {
+            var sx = 0, sy = 0, st = 0;
+            viewerModal.addEventListener('touchstart', function(e) {
+                if (e.target.closest('#posterBox')) return;
+                if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now(); }
+            }, { passive: true });
+            viewerModal.addEventListener('touchend', function(e) {
+                if (!st || e.target.closest('#posterBox')) { st = 0; return; }
+                if (e.changedTouches.length === 1) {
+                    var dx = e.changedTouches[0].clientX - sx;
+                    var dy = e.changedTouches[0].clientY - sy;
+                    var dt = Date.now() - st;
+                    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 500) navigateViewer(dx < 0 ? 1 : -1);
+                }
+                st = 0;
+            }, { passive: true });
+        })();
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') { closeViewer(); closeRewardModal(); closeClaimPopup(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); }
