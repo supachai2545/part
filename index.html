@@ -1484,9 +1484,21 @@
                 localStorage.setItem('viewedPosters', JSON.stringify(viewedPosters));
             }
             var oldLevel = getLevel(userPoints);
+            var prevPts  = userPoints;
             if (scoringActive) {
                 userPoints += POINTS_PER_VIEW;
                 localStorage.setItem('posterPoints', userPoints);
+                // บันทึก milestone ใน GA เมื่อผ่านแต่ละเกณฑ์คะแนน
+                if (typeof gtag === 'function') {
+                    [50, 75, 100, 110].forEach(function(m) {
+                        if (prevPts < m && userPoints >= m) {
+                            gtag('event', 'score_milestone', {
+                                'milestone_points': m,
+                                'total_points':     userPoints
+                            });
+                        }
+                    });
+                }
             }
             var newLevel = getLevel(userPoints);
             _passportJustEarned = (newLevel > oldLevel);
