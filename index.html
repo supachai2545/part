@@ -1086,14 +1086,16 @@
                 }
                 if (e.touches.length === 0) {
                     panOn = false;
-                    // Fullscreen swipe-to-navigate: fast horizontal flick
+                    // Fullscreen swipe-to-navigate
                     if (scrollBox.id === 'fsBox' && _swT && e.changedTouches.length === 1) {
                         var _dx = e.changedTouches[0].clientX - _swX;
                         var _dy = e.changedTouches[0].clientY - _swY;
                         var _dt = Date.now() - _swT;
-                        if (Math.abs(_dx) > 85 && Math.abs(_dx) > Math.abs(_dy) * 2.5 && _dt < 380) {
-                            navigateViewer(_dx < 0 ? 1 : -1);
-                        }
+                        // ถ้าไม่ได้ zoom → ปัดง่าย; ถ้า zoom อยู่ → ต้องเร็วมาก (ป้องกัน pan)
+                        var isSwipe = zoom <= 1.05
+                            ? (Math.abs(_dx) > 50 && Math.abs(_dx) > Math.abs(_dy) * 1.5)
+                            : (Math.abs(_dx) > 110 && Math.abs(_dx) > Math.abs(_dy) * 3.5 && _dt < 280);
+                        if (isSwipe) navigateViewer(_dx < 0 ? 1 : -1);
                     }
                     _swT = 0;
                 }
