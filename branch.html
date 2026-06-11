@@ -213,13 +213,13 @@
         <table class="w-full text-left min-w-[800px]">
           <thead class="bg-slate-50/80 border-b border-gray-100">
             <tr class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">
-              <th class="py-4 px-4 w-[10%]">รหัส</th>
-              <th class="py-4 px-4 w-[19%]">ผู้นำเสนอ</th>
-              <th class="py-4 px-4 w-[24%]">ชื่อผลงาน</th>
-              <th class="py-4 px-4 w-[13%]">สาขา</th>
-              <th class="py-4 px-4 w-[12%] text-center">ลำดับ / เวลา</th>
-              <th class="py-4 px-4 w-[13%] text-center">สถานะเช็คอิน</th>
-              <th class="py-4 px-4 w-[12%] text-center">ใบประกาศ</th>
+              <th class="py-4 px-3 w-[9%]">รหัส</th>
+              <th class="py-4 px-3 w-[18%]">ผู้นำเสนอ</th>
+              <th class="py-4 px-3 w-[22%]">ชื่อผลงาน</th>
+              <th class="py-4 px-3 w-[10%]">สาขา</th>
+              <th class="py-4 px-3 w-[11%] text-center">ลำดับ / เวลา</th>
+              <th class="py-4 px-3 w-[15%] text-center">สถานะเช็คอิน</th>
+              <th class="py-4 px-3 w-[15%] text-center">ใบประกาศ</th>
             </tr>
           </thead>
           <tbody id="tableBody" class="divide-y divide-gray-100">
@@ -307,6 +307,7 @@ function formatTime(v){
   const hd=s.match(/^(\d{1,2})\.(\d{2})$/); if(hd) return `${hd[1].padStart(2,'0')}:${hd[2]} น.`;
   return '';
 }
+function findTime(r,...keys){ for(const k of keys){ const t=formatTime(r[k]||''); if(t) return t; } return ''; }
 function parsePresTime(str){
   const m=String(str||'').match(/(\d{1,2})[.:](\d{2})/);
   if(!m) return null;
@@ -379,7 +380,7 @@ async function handleLogin(e){
 
 window.doLogout=function(){
   sessionStorage.removeItem('branchSession');
-  session=null; allData=[]; filteredData=[]; selectedItems.clear();
+  session=null; allData=[]; filteredData=[];
   filters={stat:'all',branch:'ALL',search:''};
   document.getElementById('loginUser').value=''; document.getElementById('loginPass').value='';
   document.getElementById('loginError').classList.add('hidden');
@@ -405,8 +406,9 @@ async function fetchData(){
 }
 
 window.refreshData=async function(){
-  const ic=document.getElementById('refreshIcon'); ic.classList.add('animate-spin');
-  await fetchData(); ic.classList.remove('animate-spin');
+  const ic=document.getElementById('refreshIcon');
+  ic.classList.add('animate-spin');
+  try{ await fetchData(); }finally{ ic.classList.remove('animate-spin'); }
 };
 
 function updateStats(){
@@ -536,41 +538,41 @@ function renderTable(){
     const title=r['ชื่อผลงาน']||'-', branch=getBranch(code);
     const queue=r['ลำดับคิว']||'-', start=r['เวลาการนำเสนอ']||'-', end=r['หมดการนำเสนอ']||'-';
     const ci=r['Checkin']==='Y', rw=r['รับประกาศ']==='Y';
-    // ลอง column ที่น่าจะมี timestamp เช็คอิน/รับประกาศ
-    const ciTime = formatTime(r['เวลาเช็คอิน']||r['CheckinTime']||r['checkin_time']||r['เวลา_checkin']||'');
-    const rwTime = formatTime(r['เวลารับประกาศ']||r['RewardTime']||r['reward_time']||r['เวลา_รับประกาศ']||'');
+    const ciTime=findTime(r,'เวลาเช็คอิน','CheckinTime','checkin_time','เวลา_checkin','checkin_at','checkedin_at','ci_time');
+    const rwTime=findTime(r,'เวลารับประกาศ','RewardTime','reward_time','เวลา_รับประกาศ','reward_at','rewarded_at','rw_time','certificate_time');
     const mins=!ci?minutesUntil(r['เวลาการนำเสนอ']):null;
     const isUpcoming=!ci&&mins!==null&&mins>=0&&mins<=15;
     const isOverdue=!ci&&mins!==null&&mins<0;
+    const chip=(bg,fg,icon,label,border='')=>`<span class="inline-flex items-center gap-1 ${bg} ${fg} ${border} px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap"><i data-lucide="${icon}" class="w-3 h-3 flex-shrink-0"></i>${label}</span>`;
     const ciBadge=ci
-      ?`<div class="flex flex-col items-center gap-1"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> เช็คอินแล้ว</span>${ciTime?`<span class="text-[10px] text-emerald-600 font-semibold">${esc(ciTime)}</span>`:''}</div>`
+      ?`<div class="flex flex-col items-center gap-0.5">${chip('bg-emerald-100','text-emerald-700','check-circle','เช็คอินแล้ว')}${ciTime?`<span class="text-[10px] text-emerald-600 font-semibold whitespace-nowrap">${esc(ciTime)}</span>`:''}</div>`
       :isOverdue
-        ?`<span class="bg-[#7f1d1d] text-red-100 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> ขาดการเช็คอิน</span>`
+        ?chip('bg-[#7f1d1d]','text-red-100','x-circle','ขาดเช็คอิน')
         :isUpcoming
-          ?`<span class="bg-red-100 text-red-600 border border-red-300 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> ยังไม่เช็คอิน!</span>`
-          :`<span class="bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ยังไม่เช็คอิน</span>`;
+          ?chip('bg-red-100','text-red-600','alert-circle','ใกล้หมดเวลา','border border-red-300')
+          :chip('bg-amber-50','text-amber-600','clock','ยังไม่เช็คอิน','border border-amber-200');
     const rwBadge=rw
-      ?`<div class="flex flex-col items-center gap-1"><span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"><i data-lucide="award" class="w-3 h-3"></i> รับใบประกาศแล้ว</span>${rwTime?`<span class="text-[10px] text-blue-600 font-semibold">${esc(rwTime)}</span>`:''}</div>`
-      :`<span class="bg-slate-100 text-slate-400 px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center">ยังไม่รับประกาศ</span>`;
+      ?`<div class="flex flex-col items-center gap-0.5">${chip('bg-blue-100','text-blue-700','award','รับประกาศแล้ว')}${rwTime?`<span class="text-[10px] text-blue-600 font-semibold whitespace-nowrap">${esc(rwTime)}</span>`:''}</div>`
+      :chip('bg-slate-100','text-slate-400','minus','ยังไม่รับ');
     const tr=document.createElement('tr'); tr.className='hover:bg-slate-50 transition-colors';
     tr.innerHTML=`
-      <td class="py-4 px-4 whitespace-nowrap align-top"><div class="text-[13px] font-bold text-slate-700 font-mono">${esc(code)}</div></td>
-      <td class="py-4 px-4 align-top">
-        <div class="font-bold text-slate-900 text-[14px] leading-tight">${esc(name)}</div>
-        <div class="text-[11.5px] text-slate-500 font-medium mt-1 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3 flex-shrink-0"></i><span class="truncate max-w-[160px]">${esc(email)}</span></div>
-        <div class="text-[11.5px] text-slate-500 font-medium mt-0.5 flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3 flex-shrink-0"></i>${esc(phone)}</div>
+      <td class="py-3 px-3 whitespace-nowrap align-middle"><div class="text-xs font-bold text-slate-700 font-mono">${esc(code)}</div></td>
+      <td class="py-3 px-3 align-middle">
+        <div class="font-bold text-slate-900 text-sm leading-tight">${esc(name)}</div>
+        <div class="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3 flex-shrink-0"></i><span class="truncate max-w-[140px]">${esc(email)}</span></div>
+        <div class="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3 flex-shrink-0"></i>${esc(phone)}</div>
       </td>
-      <td class="py-4 px-4 align-top"><div class="font-bold text-slate-800 text-[13px] leading-snug whitespace-normal">${esc(title)}</div></td>
-      <td class="py-4 px-4 align-top">
-        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[11px] font-bold inline-block">${esc(shortBranch(branch))}</span>
+      <td class="py-3 px-3 align-middle"><div class="font-bold text-slate-800 text-xs leading-snug whitespace-normal">${esc(title)}</div></td>
+      <td class="py-3 px-3 align-middle text-center">
+        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[10px] font-bold inline-block whitespace-nowrap">${esc(shortBranch(branch))}</span>
       </td>
-      <td class="py-4 px-4 align-top text-center">
-        <div class="text-[13px] font-bold text-slate-700">คิวที่ ${esc(queue)}</div>
-        <div class="text-[11px] text-slate-500 mt-0.5">${esc(start)}</div>
-        <div class="text-[11px] text-slate-400">ถึง ${esc(end)}</div>
+      <td class="py-3 px-3 align-middle text-center">
+        <div class="text-xs font-bold text-slate-700 whitespace-nowrap">คิว ${esc(queue)}</div>
+        <div class="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">${esc(start)}</div>
+        <div class="text-[10px] text-slate-400 whitespace-nowrap">ถึง ${esc(end)}</div>
       </td>
-      <td class="py-4 px-4 text-center align-top">${ciBadge}</td>
-      <td class="py-4 px-4 text-center align-top">${rwBadge}</td>`;
+      <td class="py-3 px-2 text-center align-middle">${ciBadge}</td>
+      <td class="py-3 px-2 text-center align-middle">${rwBadge}</td>`;
     frag.appendChild(tr);
   });
   tbody.appendChild(frag); lucide.createIcons();
