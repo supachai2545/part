@@ -550,6 +550,44 @@
         </div>
     </div>
 
+    <!-- Survey Modal -->
+    <div id="surveyModal" class="hidden fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div id="surveyContent" class="bg-white w-full sm:w-[420px] sm:max-w-[92vw] rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 relative transform translate-y-4 sm:translate-y-0 sm:scale-95 transition-all duration-300">
+            <button onclick="closeSurveyModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-all">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <div class="flex items-center gap-2 mb-1">
+                <div class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+                </div>
+                <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest">แบบประเมินความพึงพอใจ</p>
+            </div>
+            <h3 class="text-[15px] sm:text-[17px] font-black text-gray-900 leading-snug mb-1">ท่านพึงพอใจต่อการใช้งาน<br>ระบบ E-Poster HUB เพียงใด</h3>
+            <p class="text-[11px] text-gray-400 font-semibold mb-5">กรุณาให้คะแนนความพึงพอใจต่อการใช้งานระบบ</p>
+
+            <div class="flex justify-center gap-3 mb-5" id="surveyStars">
+                <button onclick="setSurveyRating(1)" class="survey-star text-4xl transition-all duration-150 hover:scale-125 active:scale-110" data-val="1">☆</button>
+                <button onclick="setSurveyRating(2)" class="survey-star text-4xl transition-all duration-150 hover:scale-125 active:scale-110" data-val="2">☆</button>
+                <button onclick="setSurveyRating(3)" class="survey-star text-4xl transition-all duration-150 hover:scale-125 active:scale-110" data-val="3">☆</button>
+                <button onclick="setSurveyRating(4)" class="survey-star text-4xl transition-all duration-150 hover:scale-125 active:scale-110" data-val="4">☆</button>
+                <button onclick="setSurveyRating(5)" class="survey-star text-4xl transition-all duration-150 hover:scale-125 active:scale-110" data-val="5">☆</button>
+            </div>
+            <p id="surveyRatingLabel" class="text-center text-[12px] font-bold text-gray-400 -mt-3 mb-4 h-4"></p>
+
+            <div class="mb-4">
+                <label class="text-[11px] font-bold text-gray-500 mb-1.5 block">ความคิดเห็นหรือข้อเสนอแนะเพิ่มเติม <span id="surveyCommentRequired" class="text-rose-500 hidden">*จำเป็น</span></label>
+                <textarea id="surveyComment" rows="3" placeholder="พิมพ์ข้อความที่นี่..."
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] text-gray-700 resize-none focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all placeholder:text-gray-300"></textarea>
+            </div>
+
+            <button onclick="submitSurvey()" id="surveySubmitBtn"
+                class="w-full bg-gray-800 hover:bg-gray-900 text-white font-black py-2.5 rounded-xl transition-all shadow-md text-[13px] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <i data-lucide="send" class="w-4 h-4"></i> ส่งแบบประเมิน
+            </button>
+            <button onclick="closeSurveyModal()" class="w-full mt-2 text-gray-400 hover:text-gray-600 font-bold text-[11px] py-1 transition-all">ข้ามไปก่อน</button>
+        </div>
+    </div>
+
     <script>
         // =============================================================
         // 🔧 CONFIG — Supabase
@@ -640,6 +678,9 @@
         let userPoints    = parseInt(localStorage.getItem('posterPoints') || '0');
         let viewedPosters = JSON.parse(localStorage.getItem('viewedPosters') || '[]');
         let timerInterval = null;
+        var _closedCount  = 0;
+        var _surveyRating = 0;
+        var _sessionId    = localStorage.getItem('_sid') || (function(){ var s = Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('_sid',s); return s; })();
         let timeElapsed   = 0;
         let badgeCollapseTimeout = null;
 
@@ -1434,6 +1475,11 @@
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
             if (window.scrollY >= 320) { var stb = document.getElementById('scrollTopBtn'); if (stb) stb.classList.remove('hidden'); }
+            // นับจำนวนปิด poster → แสดง survey หลังปิดอันที่ 3 (สุ่ม 1 ใน 5)
+            _closedCount++;
+            if (_closedCount === 3 && !localStorage.getItem('surveyDone') && Math.random() < 0.2) {
+                setTimeout(openSurveyModal, 600);
+            }
         }
 
         // =============================================================
@@ -1715,6 +1761,87 @@
             const content = document.getElementById('claimPopupContent');
             popup.classList.remove('hidden');
             setTimeout(function() { popup.classList.remove('opacity-0'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+        }
+
+        // =============================================================
+        // ⭐ SURVEY
+        // =============================================================
+        var _surveyLabels = ['','ควรปรับปรุง','พอใช้','ดี','ดีมาก','ดีเยี่ยม'];
+
+        function openSurveyModal() {
+            _surveyRating = 0;
+            document.getElementById('surveyComment').value = '';
+            document.getElementById('surveyRatingLabel').innerText = '';
+            document.getElementById('surveyCommentRequired').classList.add('hidden');
+            document.querySelectorAll('.survey-star').forEach(function(s){ s.textContent = '☆'; s.style.filter = ''; });
+            var modal = document.getElementById('surveyModal');
+            var content = document.getElementById('surveyContent');
+            modal.classList.remove('hidden');
+            setTimeout(function(){ content.classList.remove('translate-y-4','scale-95'); content.classList.add('translate-y-0','scale-100'); }, 10);
+            lucide.createIcons({ nodes: Array.from(modal.querySelectorAll('[data-lucide]')) });
+        }
+
+        function closeSurveyModal() {
+            var modal = document.getElementById('surveyModal');
+            var content = document.getElementById('surveyContent');
+            content.classList.remove('translate-y-0','scale-100');
+            content.classList.add('translate-y-4','scale-95');
+            setTimeout(function(){ modal.classList.add('hidden'); }, 300);
+        }
+
+        function setSurveyRating(val) {
+            _surveyRating = val;
+            document.querySelectorAll('.survey-star').forEach(function(s){
+                var v = parseInt(s.dataset.val);
+                s.textContent = v <= val ? '⭐' : '☆';
+                s.style.filter = v <= val ? 'drop-shadow(0 0 3px rgba(245,158,11,0.5))' : '';
+            });
+            document.getElementById('surveyRatingLabel').innerText = _surveyLabels[val] || '';
+            if (val >= 3) document.getElementById('surveyCommentRequired').classList.add('hidden');
+        }
+
+        async function submitSurvey() {
+            if (!_surveyRating) { alert('กรุณาเลือกคะแนนดาวก่อนครับ'); return; }
+            var comment = document.getElementById('surveyComment').value.trim();
+            if (_surveyRating <= 2 && !comment) {
+                document.getElementById('surveyCommentRequired').classList.remove('hidden');
+                document.getElementById('surveyComment').focus();
+                return;
+            }
+            var btn = document.getElementById('surveySubmitBtn');
+            btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังส่ง...';
+            lucide.createIcons({ nodes: [btn] });
+            var ua = navigator.userAgent;
+            var deviceType = /Mobi|Android/i.test(ua) ? 'mobile' : /iPad|Tablet/i.test(ua) ? 'tablet' : 'desktop';
+            try {
+                var res = await fetch(SUPABASE_URL + '/rest/v1/survey_responses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_KEY,
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        rating:          _surveyRating,
+                        comment:         comment || null,
+                        session_id:      _sessionId,
+                        device_type:     deviceType,
+                        posters_viewed:  _closedCount
+                    })
+                });
+                if (res.ok) {
+                    localStorage.setItem('surveyDone', 'true');
+                    var content = document.getElementById('surveyContent');
+                    content.innerHTML = '<div class="flex flex-col items-center justify-center py-8 gap-3"><div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center"><i data-lucide="check-circle" class="w-8 h-8 text-emerald-500"></i></div><p class="font-black text-gray-800 text-lg">ขอบคุณมากครับ!</p><p class="text-gray-400 text-sm font-semibold text-center">ความคิดเห็นของท่านมีคุณค่ามากสำหรับเรา</p><button onclick="closeSurveyModal()" class="mt-2 bg-gray-800 text-white font-black px-8 py-2.5 rounded-xl text-sm">ปิด</button></div>';
+                    lucide.createIcons({ nodes: Array.from(content.querySelectorAll('[data-lucide]')) });
+                    setTimeout(closeSurveyModal, 2500);
+                } else { throw new Error('error'); }
+            } catch(e) {
+                btn.disabled = false; btn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> ส่งแบบประเมิน';
+                lucide.createIcons({ nodes: [btn] });
+                alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
+            }
         }
 
         function closeClaimPopup() {
