@@ -600,6 +600,16 @@
 
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // fire-and-forget tracker → ไม่รอ response ไม่กระทบ UI
+        function _track(type, extra) {
+            var body = Object.assign({ type: type }, extra || {});
+            fetch(SUPABASE_URL + '/rest/v1/poster_views', {
+                method: 'POST', keepalive: true,
+                headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' },
+                body: JSON.stringify(body)
+            }).catch(function(){});
+        }
+
         // =============================================================
         // 🔊 Audio
         // =============================================================
@@ -694,6 +704,7 @@
         // 🔧 INIT
         // =============================================================
         document.addEventListener("DOMContentLoaded", function() {
+            _track('visit');
             document.getElementById('posterGrid').innerHTML = getSkeletonHTML();
 
             setTimeout(function() {
@@ -1376,6 +1387,8 @@
                     ? "text-emerald-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100"
                     : "text-gray-600 font-bold text-[12px] sm:text-[13px] flex items-center bg-gray-50 px-2.5 py-0.5 rounded-md border border-gray-100";
 
+            _track('view', { poster_id: activePoster.id, zone: activePoster.calcZone || null, branch: activePoster.displayZone || null });
+
             if (typeof gtag === 'function') {
                 gtag('event', 'view_poster', {
                     'poster_id':    activePoster.id,
@@ -1749,6 +1762,7 @@
             if (userPoints >= TARGET_POINTS) {
                 if (localStorage.getItem('posterRewardClaimed') !== 'true') {
                     localStorage.setItem('posterRewardClaimed', 'true');
+                    _track('reward_claim');
                     updatePassportUIButtons();
                 }
                 openClaimPopup();
