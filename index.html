@@ -608,7 +608,8 @@
         };
         function _track(type, extra) {
             var stats = [];
-            if (type === 'visit')        stats = ['visits'];
+            if (type === 'visit')             stats = ['visits'];
+            else if (type === 'device')       stats = ['devices'];
             else if (type === 'reward_claim') stats = ['rewards'];
             else if (type === 'view') {
                 stats = ['views_total'];
@@ -715,6 +716,10 @@
         // =============================================================
         document.addEventListener("DOMContentLoaded", function() {
             _track('visit');
+            if (!localStorage.getItem('deviceTracked')) {
+                localStorage.setItem('deviceTracked', '1');
+                _track('device');
+            }
             document.getElementById('posterGrid').innerHTML = getSkeletonHTML();
 
             setTimeout(function() {
