@@ -600,14 +600,24 @@
 
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // fire-and-forget tracker → ไม่รอ response ไม่กระทบ UI
+        // fire-and-forget tracker → เพิ่มตัวเลขใน site_stats
+        var _branchCol = {
+            'R&D สาขา 1': 'views_rnd_1', 'R&D สาขา 2': 'views_rnd_2',
+            'R&D สาขา 3': 'views_rnd_3', 'R&D สาขา 4': 'views_rnd_4',
+            'R2R สาขา 1': 'views_r2r_1', 'R2R สาขา 2': 'views_r2r_2'
+        };
         function _track(type, extra) {
-            var body = Object.assign({ type: type }, extra || {});
-            fetch(SUPABASE_URL + '/rest/v1/poster_views', {
-                method: 'POST', keepalive: true,
-                headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' },
-                body: JSON.stringify(body)
-            }).catch(function(){});
+            var stats = [];
+            if (type === 'visit')        stats = ['visits'];
+            else if (type === 'reward_claim') stats = ['rewards'];
+            else if (type === 'view') {
+                stats = ['views_total'];
+                var col = extra && _branchCol[extra.branch];
+                if (col) stats.push(col);
+            }
+            stats.forEach(function(s) {
+                sbClient.rpc('increment_stat', { stat_name: s }).then(function(){}).catch(function(){});
+            });
         }
 
         // =============================================================
