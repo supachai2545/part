@@ -1773,7 +1773,7 @@
             document.getElementById('surveyComment').value = '';
             document.getElementById('surveyRatingLabel').innerText = '';
             document.getElementById('surveyCommentRequired').classList.add('hidden');
-            document.querySelectorAll('.survey-star').forEach(function(s){ s.style.color = '#d1d5db'; s.style.transform = ''; });
+            document.querySelectorAll('.survey-star').forEach(function(s){ s.style.color = '#d1d5db'; s.style.transform = 'scale(1)'; });
             var modal = document.getElementById('surveyModal');
             var content = document.getElementById('surveyContent');
             modal.classList.remove('hidden');
@@ -1802,11 +1802,13 @@
             }, 320);
         }
 
+        var _surveyStarColors = ['','#92400e','#b45309','#d97706','#f59e0b','#fcd34d'];
+
         function setSurveyRating(val) {
             _surveyRating = val;
             document.querySelectorAll('.survey-star').forEach(function(s){
                 var v = parseInt(s.dataset.val);
-                s.style.color   = v <= val ? '#f59e0b' : '#d1d5db';
+                s.style.color     = v <= val ? _surveyStarColors[v] : '#d1d5db';
                 s.style.transform = v === val ? 'scale(1.25)' : 'scale(1)';
             });
             document.getElementById('surveyRatingLabel').innerText = _surveyLabels[val] || '';
