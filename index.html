@@ -1477,7 +1477,7 @@
             if (window.scrollY >= 320) { var stb = document.getElementById('scrollTopBtn'); if (stb) stb.classList.remove('hidden'); }
             // นับจำนวนปิด poster → แสดง survey หลังปิดอันที่ 3 (สุ่ม 1 ใน 5)
             _closedCount++;
-            if (_closedCount === 3) {
+            if (_closedCount === 3 && !localStorage.getItem('surveyDone') && Math.random() < 0.2) {
                 setTimeout(openSurveyModal, 600);
             }
         }
@@ -1787,6 +1787,7 @@
         }
 
         function closeSurveyModal() {
+            localStorage.setItem('surveyDone', 'true');
             var modal = document.getElementById('surveyModal');
             var content = document.getElementById('surveyContent');
             modal.style.background = 'rgba(0,0,0,0)';
