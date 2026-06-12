@@ -696,6 +696,13 @@
             localStorage.setItem('lastScoreReset', SCORE_RESET_DATE);
         }
 
+        // เปลี่ยนค่า DEVICE_RESET_DATE เพื่อให้นับเครื่องใหม่ทั้งหมด (ต้องเปลี่ยนพร้อม reset ตัวเลขใน Supabase)
+        var DEVICE_RESET_DATE = '2026-06-12';
+        if (localStorage.getItem('lastDeviceReset') !== DEVICE_RESET_DATE) {
+            localStorage.removeItem('deviceTracked');
+            localStorage.setItem('lastDeviceReset', DEVICE_RESET_DATE);
+        }
+
         let userPoints    = parseInt(localStorage.getItem('posterPoints') || '0');
         let viewedPosters = JSON.parse(localStorage.getItem('viewedPosters') || '[]');
         let timerInterval = null;
