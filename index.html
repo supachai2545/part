@@ -281,6 +281,7 @@
                 <div class="text-right">
                     <div id="clockTime" class="text-sm lg:text-xl font-bold text-slate-700 tabular-nums leading-none">--:--:--</div>
                     <div id="clockDate" class="hidden lg:block text-[11px] font-medium text-slate-500 mt-0.5">กำลังโหลด...</div>
+                    <div id="lastUpdateTime" class="hidden lg:block text-[10px] font-medium text-slate-400 mt-0.5"></div>
                 </div>
             </div>
             <button onclick="promptStaffPin()" class="w-10 h-10 lg:w-11 lg:h-11 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-sm" title="โหมดสแกนเนอร์">
@@ -1125,16 +1126,21 @@
             const badge = document.getElementById('networkStatusBadge');
             const dot   = document.getElementById('networkDot');
             const text  = document.getElementById('networkText');
-            if (navigator.onLine) {
-                badge.className = "bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
-                dot.className   = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-                text.className  = "text-[10px] font-bold text-emerald-700 tracking-wider";
-                text.innerText  = "ONLINE";
-            } else {
+            if (!navigator.onLine) {
                 badge.className = "bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
                 dot.className   = "w-2.5 h-2.5 rounded-full bg-rose-500";
                 text.className  = "text-[10px] font-bold text-rose-700 tracking-wider";
                 text.innerText  = "OFFLINE";
+            } else if (dbConnected === false) {
+                badge.className = "bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
+                dot.className   = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+                text.className  = "text-[10px] font-bold text-amber-700 tracking-wider";
+                text.innerText  = "ขาดการเชื่อมต่อ";
+            } else {
+                badge.className = "bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hidden sm:flex";
+                dot.className   = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                text.className  = "text-[10px] font-bold text-emerald-700 tracking-wider";
+                text.innerText  = "LIVE";
             }
         }
         window.addEventListener('online',  updateNetworkStatus);
@@ -1156,6 +1162,8 @@
 
                 if (fetchError) {
                     console.error('[Supabase Error]', fetchError);
+                    dbConnected = false;
+                    updateNetworkStatus();
                     showEmptyOrErrorState(
                         `เชื่อมต่อฐานข้อมูลไม่ได้: ${fetchError.message} (Code: ${fetchError.code})`, true
                     );
@@ -1198,6 +1206,8 @@
                     });
 
                 isInitialLoad = false;
+                const lastUpEl = document.getElementById('lastUpdateTime');
+                if (lastUpEl) lastUpEl.innerText = 'อัปเดต ' + getSyncedTime().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
                 updateCounters(checkinData.length, rewardDataSorted.length);
 
                 // ─── [FIX 4] Smart Render: re-render เฉพาะเมื่อ data เปลี่ยน
@@ -1227,6 +1237,8 @@
 
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
+                dbConnected = false;
+                updateNetworkStatus();
                 if (isInitialLoad) {
                     showEmptyOrErrorState(
                         'เกิดข้อผิดพลาดภายนอกในการเชื่อมต่อ: ' + (error.message || error), true
@@ -1673,6 +1685,7 @@
         // 🔧 [FIX 6] Supabase Realtime + cleanup beforeunload
         // =============================================================
         var realtimeChannel = null;
+        var dbConnected     = null; // null=unknown, true=LIVE, false=ขาดการเชื่อมต่อ
 
         function initSupabaseSubscription() {
             try {
@@ -1685,8 +1698,14 @@
                             fetchDashboardData();
                         }
                     )
-                    .subscribe();
+                    .subscribe((status, err) => {
+                        dbConnected = (status === 'SUBSCRIBED');
+                        if (!dbConnected) console.warn('[Realtime]', status, err);
+                        updateNetworkStatus();
+                    });
             } catch (err) {
+                dbConnected = false;
+                updateNetworkStatus();
                 console.error("Realtime subscription failed:", err);
             }
         }
