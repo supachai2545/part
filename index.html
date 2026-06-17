@@ -1462,21 +1462,25 @@
         // ── cache scrollMax เพื่อไม่ให้ reflow ทุก frame ──────────────────
         var cachedScrollMax = { checkin: -1, reward: -1 };
 
-        // ── หาจุดหยุดสูงสุด: หยุดเมื่อการ์ดสีอันสุดท้ายอยู่ล่างสุดของ viewport ──
+        // ── หาจุดหยุดสูงสุด: หยุดเมื่อการ์ดสุดท้ายที่ไม่ expired อยู่ล่างสุด viewport ──
         function getScrollMax(listEl, sec) {
             if (cachedScrollMax[sec] >= 0) return cachedScrollMax[sec];
             const fullMax = listEl.scrollHeight - listEl.clientHeight;
             let max;
-            const urgencyCards = listEl.querySelectorAll('.urgency-card');
-            if (urgencyCards.length > 0) {
-                const last = urgencyCards[urgencyCards.length - 1];
-                // scrollTop ที่ทำให้ bottom ของการ์ดสีอยู่พอดีล่างสุด viewport
-                const boundary = last.offsetTop + last.offsetHeight - listEl.clientHeight + 24;
+            // ลำดับความสำคัญ: urgency → non-expired → expired boundary → 0
+            const urgencyCards  = listEl.querySelectorAll('.urgency-card');
+            const nonExpiredCards = [...listEl.querySelectorAll(':scope > div:not(.expired-card)')];
+            const expiredCards  = listEl.querySelectorAll('.expired-card');
+            const anchor = urgencyCards.length > 0
+                ? urgencyCards[urgencyCards.length - 1]
+                : nonExpiredCards.length > 0
+                    ? nonExpiredCards[nonExpiredCards.length - 1]
+                    : null;
+            if (anchor) {
+                const boundary = anchor.offsetTop + anchor.offsetHeight - listEl.clientHeight + 24;
                 max = Math.max(0, Math.min(boundary, fullMax));
             } else {
-                // ไม่มีการ์ดสี — หยุดก่อน expired-card หรือไม่เลื่อนเลย
-                const expired = listEl.querySelectorAll('.expired-card');
-                max = expired.length > 0 ? Math.max(0, expired[0].offsetTop - 24) : 0;
+                max = expiredCards.length > 0 ? Math.max(0, expiredCards[0].offsetTop - 24) : 0;
             }
             cachedScrollMax[sec] = max;
             return max;
