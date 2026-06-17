@@ -281,7 +281,6 @@
                 <div class="text-right">
                     <div id="clockTime" class="text-sm lg:text-xl font-bold text-slate-700 tabular-nums leading-none">--:--:--</div>
                     <div id="clockDate" class="hidden lg:block text-[11px] font-medium text-slate-500 mt-0.5">กำลังโหลด...</div>
-                    <div id="lastUpdateTime" class="hidden lg:block text-[10px] font-medium text-slate-400 mt-0.5"></div>
                 </div>
             </div>
             <button onclick="promptStaffPin()" class="w-10 h-10 lg:w-11 lg:h-11 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-sm" title="โหมดสแกนเนอร์">
@@ -1114,8 +1113,6 @@
                     });
 
                 isInitialLoad = false;
-                const lastUpEl = document.getElementById('lastUpdateTime');
-                if (lastUpEl) lastUpEl.innerText = 'อัปเดต ' + getSyncedTime().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
                 updateCounters(checkinData.length, rewardDataSorted.length);
 
                 // ─── [FIX 4] Smart Render: re-render เฉพาะเมื่อ data เปลี่ยน
