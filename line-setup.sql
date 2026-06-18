@@ -80,6 +80,11 @@ declare
     v_m       text[];
     r         record;
 begin
+    -- ส่งแจ้งเตือนเฉพาะวันที่ 25 มิถุนายนเท่านั้น
+    if to_char(now() at time zone 'Asia/Bangkok', 'MM-DD') <> '06-25' then
+        return;
+    end if;
+
     select decrypted_secret into v_token
     from vault.decrypted_secrets where name = 'LINE_CHANNEL_TOKEN' limit 1;
     if v_token is null then
