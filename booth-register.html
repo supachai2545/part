@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ลงทะเบียนผู้ประจำบูธ — เครือข่าย</title>
+
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Sarabun','sans-serif']}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- ตั้งค่าบูธ/ฐานข้อมูล -->
+<script src="booth-config.js"></script>
+
+<style>
+  body{font-family:'Sarabun',sans-serif;background:#f1f5f9;}
+  .fade-up{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .pop{animation:pop .45s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes pop{0%{opacity:0;transform:scale(.7)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+  .ring-draw{stroke-dasharray:166;stroke-dashoffset:166;animation:draw .6s .15s ease forwards;}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .check-draw{stroke-dasharray:48;stroke-dashoffset:48;animation:draw .35s .55s ease forwards;}
+  input{font-size:16px;} /* กัน iOS zoom */
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="root" class="max-w-md mx-auto px-4 py-6"></div>
+
+<!-- โหมดทดลอง (โชว์เมื่อยังไม่ได้ต่อฐานข้อมูล) -->
+<div id="localBanner" class="hidden fixed bottom-0 inset-x-0 z-40">
+  <div class="max-w-md mx-auto m-3 px-4 py-2.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-xs flex items-center gap-2 shadow-lg">
+    <i data-lucide="flask-conical" class="w-4 h-4 shrink-0"></i>
+    <span>โหมดทดลอง — ยังไม่ได้เชื่อมฐานข้อมูล ข้อมูลเก็บในเครื่องนี้เท่านั้น (รัน <b>booth-setup.sql</b> เพื่อใช้งานจริง)</span>
+  </div>
+</div>
+
+<script>
+const CFG = window.BOOTH_CONFIG;
+const sb  = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_KEY);
+const root = document.getElementById('root');
+
+let MODE  = 'db';      // 'db' = Supabase | 'local' = เก็บในเครื่อง
+let booth = null;
+let rows  = [];
+
+/* ---------- utils ---------- */
+const qp = n => new URL(location.href).searchParams.get(n);
+const boothId = () => qp('b') || qp('booth');
+const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const initial = s => (s||'?').trim().charAt(0).toUpperCase();
+const fmtTime = iso => { try{ return new Date(iso).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}); }catch{ return ''; } };
+const icons = () => lucide.createIcons();
+
+function readLocal(){ try{ return JSON.parse(localStorage.getItem('booth_staff_local')||'[]'); }catch{ return []; } }
+function writeLocal(a){ localStorage.setItem('booth_staff_local', JSON.stringify(a)); }
+function deviceList(id){ try{ return JSON.parse(localStorage.getItem('booth_me_'+id)||'[]'); }catch{ return []; } }
+function deviceAdd(id,name){ const a=deviceList(id); a.push({name,at:Date.now()}); localStorage.setItem('booth_me_'+id, JSON.stringify(a)); }
+
+/* ---------- data ---------- */
+async function loadRows(){
+  try{
+    const { data, error } = await sb.from(CFG.TABLE).select('*')
+      .eq('booth_id', String(booth.id)).order('created_at',{ascending:true});
+    if(error) throw error;
+    MODE='db'; rows = data||[];
+  }catch(e){
+    MODE='local';
+    rows = readLocal().filter(r=>String(r.booth_id)===String(booth.id))
+            .sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  }
+  document.getElementById('localBanner').classList.toggle('hidden', MODE==='db');
+}
+
+async function saveRow(rec){
+  if(MODE==='db'){
+    const { data, error } = await sb.from(CFG.TABLE).insert(rec).select().single();
+    if(error) throw error;
+    return data;
+  }
+  const all = readLocal();
+  const row = Object.assign({ id:Date.now(), created_at:new Date().toISOString() }, rec);
+  all.push(row); writeLocal(all);
+  return row;
+}
+
+/* ---------- screens ---------- */
+function renderPicker(){
+  document.getElementById('localBanner').classList.add('hidden');
+  root.innerHTML = `
+    <div class="fade-up">
+      <div class="text-center mb-6 mt-2">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-indigo-600 text-white items-center justify-center shadow-lg shadow-indigo-200 mb-3">
+          <i data-lucide="network" class="w-7 h-7"></i>
+        </div>
+        <h1 class="text-xl font-extrabold text-slate-800">${esc(CFG.EVENT_NAME)}</h1>
+        <p class="text-slate-500 text-sm mt-1">เลือกบูธเพื่อลงทะเบียนผู้ประจำบูธ</p>
+        <p class="text-slate-400 text-xs mt-1">(ปกติให้สแกน QR ของบูธ จะเข้าหน้านี้อัตโนมัติ)</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        ${CFG.BOOTHS.map(b=>{const c=CFG.colorOf(b.id);return `
+          <a href="?b=${encodeURIComponent(b.id)}" class="block p-4 bg-white rounded-2xl border border-slate-100 shadow-sm active:scale-95 transition">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${c.grad} text-white flex items-center justify-center font-bold mb-2">${esc(b.id)}</div>
+            <div class="font-bold text-slate-800 text-sm leading-tight">${esc(b.name)}</div>
+            ${b.org?`<div class="text-xs text-slate-400 mt-0.5">${esc(b.org)}</div>`:''}
+          </a>`;}).join('')}
+      </div>
+      <div class="text-center mt-6">
+        <a href="booth-admin.html" class="text-xs text-slate-400 underline">ดูภาพรวมทุกบูธ (สำหรับเจ้าหน้าที่)</a>
+      </div>
+    </div>`;
+  icons();
+}
+
+function renderError(msg){
+  root.innerHTML = `
+    <div class="fade-up mt-10 text-center">
+      <div class="inline-flex w-16 h-16 rounded-full bg-rose-100 text-rose-500 items-center justify-center mb-4">
+        <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+      </div>
+      <h1 class="text-lg font-bold text-slate-800">${esc(msg)}</h1>
+      <a href="booth-register.html" class="inline-block mt-5 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm">เลือกบูธเอง</a>
+    </div>`;
+  icons();
+}
+
+function renderBooth(){
+  const c = CFG.colorOf(booth.id);
+  const n = rows.length, cap = CFG.STAFF_PER_BOOTH;
+  const full = n >= cap;
+  const me = deviceList(booth.id);
+
+  root.innerHTML = `
+  <div class="fade-up">
+    <!-- หัวบูธ -->
+    <div class="rounded-3xl bg-gradient-to-br ${c.grad} text-white p-5 shadow-xl mb-4 relative overflow-hidden">
+      <i data-lucide="network" class="w-28 h-28 absolute -right-4 -bottom-4 opacity-15"></i>
+      <div class="relative">
+        <div class="flex items-center gap-2 text-white/80 text-xs font-medium mb-1">
+          <i data-lucide="qr-code" class="w-4 h-4"></i> ลงทะเบียนผู้ประจำบูธ
+        </div>
+        <h1 class="text-2xl font-extrabold leading-tight">${esc(booth.name)}</h1>
+        ${booth.org?`<p class="text-white/85 text-sm mt-0.5">${esc(booth.org)}</p>`:''}
+        <div class="mt-4 inline-flex items-center gap-2 bg-white/20 backdrop-blur rounded-full pl-2 pr-3 py-1 text-sm font-semibold">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white ${c.text} text-xs font-bold">${n}</span>
+          ลงทะเบียนแล้ว ${n}/${cap} ท่าน
+        </div>
+      </div>
+    </div>
+
+    ${me.length?`
+    <div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700 flex items-start gap-2">
+      <i data-lucide="badge-check" class="w-5 h-5 shrink-0"></i>
+      <div>อุปกรณ์นี้ลงทะเบียนบูธนี้แล้ว: <b>${me.map(x=>esc(x.name)).join(', ')}</b></div>
+    </div>`:''}
+
+    <!-- รายชื่อที่ลงแล้ว -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-4">
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">ผู้ประจำบูธนี้</div>
+      <div class="space-y-2">
+        ${rows.length? rows.map(r=>`
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full ${c.soft} ${c.text} flex items-center justify-center font-bold text-sm shrink-0">${esc(initial(r.name))}</div>
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-slate-800 text-sm truncate">${esc(r.name)}</div>
+              ${r.org?`<div class="text-xs text-slate-400 truncate">${esc(r.org)}</div>`:''}
+            </div>
+            <div class="text-xs text-slate-400 shrink-0">${fmtTime(r.created_at)}</div>
+          </div>`).join('')
+          : `<div class="text-sm text-slate-400 text-center py-2">ยังไม่มีผู้ลงทะเบียน — เป็นคนแรกเลย!</div>`}
+        ${Array.from({length:Math.max(0,cap-rows.length)}).map(()=>`
+          <div class="flex items-center gap-3 opacity-50">
+            <div class="w-9 h-9 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 shrink-0"><i data-lucide="user" class="w-4 h-4"></i></div>
+            <div class="text-sm text-slate-300">ว่าง</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${full?`
+    <div class="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-center gap-2">
+      <i data-lucide="info" class="w-4 h-4 shrink-0"></i> บูธนี้ลงทะเบียนครบ ${cap} ท่านแล้ว — เพิ่มได้หากจำเป็น
+    </div>`:''}
+
+    <!-- ฟอร์ม -->
+    <form id="form" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+      <div>
+        <label class="text-sm font-semibold text-slate-700">ชื่อ-นามสกุล <span class="text-rose-500">*</span></label>
+        <input id="name" type="text" required autocomplete="name" placeholder="เช่น สมชาย ใจดี"
+          class="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none">
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-slate-700">หน่วยงาน/เครือข่าย <span class="text-slate-400 font-normal">(ถ้ามี)</span></label>
+        <input id="org" type="text" autocomplete="organization" placeholder="เช่น รพ.สต. ..."
+          class="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none">
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-slate-700">เบอร์โทร <span class="text-slate-400 font-normal">(ถ้ามี)</span></label>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="08x-xxx-xxxx"
+          class="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none">
+      </div>
+      <p id="err" class="hidden text-sm text-rose-500"></p>
+      <button id="submit" type="submit"
+        class="w-full py-3.5 rounded-xl bg-gradient-to-r ${c.grad} text-white font-bold shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+        <i data-lucide="user-check" class="w-5 h-5"></i> ลงทะเบียนเข้าประจำบูธ
+      </button>
+    </form>
+
+    <div class="text-center mt-5">
+      <a href="booth-admin.html" class="text-xs text-slate-400 underline">ดูภาพรวมทุกบูธ</a>
+    </div>
+  </div>`;
+  icons();
+
+  document.getElementById('form').addEventListener('submit', onSubmit);
+}
+
+function renderSuccess(rec){
+  const c = CFG.colorOf(booth.id);
+  root.innerHTML = `
+  <div class="fade-up mt-6 text-center">
+    <div class="pop inline-flex">
+      <svg width="92" height="92" viewBox="0 0 60 60">
+        <circle cx="30" cy="30" r="26" fill="none" stroke="#10b981" stroke-width="4" class="ring-draw"/>
+        <path d="M20 31 L27 38 L41 23" fill="none" stroke="#10b981" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" class="check-draw"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-extrabold text-slate-800 mt-3">ลงทะเบียนสำเร็จ</h1>
+    <p class="text-slate-500 mt-1">ขอบคุณที่มาประจำบูธครับ 🙏</p>
+
+    <div class="mt-5 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 text-left">
+      <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br ${c.grad} text-white flex items-center justify-center font-bold">${esc(booth.id)}</div>
+        <div><div class="font-bold text-slate-800">${esc(booth.name)}</div>${booth.org?`<div class="text-xs text-slate-400">${esc(booth.org)}</div>`:''}</div>
+      </div>
+      <div class="pt-3 space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">ชื่อ</span><span class="font-semibold text-slate-800">${esc(rec.name)}</span></div>
+        ${rec.org?`<div class="flex justify-between"><span class="text-slate-400">หน่วยงาน</span><span class="font-medium text-slate-700">${esc(rec.org)}</span></div>`:''}
+        ${rec.phone?`<div class="flex justify-between"><span class="text-slate-400">เบอร์โทร</span><span class="font-medium text-slate-700">${esc(rec.phone)}</span></div>`:''}
+        <div class="flex justify-between"><span class="text-slate-400">เวลา</span><span class="font-medium text-slate-700">${fmtTime(rec.created_at)} น.</span></div>
+      </div>
+    </div>
+
+    <button onclick="location.href='?b=${encodeURIComponent(booth.id)}'"
+      class="w-full mt-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold active:scale-95 transition flex items-center justify-center gap-2">
+      <i data-lucide="user-plus" class="w-5 h-5"></i> ลงทะเบียนเพิ่มอีกท่าน
+    </button>
+  </div>`;
+  icons();
+}
+
+/* ---------- submit ---------- */
+async function onSubmit(e){
+  e.preventDefault();
+  const name  = document.getElementById('name').value.trim();
+  const org   = document.getElementById('org').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const err   = document.getElementById('err');
+  const btn   = document.getElementById('submit');
+
+  err.classList.add('hidden');
+  if(!name){ err.textContent='กรุณากรอกชื่อ-นามสกุล'; err.classList.remove('hidden'); return; }
+
+  // กันชื่อซ้ำในบูธเดียวกัน (เตือน ยังลงต่อได้)
+  if(rows.some(r=>(r.name||'').trim()===name) && !btn.dataset.confirm){
+    err.textContent='ชื่อนี้ลงทะเบียนบูธนี้แล้ว — กดอีกครั้งหากต้องการลงซ้ำ';
+    err.classList.remove('hidden');
+    btn.dataset.confirm='1';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> กำลังบันทึก...';
+  icons();
+
+  try{
+    const rec = await saveRow({ booth_id:String(booth.id), name, org:org||null, phone:phone||null });
+    deviceAdd(booth.id, name);
+    renderSuccess(rec);
+  }catch(ex){
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="user-check" class="w-5 h-5"></i> ลงทะเบียนเข้าประจำบูธ';
+    icons();
+    err.textContent = 'บันทึกไม่สำเร็จ: ' + (ex.message||ex) + ' — ลองอีกครั้ง';
+    err.classList.remove('hidden');
+  }
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  const id = boothId();
+  if(!id){ renderPicker(); return; }
+  booth = CFG.getBooth(id);
+  if(!booth){ renderError('ไม่พบบูธรหัส "'+id+'"'); return; }
+  await loadRows();
+  renderBooth();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Code ประจำบูธ — พิมพ์ติดบูธ</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Sarabun','sans-serif']}}}}</script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="booth-config.js"></script>
+
+<style>
+  body{font-family:'Sarabun',sans-serif;background:#f1f5f9;}
+  @media print{
+    .no-print{display:none !important;}
+    body{background:#fff;}
+    .qr-card{break-inside:avoid;border:1px solid #e2e8f0 !important;box-shadow:none !important;}
+    .grid-print{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:14px !important;}
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-5xl mx-auto px-4 py-6">
+
+  <!-- ตัวควบคุม (ไม่ปริ้น) -->
+  <div class="no-print">
+    <div class="flex items-center gap-2 text-slate-400 text-xs font-semibold mb-1">
+      <i data-lucide="qr-code" class="w-4 h-4"></i> สร้าง QR สำหรับติดหน้าบูธ
+    </div>
+    <h1 class="text-2xl font-extrabold text-slate-800 mb-1">QR Code ประจำบูธ</h1>
+    <p class="text-slate-500 text-sm mb-4">บูธละ 1 QR — ผู้ประจำบูธสแกนเพื่อลงทะเบียนตัวเอง · พิมพ์แล้วตัดติดได้เลย</p>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
+      <label class="text-sm font-semibold text-slate-700">ลิงก์หน้าลงทะเบียน (Base URL)</label>
+      <p class="text-xs text-slate-400 mb-2">ปกติระบบเดาให้อัตโนมัติแล้ว — ถ้าจะนำขึ้นโฮสต์จริง ให้วางลิงก์เต็มของ <b>booth-register.html</b></p>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input id="base" oninput="render()"
+          class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm">
+        <button onclick="window.print()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 flex items-center justify-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์ทั้งหมด
+        </button>
+      </div>
+      <div id="warn" class="hidden mt-2 text-xs text-amber-600 flex items-center gap-1.5">
+        <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+        <span>ตอนนี้เปิดจากไฟล์ในเครื่อง (file://) — QR จะใช้ได้เฉพาะเครื่องนี้ ควรนำเว็บขึ้นโฮสต์แล้ววางลิงก์จริงก่อนพิมพ์</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 grid-print"></div>
+</div>
+
+<script>
+const CFG = window.BOOTH_CONFIG;
+const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const icons = () => lucide.createIcons();
+
+// เดา Base URL จากตำแหน่งไฟล์ปัจจุบัน
+const dir = location.href.split('?')[0].replace(/[^/]*$/,'');
+document.getElementById('base').value = dir + 'booth-register.html';
+document.getElementById('warn').classList.toggle('hidden', location.protocol!=='file:');
+
+function linkFor(id){
+  const base = document.getElementById('base').value.trim();
+  const sep = base.includes('?') ? '&' : '?';
+  return base + sep + 'b=' + encodeURIComponent(id);
+}
+function qrImg(url){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=' + encodeURIComponent(url);
+}
+
+function render(){
+  document.getElementById('grid').innerHTML = CFG.BOOTHS.map(b=>{
+    const c = CFG.colorOf(b.id);
+    const url = linkFor(b.id);
+    return `
+    <div class="qr-card bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+      <div class="bg-gradient-to-r ${c.grad} text-white px-4 py-3 text-center">
+        <div class="text-xs/none opacity-80 mb-0.5">สแกนเพื่อลงทะเบียนผู้ประจำบูธ</div>
+        <div class="text-lg font-extrabold leading-tight">${esc(b.name)}</div>
+        ${b.org?`<div class="text-xs opacity-90">${esc(b.org)}</div>`:''}
+      </div>
+      <div class="p-4 flex flex-col items-center">
+        <img src="${qrImg(url)}" alt="QR ${esc(b.name)}" class="w-44 h-44" loading="lazy">
+        <div class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold ${c.text}">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i> ผู้ประจำบูธ ${CFG.STAFF_PER_BOOTH} ท่าน
+        </div>
+        <div class="mt-1 text-[10px] text-slate-300 break-all text-center px-1">${esc(url)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  icons();
+}
+
+render();
+</script>
+</body>
+</html>
