@@ -1510,9 +1510,9 @@
             var sb = document.getElementById('scoreBadge');
             if (sb) { sb.style.opacity = ''; sb.style.pointerEvents = ''; }
             if (window.scrollY >= 320) { var stb = document.getElementById('scrollTopBtn'); if (stb) stb.classList.remove('hidden'); }
-            // นับจำนวนปิด poster → แสดง survey หลังปิดอันที่ 3 (สุ่ม 1 ใน 5)
+            // นับจำนวนปิด poster → แสดง survey หลังปิดอันที่ 9 ครั้งแรกเท่านั้น
             _closedCount++;
-            if (_closedCount === 3 && !localStorage.getItem('surveyDone') && Math.random() < 0.2) {
+            if (_closedCount === 9 && !localStorage.getItem('surveyDone')) {
                 setTimeout(openSurveyModal, 600);
             }
         }
