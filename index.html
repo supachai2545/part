@@ -31,6 +31,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- CDN failure guard -->
@@ -106,6 +107,7 @@
 
         .modal-enter { animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes modalFadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(10px); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .image-enter { animation: imageScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes imageScaleUp { from { transform: scale(0.9) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
@@ -527,26 +529,55 @@
     <!-- ป๊อปอัพยืนยันการรับรางวัล -->
     <div id="claimPopup" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-2xl w-[85%] max-w-[320px] text-center transform scale-95 transition-transform duration-300" id="claimPopupContent">
-            <div class="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-inner">
-                <i data-lucide="check-circle" class="w-6 h-6 sm:w-8 sm:h-8"></i>
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
+                <i data-lucide="check-circle" class="w-6 h-6 sm:w-7 sm:h-7"></i>
             </div>
-            <h3 class="text-lg sm:text-xl font-black text-emerald-600 mb-1">ยินดีด้วย! คุณครบเกณฑ์แล้ว</h3>
-            <p class="text-[11px] sm:text-[13px] font-bold text-gray-700 mb-3 leading-relaxed">
-                คุณสะสมครบ <span class="text-emerald-600">100 แต้ม</span> แล้ว! นำหน้าจอนี้ไปแสดงที่จุดรับรางวัล
+            <h3 class="text-base sm:text-lg font-black text-emerald-600 mb-1">ยินดีด้วย! คุณครบเกณฑ์แล้ว</h3>
+            <p class="text-[10px] sm:text-[12px] font-bold text-gray-500 mb-3 leading-relaxed">
+                สะสมครบ <span class="text-emerald-600 font-black">100 แต้ม</span> แล้ว! ให้เจ้าหน้าที่สแกน QR Code นี้
             </p>
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-left">
-                <p class="text-[10px] sm:text-[12px] font-black text-blue-700 mb-1 flex items-center gap-1">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ติดต่อรับรางวัลได้ที่
-                </p>
-                <p class="text-[12px] sm:text-[14px] font-black text-blue-900">จุด Check-in</p>
-                <p class="text-[9px] sm:text-[11px] text-blue-600 font-bold mt-0.5">เฉพาะวันที่ 25 มิถุนายน 2569 เวลา 09.00 - 15.00 น. เท่านั้น</p>
+            <div id="claimQR" class="flex justify-center mb-3"></div>
+            <div id="claimCodeBox" class="bg-gray-50 border border-gray-200 rounded-lg p-2 mb-3">
+                <p class="text-[9px] text-gray-400 font-bold">รหัส</p>
+                <p id="claimCodeText" class="text-[13px] font-black text-gray-700 tracking-widest"></p>
             </div>
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
-                <p class="text-[9px] sm:text-[10px] font-bold text-amber-700 leading-tight">
-                    💡 กดปุ่ม "แสดงหลักฐาน" ในสมุดได้ตลอด เพื่อเปิดหน้าจอนี้แสดงต่อเจ้าหน้าที่
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-2.5 mb-3 text-left">
+                <p class="text-[10px] sm:text-[11px] font-black text-blue-700 mb-0.5 flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3 h-3"></i> ติดต่อรับรางวัลได้ที่
                 </p>
+                <p class="text-[11px] sm:text-[13px] font-black text-blue-900">จุด Check-in</p>
+                <p class="text-[9px] sm:text-[10px] text-blue-600 font-bold mt-0.5">เฉพาะวันที่ 25 มิถุนายน 2569 เวลา 09.00 - 15.00 น. เท่านั้น</p>
             </div>
             <button onclick="closeClaimPopup()" class="w-full bg-gray-800 text-white font-black px-4 py-2 sm:py-2.5 rounded-lg hover:bg-gray-900 transition-all shadow-md text-xs sm:text-sm">ตกลง</button>
+        </div>
+    </div>
+
+    <!-- Verify Page (เปิดเมื่อเจ้าหน้าที่สแกน QR Code) -->
+    <div id="verifyPage" class="hidden fixed inset-0 z-[200] bg-gray-50 flex flex-col items-center justify-center p-6">
+        <p class="text-[11px] font-bold text-gray-400 mb-8 text-center">ระบบตรวจสอบรางวัล — กรมวิทยาศาสตร์การแพทย์</p>
+        <div id="verifyLoading" class="flex flex-col items-center gap-4">
+            <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-500 rounded-full" style="animation:spin 0.8s linear infinite;"></div>
+            <p class="font-bold text-gray-500 text-sm">กำลังตรวจสอบ...</p>
+        </div>
+        <div id="verifySuccess" class="hidden flex-col items-center gap-3 w-full max-w-xs">
+            <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-12 h-12 text-emerald-500"></i>
+            </div>
+            <h2 class="text-2xl font-black text-emerald-600">ยืนยันสำเร็จ!</h2>
+            <p class="text-gray-600 font-bold text-sm">มอบรางวัลได้เลยครับ</p>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 w-full text-center mt-2">
+                <p class="text-[10px] text-emerald-600 font-bold">รหัส</p>
+                <p id="verifyCodeDisplay" class="text-lg font-black text-emerald-800 tracking-widest mt-1"></p>
+            </div>
+        </div>
+        <div id="verifyFailed" class="hidden flex-col items-center gap-3 w-full max-w-xs">
+            <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center">
+                <i data-lucide="x-circle" class="w-12 h-12 text-red-500"></i>
+            </div>
+            <h2 class="text-2xl font-black text-red-600" id="verifyFailTitle">ใช้ไปแล้ว!</h2>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4 w-full text-center mt-2">
+                <p id="verifyFailDetail" class="text-sm text-red-700 font-bold"></p>
+            </div>
         </div>
     </div>
 
@@ -599,6 +630,7 @@
         const THUMB_BASE    = `${SUPABASE_URL}/storage/v1/render/image/public/Poster`;
 
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        var _verifyCode = new URLSearchParams(window.location.search).get('verify');
 
         // fire-and-forget tracker → เพิ่มตัวเลขใน site_stats
         var _branchCol = {
@@ -722,6 +754,7 @@
         // 🔧 INIT
         // =============================================================
         document.addEventListener("DOMContentLoaded", function() {
+            if (_verifyCode) { runVerifyPage(_verifyCode); return; }
             _track('visit');
             if (!localStorage.getItem('deviceTracked')) {
                 localStorage.setItem('deviceTracked', '1');
@@ -1780,9 +1813,16 @@
             setTimeout(function() { modal.style.opacity = '0'; setTimeout(function() { modal.style.opacity = ''; modal.classList.add('opacity-0', 'hidden'); }, 300); }, 550);
         }
 
-        function claimReward() {
+        async function claimReward() {
             if (userPoints >= TARGET_POINTS) {
                 if (localStorage.getItem('posterRewardClaimed') !== 'true') {
+                    var code = Math.random().toString(36).slice(2,6).toUpperCase() + '-' +
+                               Math.random().toString(36).slice(2,6).toUpperCase() + '-' +
+                               Date.now().toString(36).slice(-4).toUpperCase();
+                    try {
+                        await sbClient.from('claim_codes').insert({ id: code });
+                        localStorage.setItem('claimCode', code);
+                    } catch(e) {}
                     localStorage.setItem('posterRewardClaimed', 'true');
                     _track('reward_claim');
                     updatePassportUIButtons();
@@ -1793,6 +1833,17 @@
 
         function openClaimPopup() {
             if (new Date() < SCORE_OPEN_DATE) return;
+            var code = localStorage.getItem('claimCode');
+            if (code) {
+                var verifyUrl = window.location.href.split('?')[0] + '?verify=' + code;
+                var qrDiv = document.getElementById('claimQR');
+                qrDiv.innerHTML = '';
+                new QRCode(qrDiv, { text: verifyUrl, width: 180, height: 180, colorDark: '#1e293b', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+                document.getElementById('claimCodeText').innerText = code;
+                document.getElementById('claimCodeBox').style.display = '';
+            } else {
+                document.getElementById('claimCodeBox').style.display = 'none';
+            }
             const popup   = document.getElementById('claimPopup');
             const content = document.getElementById('claimPopupContent');
             popup.classList.remove('hidden');
@@ -1968,6 +2019,44 @@
             if (btn) { btn.classList.toggle('hidden', window.scrollY < 320); }
         }, { passive: true });
         window.addEventListener('beforeprint', function(e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
+
+        // =============================================================
+        // 🔍 VERIFY PAGE
+        // =============================================================
+        async function runVerifyPage(code) {
+            var page = document.getElementById('verifyPage');
+            page.classList.remove('hidden');
+            lucide.createIcons({ nodes: Array.from(page.querySelectorAll('[data-lucide]')) });
+            try {
+                var res = await sbClient.rpc('use_claim_code', { code_id: code });
+                var data = res.data;
+                document.getElementById('verifyLoading').style.display = 'none';
+                if (data && data.success) {
+                    var el = document.getElementById('verifySuccess');
+                    el.classList.remove('hidden');
+                    el.style.display = 'flex';
+                    document.getElementById('verifyCodeDisplay').innerText = code;
+                } else {
+                    var el = document.getElementById('verifyFailed');
+                    el.classList.remove('hidden');
+                    el.style.display = 'flex';
+                    if (data && data.reason === 'already_used') {
+                        document.getElementById('verifyFailTitle').innerText = 'ใช้ไปแล้ว!';
+                        document.getElementById('verifyFailDetail').innerText = 'รหัส ' + code + ' ถูกใช้รับรางวัลไปแล้ว';
+                    } else {
+                        document.getElementById('verifyFailTitle').innerText = 'ไม่พบรหัสนี้';
+                        document.getElementById('verifyFailDetail').innerText = 'ไม่พบรหัส ' + code + ' ในระบบ กรุณาตรวจสอบ QR Code อีกครั้ง';
+                    }
+                }
+            } catch(e) {
+                document.getElementById('verifyLoading').style.display = 'none';
+                var el = document.getElementById('verifyFailed');
+                el.classList.remove('hidden');
+                el.style.display = 'flex';
+                document.getElementById('verifyFailTitle').innerText = 'เกิดข้อผิดพลาด';
+                document.getElementById('verifyFailDetail').innerText = 'กรุณาลองใหม่อีกครั้ง';
+            }
+        }
 
         // =============================================================
     </script>
