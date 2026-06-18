@@ -749,7 +749,7 @@
         // เริ่มบันทึกคะแนนจริงตั้งแต่ 24 มิ.ย. 2569 (2026) เวลา 08.00 น. (UTC+7 = 01:00 UTC)
         // เพิ่ม ?test=1 ต่อท้าย URL เพื่อข้ามด่านวันที่ตอนทดสอบ
         const _testMode = new URLSearchParams(window.location.search).get('test') === '1';
-        const SCORE_OPEN_DATE = _testMode ? new Date('2020-01-01') : new Date('2026-06-24T01:00:00Z');
+        const SCORE_OPEN_DATE = new Date('2026-06-15T00:00:00Z');
         const TARGET_POINTS   = 100;
 
         // =============================================================
