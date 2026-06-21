@@ -363,9 +363,11 @@
             const name   = [w['ชื่อ'], w['นามสกุล']].filter(Boolean).join(' ') || 'ไม่ระบุชื่อ';
             const reward = w['รับประกาศ'] === 'Y';
             const checkin= w['Checkin'] === 'Y';
-            const startT = parseTime(w['เวลาการนำเสนอ'] || '');
-            const endT   = parseTime(w['หมดการนำเสนอ'] || '');
             const now    = new Date();
+            // เช็คเวลานำเสนอเฉพาะวันที่ 25 มิถุนายนเท่านั้น
+            const isEventDay = now.getMonth() === 5 && now.getDate() === 25; // เดือน 0-indexed
+            const startT = isEventDay ? parseTime(w['เวลาการนำเสนอ'] || '') : null;
+            const endT   = isEventDay ? parseTime(w['หมดการนำเสนอ'] || '')  : null;
             const live   = startT && endT && now >= startT && now < endT;
             const diffMin= startT ? Math.round((startT - now) / 60000) : null;
 
