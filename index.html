@@ -422,11 +422,19 @@
         <div class="absolute bottom-0 left-0 right-0 z-20 px-5 pt-12 pb-8 flex flex-col items-center gap-4
                     bg-gradient-to-t from-black/80 to-transparent">
 
-            <p id="scanFeedback"
-               class="text-center text-sm font-semibold text-white/90 bg-white/10 backdrop-blur-md
-                      border border-white/20 px-6 py-2.5 rounded-full transition-all duration-300 max-w-xs">
-                กำลังเตรียมกล้อง...
-            </p>
+            <div class="flex items-center gap-3 w-full max-w-sm justify-center">
+                <p id="scanFeedback"
+                   class="text-center text-sm font-semibold text-white/90 bg-white/10 backdrop-blur-md
+                          border border-white/20 px-6 py-2.5 rounded-full transition-all duration-300 flex-1">
+                    กำลังเตรียมกล้อง...
+                </p>
+                <button onclick="flipCamera()"
+                        class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md
+                               border border-white/20 text-white flex items-center justify-center
+                               transition-all active:scale-90 shrink-0" title="กลับกล้อง">
+                    <i data-lucide="flip-horizontal-2" class="w-5 h-5"></i>
+                </button>
+            </div>
 
             <div class="w-full max-w-sm">
                 <p class="text-[11px] font-medium text-white/40 text-center mb-2">ค้นหาด้วยรหัสผลงาน</p>
@@ -1787,9 +1795,12 @@
             }, 2100);
         }
 
-        function startScanner() {
+        var currentFacing = "environment"; // กล้องหลัง default
+
+        function startScanner(facing) {
             isStopping  = false;
-            isProcessing = false;   // reset lock เมื่อเริ่มกล้องใหม่
+            isProcessing = false;
+            currentFacing = facing || currentFacing;
             html5QrCode = new Html5Qrcode("reader");
             const config = {
                 fps: 15,
@@ -1800,7 +1811,7 @@
             };
 
             html5QrCode.start(
-                { facingMode: "environment" },
+                { facingMode: currentFacing },
                 config,
                 onScanSuccess,
                 onScanFailure
@@ -1818,6 +1829,19 @@
                 html5QrCode.stop()
                     .then(() => { html5QrCode = null; })
                     .catch(err => console.error("Error stopping scanner:", err));
+            }
+        }
+
+        function flipCamera() {
+            const newFacing = currentFacing === "environment" ? "user" : "environment";
+            if (html5QrCode) {
+                isStopping = true;
+                html5QrCode.stop().then(() => {
+                    html5QrCode = null;
+                    startScanner(newFacing);
+                }).catch(() => startScanner(newFacing));
+            } else {
+                startScanner(newFacing);
             }
         }
 
