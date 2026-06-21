@@ -128,7 +128,7 @@ begin
             v_diff := round(extract(epoch from (v_start - v_now)) / 60)::int;
             if v_diff between 14 and 16 then
                 perform public.line_try_send(r.uid, r.code, 'lead15',
-                    '⏰ แจ้งเตือนก่อนนำเสนอ 15 นาที' || E'\n' ||
+                    '⏰ แจ้งเตือนก่อนนำเสนอ ' || v_diff || ' นาที' || E'\n' ||
                     'ผลงาน: ' || r.code || E'\n' ||
                     'เหลือเวลาอีก ' || v_diff || ' นาที ก่อนถึงเวลานำเสนอ กรุณามายังจุดรอนำเสนอและรอเรียกตามลำดับคิว' || E'\n' ||
                     'คิวของท่าน: ' || coalesce(r.queue_no::text,'?') || E'\n' ||
