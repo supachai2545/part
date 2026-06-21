@@ -1816,10 +1816,10 @@
                 onScanSuccess,
                 onScanFailure
             ).then(() => {
-                setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+                setScanFeedback("พร้อมสแกน", "slate");
             }).catch(err => {
                 console.error("Camera open error:", err);
-                setScanFeedback("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้อง", "rose");
+                setScanFeedback("เปิดกล้องไม่ได้", "rose");
             });
         }
 
@@ -1905,7 +1905,7 @@
                 }
 
                 console.log('[SCAN] rawCode =', rawCode, '| parsed code =', code);
-                setScanFeedback("กำลังตรวจค้นรหัส: " + code + "...", "indigo");
+                setScanFeedback("กำลังตรวจ...", "indigo");
 
                 // ── 2. ใช้ cached data ก่อน ถ้าว่างให้ fetch ใหม่ ─────────────
                 let rows = cachedAllData;
@@ -1931,7 +1931,7 @@
                     console.warn('[SCAN] ไม่พบ:', code,
                         '| ตัวอย่าง DB:', rows.slice(0, 3).map(r =>
                             ({ รหัส: r['รหัสผลงาน'], qr: r['QRCODE'] })));
-                    setScanFeedback(`ไม่พบข้อมูลรหัส: ${code}`, "rose");
+                    setScanFeedback("ไม่พบ", "rose");
                     playErrorTone();
                     return;
                 }
@@ -2004,7 +2004,7 @@
                         ), 600);
                     }
                 } else {
-                    setScanFeedback(`สิทธิ์ ${code} ทำรายการเสร็จสิ้นครบถ้วนแล้ว`, "slate");
+                    setScanFeedback("พบ", "slate");
                     showError(
                         `ผู้ส่งผลงานรหัส ${code} ได้เข้าร่วมการนำเสนอและสแกนรับใบประกาศเรียบร้อยแล้วเมื่อ ${data['เวลารับประกาศ'] || '-'}`
                     );
@@ -2051,7 +2051,7 @@
             document.getElementById('confirmModal').classList.add('hidden');
             if (resetFeedback) {
                 currentScannedItems = [];
-                setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+                setScanFeedback("พร้อมสแกน", "slate");
             }
         }
 
@@ -2113,7 +2113,7 @@
 
         function closeSuccess() {
             document.getElementById('successModal').classList.add('hidden');
-            setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+            setScanFeedback("พร้อมสแกน", "slate");
         }
 
         // =============================================================
@@ -2127,7 +2127,7 @@
         function closeErrorModal() {
             currentScannedItems = [];
             document.getElementById('errorModal').classList.add('hidden');
-            setScanFeedback("วาง QR Code ให้อยู่ในกรอบ", "slate");
+            setScanFeedback("พร้อมสแกน", "slate");
         }
 
         // =============================================================
