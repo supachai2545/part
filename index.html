@@ -1547,7 +1547,7 @@
             if (window.scrollY >= 320) { var stb = document.getElementById('scrollTopBtn'); if (stb) stb.classList.remove('hidden'); }
             // นับจำนวนปิด poster → แสดง survey หลังปิดอันที่ 9 ครั้งแรกเท่านั้น
             _closedCount++;
-            if (_closedCount === 5 && !localStorage.getItem('surveyDone')) {
+            if (_closedCount === 6 && !localStorage.getItem('surveyDone')) {
                 setTimeout(openSurveyModal, 600);
             }
         }
