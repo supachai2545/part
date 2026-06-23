@@ -924,8 +924,18 @@
   // ===== STAFF SEARCH (ค้นหาผู้ประจำบูธ) =====
   // ปรับชื่อคีย์ให้ตรงกับคอลัมน์ที่ Google Apps Script ส่งกลับมา (ใส่ได้หลายชื่อ ระบบจะหยิบค่าแรกที่เจอ)
   const STAFF_FIELDS = {
-    1: { prefix:['prefix1','title1','คำนำหน้า1','คำนำหน้า_1'], first:['firstName1','fname1','firstname1','ชื่อ1','ชื่อ_1'], last:['lastName1','lname1','lastname1','นามสกุล1','นามสกุล_1'], full:['person1','staff1','fullName1','name1','ชื่อสกุล1','ผู้ประจำบูธ1','ผู้ประจำบูธคนที่1'] },
-    2: { prefix:['prefix2','title2','คำนำหน้า2','คำนำหน้า_2'], first:['firstName2','fname2','firstname2','ชื่อ2','ชื่อ_2'], last:['lastName2','lname2','lastname2','นามสกุล2','นามสกุล_2'], full:['person2','staff2','fullName2','name2','ชื่อสกุล2','ผู้ประจำบูธ2','ผู้ประจำบูธคนที่2'] }
+    1: {
+      prefix:['person1Prefix','prefix1','title1','คำนำหน้า1','คำนำหน้าชื่อ ผู้ประจำบูธ คนที่ 1','คำนำหน้าชื่อผู้ประจำบูธคนที่1'],
+      first:['firstName1','ชื่อ1'], last:['lastName1','นามสกุล1'],
+      full:['person1Name','person1','staff1','fullName1','name1','ผู้ประจำบูธ1','ผู้ประจำบูธคนที่1','ชื่อ–นามสกุล ผู้ประจำบูธ คนที่ 1','ชื่อ-นามสกุล ผู้ประจำบูธ คนที่ 1','ชื่อ–นามสกุลผู้ประจำบูธคนที่1'],
+      loc:['person1Location','location1','สถานที่ประจำ คนที่ 1','สถานที่ประจำคนที่1','สถานที่ประจำ1']
+    },
+    2: {
+      prefix:['person2Prefix','prefix2','title2','คำนำหน้า2','คำนำหน้าชื่อ ผู้ประจำบูธ คนที่ 2','คำนำหน้าชื่อผู้ประจำบูธคนที่2'],
+      first:['firstName2','ชื่อ2'], last:['lastName2','นามสกุล2'],
+      full:['person2Name','person2','staff2','fullName2','name2','ผู้ประจำบูธ2','ผู้ประจำบูธคนที่2','ชื่อ–นามสกุล ผู้ประจำบูธ คนที่ 2','ชื่อ-นามสกุล ผู้ประจำบูธ คนที่ 2','ชื่อ–นามสกุลผู้ประจำบูธคนที่2'],
+      loc:['person2Location','location2','สถานที่ประจำ คนที่ 2','สถานที่ประจำคนที่2','สถานที่ประจำ2']
+    }
   };
   let peopleIndex = [];
   let peopleState = 'loading'; // loading | ready | error
@@ -936,7 +946,8 @@
     const prefix=pickField(row,f.prefix);
     const full=pickField(row,f.full);
     const name=full || [pickField(row,f.first), pickField(row,f.last)].filter(Boolean).join(' ').trim();
-    return { prefix, name };
+    const loc=pickField(row,f.loc);
+    return { prefix, name, loc };
   }
   function buildPeopleIndex(rows){
     peopleIndex=[];
@@ -948,7 +959,7 @@
         const p=resolveStaff(row,n);
         if(p.name){
           any=true;
-          peopleIndex.push({ booth, org, no:n, prefix:p.prefix, name:p.name, search:(p.prefix+' '+p.name+' '+org+' '+booth).toLowerCase() });
+          peopleIndex.push({ booth, org, no:n, prefix:p.prefix, name:p.name, loc:p.loc, search:(p.prefix+' '+p.name+' '+(p.loc||'')+' '+org+' '+booth).toLowerCase() });
         }
       });
       if(!any && (org||booth)){
@@ -973,6 +984,7 @@
       + '<div class="flex-1 min-w-0">'
       +   '<div class="flex items-center gap-2 flex-wrap mb-1"><span class="font-bold text-gray-900">'+title+'</span>'+staffBadge(p.no)+'</div>'
       +   '<p class="text-sm text-gray-600">'+esc(p.org||'-')+'</p>'
+      +   (p.loc?'<p class="text-xs text-gray-500 mt-0.5">📍 สถานที่ประจำ: '+esc(p.loc)+'</p>':'')
       +   (p.booth?'<p class="text-xs text-gray-400 mt-0.5">บูธ '+esc(p.booth)+'</p>':'')
       + '</div></div>';
   }
