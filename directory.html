@@ -5,101 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ผังงานนิทรรศการ — DMSc Conference #34 | From Lab to Life</title>
 
-<!-- PWA -->
-<meta name="theme-color" content="#15803d">
+<meta name="theme-color" content="#16a34a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Directory Map">
+<meta name="apple-mobile-web-app-title" content="Directory">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-  body{font-family:'Sarabun',sans-serif;color:#1e293b;background:#f0fdf4;background-image:radial-gradient(#bbf7d0 1px,transparent 1px);background-size:26px 26px;letter-spacing:.1px;}
-  .fade-up{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  .pulse-card{animation:pulseCard 1.6s ease-out}
-  @keyframes pulseCard{0%{box-shadow:0 0 0 0 rgba(21,128,61,.5)}70%{box-shadow:0 0 0 16px rgba(21,128,61,0)}100%{box-shadow:0 0 0 0 rgba(21,128,61,0)}}
-  .glass{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-  ::-webkit-scrollbar{width:7px;height:7px}
-  ::-webkit-scrollbar-thumb{background:#86efac;border-radius:10px}
-  ::-webkit-scrollbar-track{background:transparent}
-  .tab-active{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 8px 20px -6px rgba(21,128,61,.5)}
-  .hero-gradient{background:linear-gradient(135deg,#166534 0%,#15803d 52%,#0f766e 100%)}
-  .booth-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-  .booth-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px -12px rgba(0,0,0,.16)}
-  /* balanced type scale */
-  .eyebrow{letter-spacing:.22em}
-  h1,h2,h3{letter-spacing:-.01em}
+  :root{ --green:#16a34a; --green-deep:#15803d; }
+  *{ -webkit-tap-highlight-color:transparent; }
+  body{ font-family:'Prompt',sans-serif; color:#27272a; background:#ffffff; font-weight:400; }
+  h1,h2,h3{ font-weight:500; letter-spacing:-.01em; }
+  .eyebrow{ letter-spacing:.2em; }
+  .fade{ animation:fade .45s ease both }
+  @keyframes fade{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .flash{ animation:flash 1.5s ease-out }
+  @keyframes flash{ 0%{background:#dcfce7} 100%{background:transparent} }
+  ::-webkit-scrollbar{ width:6px;height:6px }
+  ::-webkit-scrollbar-thumb{ background:#d4d4d8;border-radius:10px }
+  ::-webkit-scrollbar-track{ background:transparent }
+  .row{ transition:background .15s ease }
 </style>
 </head>
 <body class="min-h-screen antialiased">
 
+<!-- thin brand accent -->
+<div class="h-1 w-full bg-green-600"></div>
+
 <!-- ============ HEADER ============ -->
-<header class="hero-gradient text-white relative overflow-hidden">
-  <div class="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
-  <div class="absolute -bottom-20 -left-10 w-72 h-72 bg-emerald-300/20 rounded-full blur-3xl"></div>
-  <div class="max-w-5xl mx-auto px-5 sm:px-6 pt-6 pb-8 relative z-10">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="bg-white/95 rounded-2xl px-3 py-2 flex items-center gap-3 shadow-lg">
-        <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png"
-             onerror="this.style.display='none'" alt="DMSc" class="h-8 object-contain"/>
-        <div class="h-7 w-px bg-slate-200"></div>
-        <img src="https://conferenceplan.dmsc.moph.go.th/templates/yootheme/cache/b4/logo-prachum%20wichakar-34-Final-b4d9df54.webp"
-             onerror="this.style.display='none'" alt="Conf" class="h-8 object-contain"/>
-      </div>
+<header class="border-b border-zinc-100">
+  <div class="max-w-4xl mx-auto px-6 sm:px-8 pt-7 pb-8">
+    <div class="flex items-center gap-3 mb-7 opacity-90">
+      <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png"
+           onerror="this.style.display='none'" alt="DMSc" class="h-8 object-contain"/>
+      <div class="h-6 w-px bg-zinc-200"></div>
+      <img src="https://conferenceplan.dmsc.moph.go.th/templates/yootheme/cache/b4/logo-prachum%20wichakar-34-Final-b4d9df54.webp"
+           onerror="this.style.display='none'" alt="Conf" class="h-8 object-contain"/>
     </div>
-    <p class="eyebrow text-emerald-100/90 font-bold text-[11px] sm:text-xs uppercase mb-2.5">The 34<sup>th</sup> Annual Medical Sciences Conference</p>
-    <h1 class="text-[2rem] sm:text-5xl font-extrabold leading-[1.08]">
-      From <span class="text-emerald-200">Lab</span> to <span class="text-lime-200">Life</span>
-    </h1>
-    <p class="text-emerald-50/85 font-medium text-sm sm:text-base mt-2 max-w-xl leading-relaxed">วิทยาศาสตร์เพื่อการมีสุขภาพยืนยาว · จากห้องแล็บสู่ชีวิตจริง</p>
-    <div class="flex flex-wrap items-center gap-2 mt-5">
-      <span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-full px-3.5 py-1.5 text-xs font-semibold">
-        <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> 24–26 มิถุนายน 2569
-      </span>
-      <span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-full px-3.5 py-1.5 text-xs font-semibold">
-        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ผังงานนิทรรศการ · Directory Map
-      </span>
-    </div>
+    <p class="eyebrow text-[11px] font-medium uppercase text-zinc-400 mb-3">The 34<sup>th</sup> Annual Medical Sciences Conference</p>
+    <h1 class="text-[2rem] sm:text-[2.5rem] leading-[1.1] text-zinc-900">From Lab to <span class="text-green-600">Life</span></h1>
+    <p class="text-zinc-500 text-[15px] mt-2 font-light">วิทยาศาสตร์เพื่อการมีสุขภาพยืนยาว · จากห้องแล็บสู่ชีวิตจริง</p>
+    <p class="text-zinc-400 text-[13px] mt-4 font-light">24–26 มิถุนายน 2569 &nbsp;·&nbsp; ผังงานนิทรรศการ / Directory</p>
   </div>
 </header>
 
 <!-- ============ STICKY SEARCH + TABS ============ -->
-<div class="glass sticky top-0 z-30 border-b border-green-100 shadow-sm">
-  <div class="max-w-5xl mx-auto px-5 sm:px-6 py-3">
-    <div class="relative mb-3">
-      <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500"></i>
+<div id="stickyBar" class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-zinc-100">
+  <div class="max-w-4xl mx-auto px-6 sm:px-8 pt-4">
+    <div class="relative">
+      <i data-lucide="search" class="absolute left-0 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-zinc-400"></i>
       <input id="searchBox" type="text" autocomplete="off"
-        placeholder="ค้นหาชื่อบริษัท / หน่วยงาน หรือรหัสบูธ เช่น A05, S12, กิบไทย"
-        class="w-full pl-12 pr-11 py-3.5 rounded-2xl border-2 border-green-100 bg-white/90 text-[15px] font-medium placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition"/>
-      <button id="clearBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-500 transition">
-        <i data-lucide="x" class="w-4 h-4"></i>
+        placeholder="ค้นหาชื่อบริษัท หน่วยงาน หรือรหัสบูธ — เช่น A05, S12, กิบไทย"
+        class="w-full pl-7 pr-8 py-2.5 border-0 border-b border-transparent bg-transparent text-[15px] font-light placeholder:text-zinc-400 focus:outline-none transition"/>
+      <button id="clearBtn" onclick="clearSearch()" class="hidden absolute right-0 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-600 transition">
+        <i data-lucide="x" class="w-[18px] h-[18px]"></i>
       </button>
     </div>
-    <div id="tabBar" class="flex gap-2"></div>
+    <div id="tabBar" class="flex gap-7 mt-3"></div>
   </div>
 </div>
 
-<main class="max-w-5xl mx-auto px-5 sm:px-6 py-6">
+<main class="max-w-4xl mx-auto px-6 sm:px-8 py-8">
 
   <!-- SEARCH RESULTS -->
-  <section id="resultsSection" class="hidden">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-        <i data-lucide="list-filter" class="w-5 h-5 text-green-600"></i> ผลการค้นหา
-      </h2>
-      <span id="resultCount" class="text-sm font-semibold text-slate-500"></span>
+  <section id="resultsSection" class="hidden fade">
+    <div class="flex items-baseline justify-between mb-2">
+      <p class="eyebrow text-[11px] font-medium uppercase text-zinc-400">ผลการค้นหา</p>
+      <span id="resultCount" class="text-[12px] text-zinc-400 font-light"></span>
     </div>
-    <div id="resultsGrid" class="grid sm:grid-cols-2 gap-3"></div>
-    <div id="noResults" class="hidden text-center py-20">
-      <div class="w-20 h-20 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-4 border border-green-100">
-        <i data-lucide="search-x" class="w-10 h-10 text-green-300"></i>
-      </div>
-      <h3 class="text-xl font-bold text-slate-700">ไม่พบบูธที่ค้นหา</h3>
-      <p class="text-sm text-slate-500 mt-1">ลองพิมพ์ชื่อบริษัทบางส่วน หรือรหัสบูธ เช่น <b>A12</b>, <b>S5</b></p>
+    <div id="resultsGrid" class="grid sm:grid-cols-2 sm:gap-x-10"></div>
+    <div id="noResults" class="hidden text-center py-24">
+      <i data-lucide="search-x" class="w-9 h-9 text-zinc-300 mx-auto mb-3"></i>
+      <p class="text-zinc-500">ไม่พบบูธที่ค้นหา</p>
+      <p class="text-[13px] text-zinc-400 mt-1 font-light">ลองพิมพ์ชื่อบางส่วน หรือรหัสบูธ เช่น A12, S5</p>
     </div>
   </section>
 
@@ -108,20 +90,18 @@
 
 </main>
 
-<footer class="border-t border-green-100 bg-white/70 mt-8">
-  <div class="max-w-5xl mx-auto px-5 sm:px-6 py-6 text-center">
-    <p class="text-xs text-slate-500 font-medium">ผังงานนิทรรศการ — การประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
-    <p class="text-[11px] text-slate-400 mt-1">© 2569 กรมวิทยาศาสตร์การแพทย์ กระทรวงสาธารณสุข</p>
+<footer class="border-t border-zinc-100">
+  <div class="max-w-4xl mx-auto px-6 sm:px-8 py-7 text-center">
+    <p class="text-[12px] text-zinc-400 font-light">การประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
+    <p class="text-[11px] text-zinc-300 mt-1 font-light">© 2569 กรมวิทยาศาสตร์การแพทย์ กระทรวงสาธารณสุข</p>
   </div>
 </footer>
 
 <!-- LIGHTBOX -->
-<div id="lightbox" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-3" onclick="closeLightbox()">
-  <button class="absolute top-4 right-4 w-11 h-11 bg-white/15 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition z-10">
-    <i data-lucide="x" class="w-6 h-6"></i>
-  </button>
+<div id="lightbox" class="hidden fixed inset-0 z-50 bg-white/98 flex items-center justify-center p-3" onclick="closeLightbox()">
+  <button class="absolute top-5 right-5 text-zinc-400 hover:text-zinc-800 transition z-10"><i data-lucide="x" class="w-7 h-7"></i></button>
   <div class="w-full h-full overflow-auto flex items-start justify-center">
-    <img id="lightboxImg" src="" class="max-w-none min-w-full sm:min-w-[700px] rounded-lg" alt="แผนผัง"/>
+    <img id="lightboxImg" src="" class="max-w-none min-w-full sm:min-w-[700px]" alt="แผนผัง"/>
   </div>
 </div>
 
@@ -134,12 +114,12 @@ const FLOORS = [
     id:'1', label:'ชั้น 1', tag:'โซนบูธบริษัท · ผู้ประกอบการ (Zone A)',
     image:'floor1.jpg',
     groups:[
-      { title:'จุดบริการ & ไฮไลต์', accent:'emerald', items:[
+      { title:'จุดบริการ & ไฮไลต์', items:[
         {code:'A', name:'Mini stage'},
         {code:'B', name:'Photobackdrop'},
         {code:'C', name:'Sapphire 105 จุดรับกระเป๋า'},
       ]},
-      { title:'บูธผู้ประกอบการ (A01–A87)', accent:'green', items:[
+      { title:'บูธผู้ประกอบการ (A01–A87)', items:[
         {code:'A01-A04', name:'บริษัท กิบไทย จำกัด'},
         {code:'A05', name:'บริษัท แบงเทรดดิ้ง 1992 จำกัด'},
         {code:'A06', name:'บริษัท เอสโก ไลฟ์ไซแอนซ์ (ประเทศไทย) จำกัด'},
@@ -214,7 +194,7 @@ const FLOORS = [
     id:'2', label:'ชั้น 2', tag:'โซนจัดแสดงนิทรรศการ & บูธหน่วยงาน',
     image:'floor2.jpg',
     groups:[
-      { title:'โซนจัดแสดงนิทรรศการ (A–R)', accent:'teal', items:[
+      { title:'โซนจัดแสดงนิทรรศการ (A–R)', items:[
         {code:'A', name:'โซนนิทรรศการเฉลิมพระเกียรติ'},
         {code:'B', name:'โซนแสดงผลงานด้านวิทยาศาสตร์การแพทย์ชุมชนดีเด่น'},
         {code:'C', name:'เครือข่ายความร่วมมือต่างประเทศ'},
@@ -234,7 +214,7 @@ const FLOORS = [
         {code:'Q', name:'Sapphire 205 E-Poster'},
         {code:'R', name:'Sapphire 206 ห้องรับไฟล์'},
       ]},
-      { title:'บูธหน่วยงาน (S1–S25)', accent:'cyan', items:[
+      { title:'บูธหน่วยงาน (S1–S25)', items:[
         {code:'S1', name:'สถาบันวิจัยจุฬาภรณ์'},
         {code:'S2-S3', name:'สำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.)'},
         {code:'S4', name:'TILSNA'},
@@ -264,26 +244,16 @@ const FLOORS = [
   }
 ];
 
-/* ---------- accent palette (green-forward) ---------- */
-const ACCENT = {
-  emerald:{chip:'bg-emerald-100 text-emerald-800', bar:'bg-emerald-500'},
-  green:  {chip:'bg-green-100 text-green-800',     bar:'bg-green-600'},
-  teal:   {chip:'bg-teal-100 text-teal-800',       bar:'bg-teal-500'},
-  cyan:   {chip:'bg-cyan-100 text-cyan-800',       bar:'bg-cyan-500'},
-};
-
 let activeFloor = '1';
 
 /* ---------- helpers ---------- */
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function norm(s){return String(s||'').toLowerCase().replace(/\s+/g,'');}
-// แตกช่วงรหัส เช่น A01-A04 -> [A01,A02,A03,A04] ; S2-S3 -> [S2,S3]
 function expandCodes(code){
   const m=String(code).match(/^([A-Za-z]+)(\d+)\s*-\s*([A-Za-z]*)(\d+)$/);
   if(!m) return [code];
   const pre=m[1], a=parseInt(m[2],10), b=parseInt(m[4],10), pad=m[2].length;
-  const out=[];
-  for(let i=a;i<=b;i++) out.push(pre+String(i).padStart(pad,'0'));
+  const out=[]; for(let i=a;i<=b;i++) out.push(pre+String(i).padStart(pad,'0'));
   return out;
 }
 function matchCode(code,q){
@@ -292,64 +262,62 @@ function matchCode(code,q){
   return expandCodes(code).some(c=>norm(c).includes(nq) || norm(c).replace(/^([a-z]+)0+/,'$1').includes(nq));
 }
 
-/* ---------- build flat index for search ---------- */
+/* ---------- flat index ---------- */
 const INDEX=[];
-FLOORS.forEach(f=>f.groups.forEach(g=>g.items.forEach(it=>{
-  INDEX.push({floor:f.id, floorLabel:f.label, accent:g.accent, code:it.code, name:it.name});
-})));
+FLOORS.forEach(f=>f.groups.forEach(g=>g.items.forEach(it=>INDEX.push({floor:f.id, floorLabel:f.label, code:it.code, name:it.name}))));
 
-/* ---------- render tabs ---------- */
+/* ---------- tabs ---------- */
 function renderTabs(){
-  const bar=document.getElementById('tabBar');
-  bar.innerHTML=FLOORS.map(f=>{
+  document.getElementById('tabBar').innerHTML=FLOORS.map(f=>{
     const total=f.groups.reduce((n,g)=>n+g.items.length,0);
     const on=f.id===activeFloor;
     return `<button onclick="setFloor('${f.id}')"
-      class="flex-1 py-2.5 px-3 rounded-xl font-bold text-sm transition border ${on?'tab-active border-transparent':'bg-white text-slate-600 border-green-100 hover:border-green-300'}">
-      <span class="flex items-center justify-center gap-1.5"><i data-lucide="building-2" class="w-4 h-4"></i> ${esc(f.label)}
-      <span class="text-[11px] font-bold ${on?'bg-white/25':'bg-green-50 text-green-600'} px-1.5 py-0.5 rounded-full">${total}</span></span>
-    </button>`;
+      class="pb-2.5 text-[14px] -mb-px border-b-2 transition ${on?'text-green-700 border-green-600 font-medium':'text-zinc-400 border-transparent hover:text-zinc-600 font-light'}">
+      ${esc(f.label)} <span class="text-zinc-300 mx-0.5">·</span> ${total}</button>`;
   }).join('');
-  lucide.createIcons();
+  document.getElementById('tabBar').classList.add('border-b','border-zinc-100');
 }
 
-/* ---------- render a floor ---------- */
+/* ---------- row ---------- */
+function row(it, extra){
+  return `<div id="card-${esc(it.code)}" class="row flex items-baseline gap-4 py-2.5 border-b border-zinc-100 -mx-2 px-2 rounded">
+    <span class="shrink-0 w-[72px] text-[13px] font-medium text-green-700 tracking-tight">${esc(it.code)}</span>
+    <span class="text-[14px] text-zinc-700 font-light leading-snug">${esc(it.name)}</span>
+    ${extra||''}
+  </div>`;
+}
+
+/* ---------- floor ---------- */
 function renderFloor(){
   const f=FLOORS.find(x=>x.id===activeFloor);
   const sec=document.getElementById('floorSection');
-  let html=`
-  <div class="fade-up">
+  let html=`<div class="fade">
     <!-- map -->
-    <div class="bg-white rounded-3xl border border-green-100 shadow-sm overflow-hidden mb-6">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-green-50">
+    <div class="mb-10">
+      <div class="flex items-end justify-between mb-3">
         <div>
-          <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2"><i data-lucide="map" class="w-5 h-5 text-green-600"></i> แผนผัง ${esc(f.label)}</h2>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">${esc(f.tag)}</p>
+          <h2 class="text-[17px] text-zinc-900">แผนผัง${esc(f.label)}</h2>
+          <p class="text-[12px] text-zinc-400 font-light mt-0.5">${esc(f.tag)}</p>
         </div>
-        <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-50 px-2.5 py-1 rounded-full"><i data-lucide="zoom-in" class="w-3.5 h-3.5"></i> แตะเพื่อขยาย</span>
       </div>
-      <div class="relative bg-green-50/40">
-        <img src="${esc(f.image)}" alt="แผนผัง ${esc(f.label)}" loading="lazy"
+      <div class="relative border border-zinc-100 rounded-2xl overflow-hidden bg-zinc-50/60">
+        <img src="${esc(f.image)}" alt="แผนผัง${esc(f.label)}" loading="lazy"
              onclick="openLightbox(this.src)"
              onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')"
-             class="w-full max-h-[460px] object-contain cursor-zoom-in mx-auto"/>
+             class="w-full max-h-[440px] object-contain cursor-zoom-in mx-auto"/>
         <div class="hidden flex-col items-center justify-center text-center py-16 px-6">
-          <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-3"><i data-lucide="image-off" class="w-8 h-8 text-green-500"></i></div>
-          <p class="font-bold text-slate-700">ยังไม่มีรูปแผนผัง <code class="bg-slate-100 px-1.5 py-0.5 rounded text-green-700">${esc(f.image)}</code></p>
-          <p class="text-sm text-slate-500 mt-1 max-w-sm">นำรูปผัง${esc(f.label)}มาวางไว้โฟลเดอร์เดียวกับไฟล์นี้ในชื่อ <b>${esc(f.image)}</b> แล้วรูปจะแสดงอัตโนมัติ (รายชื่อบูธด้านล่างใช้งานได้ทันที)</p>
+          <i data-lucide="image" class="w-7 h-7 text-zinc-300 mb-3"></i>
+          <p class="text-[14px] text-zinc-500">ยังไม่มีรูปแผนผัง <span class="text-green-700">${esc(f.image)}</span></p>
+          <p class="text-[12.5px] text-zinc-400 font-light mt-1 max-w-xs">วางไฟล์ <b>${esc(f.image)}</b> ไว้โฟลเดอร์เดียวกับหน้านี้ แล้วรูปจะแสดงอัตโนมัติ</p>
         </div>
       </div>
     </div>`;
 
   f.groups.forEach(g=>{
-    html+=`
-    <div class="mb-7">
-      <h3 class="text-[15px] font-extrabold text-slate-700 mb-3 flex items-center gap-2">
-        <span class="w-1.5 h-5 rounded-full ${ACCENT[g.accent].bar}"></span>${esc(g.title)}
-        <span class="text-xs font-semibold text-slate-400">(${g.items.length})</span>
-      </h3>
-      <div class="grid sm:grid-cols-2 gap-2.5">
-        ${g.items.map(it=>boothCard(it,g.accent)).join('')}
+    html+=`<div class="mb-10">
+      <p class="eyebrow text-[11px] font-medium uppercase text-zinc-400 mb-2">${esc(g.title)} <span class="text-zinc-300">· ${g.items.length}</span></p>
+      <div class="grid sm:grid-cols-2 sm:gap-x-10">
+        ${g.items.map(it=>row(it)).join('')}
       </div>
     </div>`;
   });
@@ -358,21 +326,12 @@ function renderFloor(){
   lucide.createIcons();
 }
 
-function boothCard(it,accent){
-  const a=ACCENT[accent];
-  return `<div id="card-${esc(it.code)}" class="booth-card bg-white rounded-2xl border border-slate-100 p-3 flex items-center gap-3 shadow-sm">
-    <span class="shrink-0 min-w-[58px] text-center ${a.chip} font-extrabold rounded-xl px-2.5 py-2 text-sm tracking-tight">${esc(it.code)}</span>
-    <p class="text-[13.5px] font-semibold text-slate-700 leading-snug">${esc(it.name)}</p>
-  </div>`;
-}
-
 /* ---------- search ---------- */
 function runSearch(q){
   const fSec=document.getElementById('floorSection');
   const rSec=document.getElementById('resultsSection');
-  const clear=document.getElementById('clearBtn');
   q=q.trim();
-  clear.classList.toggle('hidden', q==='');
+  document.getElementById('clearBtn').classList.toggle('hidden', q==='');
   if(q===''){ rSec.classList.add('hidden'); fSec.classList.remove('hidden'); return; }
   fSec.classList.add('hidden'); rSec.classList.remove('hidden');
 
@@ -380,19 +339,15 @@ function runSearch(q){
   const hits=INDEX.filter(e=> norm(e.name).includes(tokens) || matchCode(e.code,q));
   const grid=document.getElementById('resultsGrid');
   const none=document.getElementById('noResults');
-  document.getElementById('resultCount').textContent=`พบ ${hits.length} รายการ`;
+  document.getElementById('resultCount').textContent=`${hits.length} รายการ`;
   if(hits.length===0){ grid.innerHTML=''; none.classList.remove('hidden'); lucide.createIcons(); return; }
   none.classList.add('hidden');
-  grid.innerHTML=hits.map(e=>{
-    const a=ACCENT[e.accent];
-    return `<button onclick="goToBooth('${e.floor}','${esc(e.code)}')" class="booth-card text-left bg-white rounded-2xl border border-slate-100 p-3 flex items-center gap-3 shadow-sm w-full">
-      <span class="shrink-0 min-w-[58px] text-center ${a.chip} font-extrabold rounded-xl px-2.5 py-2 text-sm">${esc(e.code)}</span>
-      <span class="min-w-0">
-        <span class="block text-[13.5px] font-semibold text-slate-700 leading-snug">${esc(e.name)}</span>
-        <span class="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-green-600"><i data-lucide="map-pin" class="w-3 h-3"></i> ${esc(e.floorLabel)}</span>
-      </span>
-    </button>`;
-  }).join('');
+  grid.innerHTML=hits.map(e=>`
+    <button onclick="goToBooth('${e.floor}','${esc(e.code)}')" class="row text-left w-full flex items-baseline gap-4 py-2.5 border-b border-zinc-100 -mx-2 px-2 rounded hover:bg-zinc-50">
+      <span class="shrink-0 w-[72px] text-[13px] font-medium text-green-700">${esc(e.code)}</span>
+      <span class="flex-1 text-[14px] text-zinc-700 font-light leading-snug">${esc(e.name)}</span>
+      <span class="shrink-0 text-[11px] text-zinc-400 font-light">${esc(e.floorLabel)}</span>
+    </button>`).join('');
   lucide.createIcons();
 }
 
@@ -402,12 +357,12 @@ function goToBooth(floor,code){
   setFloor(floor);
   setTimeout(()=>{
     const el=document.getElementById('card-'+code);
-    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('pulse-card','border-green-400'); setTimeout(()=>el.classList.remove('pulse-card'),1700); }
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1500); }
   },120);
 }
 
 function clearSearch(){ const b=document.getElementById('searchBox'); b.value=''; runSearch(''); b.focus(); }
-function setFloor(id){ activeFloor=id; renderTabs(); renderFloor(); window.scrollTo({top:document.querySelector('.glass').offsetHeight-10,behavior:'instant'}); }
+function setFloor(id){ activeFloor=id; renderTabs(); renderFloor(); window.scrollTo({top:document.getElementById('stickyBar').offsetHeight-2,behavior:'instant'}); }
 
 /* ---------- lightbox ---------- */
 function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').classList.remove('hidden'); document.body.style.overflow='hidden'; lucide.createIcons(); }
