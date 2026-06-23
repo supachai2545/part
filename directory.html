@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ผังงานนิทรรศการ — DMSc Conference #34 | From Lab to Life</title>
+
+<!-- PWA -->
+<meta name="theme-color" content="#ea580c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Directory Map">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  body{font-family:'Sarabun',sans-serif;color:#1c1917;background:#fff7ed;background-image:radial-gradient(#fed7aa 1px,transparent 1px);background-size:26px 26px;}
+  .fade-up{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .pulse-card{animation:pulseCard 1.6s ease-out}
+  @keyframes pulseCard{0%{box-shadow:0 0 0 0 rgba(234,88,12,.5)}70%{box-shadow:0 0 0 16px rgba(234,88,12,0)}100%{box-shadow:0 0 0 0 rgba(234,88,12,0)}}
+  .glass{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  ::-webkit-scrollbar{width:7px;height:7px}
+  ::-webkit-scrollbar-thumb{background:#fdba74;border-radius:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  .tab-active{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;box-shadow:0 8px 20px -6px rgba(234,88,12,.5)}
+  .hero-gradient{background:linear-gradient(120deg,#f97316 0%,#ea580c 55%,#c2410c 100%)}
+  .booth-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+  .booth-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px -12px rgba(0,0,0,.18)}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- ============ HEADER ============ -->
+<header class="hero-gradient text-white relative overflow-hidden">
+  <div class="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
+  <div class="absolute -bottom-20 -left-10 w-72 h-72 bg-amber-300/20 rounded-full blur-3xl"></div>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-7 relative z-10">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="bg-white/95 rounded-2xl px-3 py-2 flex items-center gap-3 shadow-lg">
+        <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png"
+             onerror="this.style.display='none'" alt="DMSc" class="h-8 object-contain"/>
+        <div class="h-7 w-px bg-slate-200"></div>
+        <img src="https://conferenceplan.dmsc.moph.go.th/templates/yootheme/cache/b4/logo-prachum%20wichakar-34-Final-b4d9df54.webp"
+             onerror="this.style.display='none'" alt="Conf" class="h-8 object-contain"/>
+      </div>
+    </div>
+    <p class="text-amber-100 font-bold text-xs sm:text-sm tracking-wide uppercase mb-1">The 34<sup>th</sup> Annual Medical Sciences Conference</p>
+    <h1 class="text-3xl sm:text-5xl font-black leading-tight tracking-tight">
+      From <span class="text-amber-200 italic">Lab</span> to <span class="text-amber-200 italic">Life</span>
+    </h1>
+    <p class="text-amber-50/90 font-medium text-sm sm:text-base mt-1">จากห้องแล็บสู่ชีวิตจริง วิทยาศาสตร์เพื่อการมีสุขภาพยืนยาว</p>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <span class="inline-flex items-center gap-1.5 bg-white/20 border border-white/30 rounded-full px-3 py-1.5 text-xs font-bold">
+        <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> 24–26 มิถุนายน 2569
+      </span>
+      <span class="inline-flex items-center gap-1.5 bg-white/20 border border-white/30 rounded-full px-3 py-1.5 text-xs font-bold">
+        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ผังงานนิทรรศการ · Directory Map
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ STICKY SEARCH + TABS ============ -->
+<div class="glass sticky top-0 z-30 border-b border-orange-100 shadow-sm">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+    <div class="relative mb-3">
+      <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400"></i>
+      <input id="searchBox" type="text" autocomplete="off"
+        placeholder="ค้นหาชื่อบริษัท / หน่วยงาน หรือรหัสบูธ เช่น A05, S12, กิบไทย"
+        class="w-full pl-12 pr-11 py-3.5 rounded-2xl border-2 border-orange-100 bg-white/90 text-[15px] font-medium placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition"/>
+      <button id="clearBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-500 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div id="tabBar" class="flex gap-2"></div>
+  </div>
+</div>
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+
+  <!-- SEARCH RESULTS -->
+  <section id="resultsSection" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+        <i data-lucide="list-filter" class="w-5 h-5 text-orange-500"></i> ผลการค้นหา
+      </h2>
+      <span id="resultCount" class="text-sm font-bold text-slate-500"></span>
+    </div>
+    <div id="resultsGrid" class="grid sm:grid-cols-2 gap-3"></div>
+    <div id="noResults" class="hidden text-center py-20">
+      <div class="w-20 h-20 mx-auto bg-orange-50 rounded-full flex items-center justify-center mb-4 border border-orange-100">
+        <i data-lucide="search-x" class="w-10 h-10 text-orange-300"></i>
+      </div>
+      <h3 class="text-xl font-bold text-slate-700">ไม่พบบูธที่ค้นหา</h3>
+      <p class="text-sm text-slate-500 mt-1">ลองพิมพ์ชื่อบริษัทบางส่วน หรือรหัสบูธ เช่น <b>A12</b>, <b>S5</b></p>
+    </div>
+  </section>
+
+  <!-- FLOOR BROWSE -->
+  <section id="floorSection"></section>
+
+</main>
+
+<footer class="border-t border-orange-100 bg-white/70 mt-8">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 text-center">
+    <p class="text-xs text-slate-500 font-medium">ผังงานนิทรรศการ — การประชุมวิชาการวิทยาศาสตร์การแพทย์ ครั้งที่ 34</p>
+    <p class="text-[11px] text-slate-400 mt-1">© 2569 กรมวิทยาศาสตร์การแพทย์ กระทรวงสาธารณสุข</p>
+  </div>
+</footer>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-3" onclick="closeLightbox()">
+  <button class="absolute top-4 right-4 w-11 h-11 bg-white/15 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition z-10">
+    <i data-lucide="x" class="w-6 h-6"></i>
+  </button>
+  <div class="w-full h-full overflow-auto flex items-start justify-center">
+    <img id="lightboxImg" src="" class="max-w-none min-w-full sm:min-w-[700px] rounded-lg" alt="แผนผัง"/>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ข้อมูลผังงาน — แก้ไข/เพิ่มชื่อบริษัทได้ที่นี่โดยตรง
+   ============================================================ */
+const FLOORS = [
+  {
+    id:'1', label:'ชั้น 1', tag:'โซนบูธบริษัท · ผู้ประกอบการ (Zone A)',
+    image:'floor1.jpg',
+    groups:[
+      { title:'จุดบริการ & ไฮไลต์', accent:'amber', items:[
+        {code:'A', name:'Mini stage'},
+        {code:'B', name:'Photobackdrop'},
+        {code:'C', name:'Sapphire 105 จุดรับกระเป๋า'},
+      ]},
+      { title:'บูธผู้ประกอบการ (A01–A87)', accent:'orange', items:[
+        {code:'A01-A04', name:'บริษัท กิบไทย จำกัด'},
+        {code:'A05', name:'บริษัท แบงเทรดดิ้ง 1992 จำกัด'},
+        {code:'A06', name:'บริษัท เอสโก ไลฟ์ไซแอนซ์ (ประเทศไทย) จำกัด'},
+        {code:'A07', name:'บริษัท ธีระเทรดดิ้ง จำกัด'},
+        {code:'A08', name:'บริษัท วีเซนท์ ไบโอเทคโนโลยี (ประเทศไทย) จำกัด'},
+        {code:'A09', name:'บริษัท ไบโอเมด ไดแอกนอสติกส์ (ประเทศไทย) จำกัด'},
+        {code:'A10', name:'บริษัท ซีจี ไซแอนติฟิค จำกัด'},
+        {code:'A11-A12', name:'บริษัท ไบโอดีไซน์ จำกัด'},
+        {code:'A13', name:'บริษัท แล็บ ลีดเดอร์ จำกัด'},
+        {code:'A14', name:'บริษัท ดอกเตอร์ คาลิเบรชั่น จำกัด'},
+        {code:'A15', name:'บริษัท ฟิตาร่า เอสเซนซ์ กรุ๊ป จำกัด (สำนักงานใหญ่)'},
+        {code:'A16', name:'บริษัท ไอซายเอนซ์ เทคโนโลยี จำกัด'},
+        {code:'A17-A18', name:'บริษัท ไทยยูนีค จำกัด'},
+        {code:'A19-A20', name:'บริษัท แอพพลาย เคมิคอล แอนด์ อินสตรูเมนท์ จำกัด'},
+        {code:'A21', name:'บริษัท เจนบรรเจิด จำกัด (สำนักงานใหญ่)'},
+        {code:'A22', name:'บริษัท พีพีดีลลิ่ง กรุ๊ป จำกัด'},
+        {code:'A23-A24', name:'บริษัท คลาริตัส จำกัด (สำนักงานใหญ่)'},
+        {code:'A25', name:'บริษัท เอสเอ็นพี ไซแอนติฟิค จำกัด'},
+        {code:'A26', name:'บริษัท เคมิเคิล เอ็กซ์เพรส จำกัด'},
+        {code:'A27-A28', name:'บริษัท จีนแม็กซ์ เทคโนโลยีส์ จำกัด'},
+        {code:'A29-A30', name:'บริษัท ยีนพลัส จำกัด'},
+        {code:'A31-A32', name:'บริษัท เอฟ.เอ็น. ไซเอนซ์ จำกัด'},
+        {code:'A33-A34', name:'บริษัท สิทธิพรแอสโซซิเอส จำกัด'},
+        {code:'A35', name:'บริษัท พาวเวอร์เทค เคมีคัล อินดัสทรี จำกัด'},
+        {code:'A36', name:'บริษัท มิท เทคโนโลยี จำกัด'},
+        {code:'A37', name:'บริษัท เอเชีย เซมัย (ไทยแลนด์) จำกัด'},
+        {code:'A38-A39', name:'บริษัท แอฟพีไอ เร็คเร็นจ์ (ประเทศไทย) จำกัด'},
+        {code:'A40', name:'บริษัท ยูไบเทค ซายน์ จำกัด'},
+        {code:'A41', name:'บริษัท ไบโอ อาร์ท เซอร์วิส จำกัด'},
+        {code:'A42', name:'บริษัท แอ็กโซ เคมิคอลส์ แอนด์ เซอร์วิสเซส จำกัด'},
+        {code:'A43', name:'บริษัท พี.อินเตอร์เทรด อิควิปเม้นท์ จำกัด'},
+        {code:'A44', name:'บริษัท ลอรีอัล (ประเทศไทย) จำกัด'},
+        {code:'A45', name:'บริษัท ไบโอมีเดีย (ประเทศไทย) จำกัด'},
+        {code:'A46', name:'บริษัท เซสท์-เมด จำกัด'},
+        {code:'A47', name:'MEGA WE CARE'},
+        {code:'A48', name:'ห้างหุ้นส่วนจำกัด วอร์ด เมดิก'},
+        {code:'A49', name:'บริษัท อาร์.เคมีก้า อินเตอร์เนชั่นแนล จำกัด'},
+        {code:'A50', name:'บริษัท อาร์.ไอ เทคโนโลยี่ส์ จำกัด'},
+        {code:'A51', name:'บริษัท ฟินิทย์ ไซแอนติฟิค จำกัด'},
+        {code:'A52', name:'บริษัท แล็ป แมนเนจ จำกัด'},
+        {code:'A53', name:'ศูนย์ทดสอบทางพิษวิทยาและชีววิทยา (TBES) สวทช.'},
+        {code:'A54', name:'บริษัท เอส.เอ็ม.เคมีคอล ซัพพลาย จำกัด'},
+        {code:'A55', name:'บริษัท แอนนาไลติเคิลแล็บไซน์ จำกัด'},
+        {code:'A56', name:'World BioHazTec Pte. Ltd'},
+        {code:'A57', name:'บริษัท บูชิ (ไทยแลนด์) จำกัด'},
+        {code:'A58', name:'บริษัท ชินเทค อินโนเวชั่น จำกัด'},
+        {code:'A59', name:'บริษัท ไคลาเจน (ประเทศไทย) จำกัด'},
+        {code:'A60', name:'บริษัท พี ซี แอล โฮลดิ้ง จำกัด (มหาชน)'},
+        {code:'A61', name:'บริษัท อนาไลติค เยนา อินสตรูเมนท์ (ประเทศไทย) จำกัด'},
+        {code:'A62', name:'บริษัท ทิติธัรัส จำกัด'},
+        {code:'A63', name:'บริษัท บีเอ็นเคไบโอไซเอนซ์ จำกัด'},
+        {code:'A64', name:'บริษัท หริกุล ซายเอนซ์ จำกัด'},
+        {code:'A65', name:'Nomura Siam International Co., Ltd.'},
+        {code:'A66', name:'บริษัท ไบโอแอคทีฟ จำกัด'},
+        {code:'A67-A69', name:'บริษัท สมาร์ท อัลลายแอนซ์ จำกัด'},
+        {code:'A70', name:'SCIEX'},
+        {code:'A71-A72', name:'บริษัท แสงวิทย์ ซายน์ จำกัด'},
+        {code:'A73-A74', name:'บริษัท ไทย แคน ไบโอเทค จำกัด'},
+        {code:'A75', name:'บริษัท เอส.เค.เพาวเวอร์เอเบิล จำกัด'},
+        {code:'A76-A77', name:'บริษัท แอลเคมิสท์ ไซเอนติฟิค จำกัด'},
+        {code:'A78', name:'บริษัท เนวี่ ไซเอนซ์ จำกัด'},
+        {code:'A79', name:'บริษัท โกลบอล ไซแอนดิฟิค จำกัด'},
+        {code:'A80', name:'บริษัท เมทเล่อร์-โทเลโด (ประเทศไทย) จำกัด'},
+        {code:'A81', name:'ห้างหุ้นส่วนจำกัด บางกอกเคมาร์ท'},
+        {code:'A82', name:'บริษัท แบงคอกจีโนมิกส์อินโนเวชั่น จำกัด (มหาชน)'},
+        {code:'A83-A84', name:'บริษัท ดีเคเอสเอช เทคโนโลยี จำกัด'},
+        {code:'A87', name:'Kongsak X-Ray'},
+      ]},
+    ]
+  },
+  {
+    id:'2', label:'ชั้น 2', tag:'โซนจัดแสดงนิทรรศการ & บูธหน่วยงาน',
+    image:'floor2.jpg',
+    groups:[
+      { title:'โซนจัดแสดงนิทรรศการ (A–R)', accent:'teal', items:[
+        {code:'A', name:'โซนนิทรรศการเฉลิมพระเกียรติ'},
+        {code:'B', name:'โซนแสดงผลงานด้านวิทยาศาสตร์การแพทย์ชุมชนดีเด่น'},
+        {code:'C', name:'เครือข่ายความร่วมมือต่างประเทศ'},
+        {code:'D', name:'การตอบโต้เหตุฉุกเฉินด้านห้องปฏิบัติการและรังสี (LERT)'},
+        {code:'E', name:'SMART MEDICAL SCIENCE COMMUNITY'},
+        {code:'F', name:'Photobooth'},
+        {code:'G', name:'ด้านการลงทุนและสร้างความมั่นคงทางห้องปฏิบัติการ'},
+        {code:'H', name:'การสนับสนุนการพัฒนาศักยภาพอุตสาหกรรมอาหารมูลค่าสูงของไทย'},
+        {code:'I', name:'การพัฒนายาและผลิตภัณฑ์ขั้นสูง (ATMPs)'},
+        {code:'J', name:'Wellness'},
+        {code:'K', name:'DMSc Biobank'},
+        {code:'L', name:'Smart Health & Precision Medicine'},
+        {code:'M', name:'วิวัฒนาการห้องปฏิบัติการ'},
+        {code:'N', name:'Archway'},
+        {code:'O', name:'Photobackdrop'},
+        {code:'P', name:'REGISTRATION / INFORMATION'},
+        {code:'Q', name:'Sapphire 205 E-Poster'},
+        {code:'R', name:'Sapphire 206 ห้องรับไฟล์'},
+      ]},
+      { title:'บูธหน่วยงาน (S1–S25)', accent:'indigo', items:[
+        {code:'S1', name:'สถาบันวิจัยจุฬาภรณ์'},
+        {code:'S2-S3', name:'สำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.)'},
+        {code:'S4', name:'TILSNA'},
+        {code:'S5', name:'สถาบันวิจัยระบบสาธารณสุข (สวรส.)'},
+        {code:'S6', name:'BioTesting LAB'},
+        {code:'S7', name:'คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต'},
+        {code:'S8', name:'คณะวิทยาศาสตร์การแพทย์ มหาวิทยาลัยนเรศวร'},
+        {code:'S9', name:'ศูนย์รวมผู้เชี่ยวชาญด้านเครื่องมือแพทย์และวัสดุการแพทย์ชนิดบุกรุกน้อย'},
+        {code:'S10', name:'บริษัท เอฟไอทียู จำกัด มหาวิทยาลัยธรรมศาสตร์'},
+        {code:'S11', name:'มูลนิธิกันตนวัตกรรม ในพระบรมราชูปถัมภ์'},
+        {code:'S12', name:'กรมวิทยาศาสตร์บริการ'},
+        {code:'S13', name:'สำนักงานหลักประกันสุขภาพแห่งชาติ (สปสช.)'},
+        {code:'S14', name:'สถาบันวิจัยแสงซินโครตรอน (องค์การมหาชน)'},
+        {code:'S15', name:'สถาบันวิจัยวิทยาศาสตร์และเทคโนโลยีแห่งประเทศไทย'},
+        {code:'S16', name:'สมาคมการค้าเสริมสร้างและพัฒนาธุรกิจ เอส เอ็ม อี'},
+        {code:'S17', name:'บริษัท เน็คซ์โรโบติกส์ แล็บ จำกัด'},
+        {code:'S18', name:'บริษัท สยามไบโอไซเอนซ์ จำกัด'},
+        {code:'S19', name:'ห้างหุ้นส่วนจำกัด โรจนารักษ์เภสัช'},
+        {code:'S20', name:'บริษัท ยูแอนด์วี โฮลดิ้ง (ไทยแลนด์) จำกัด'},
+        {code:'S21', name:'บริษัท อิคาริ เทรดดิ้ง (ประเทศไทย) จำกัด'},
+        {code:'S22', name:'บริษัท โปรเจ็คฟิลด์ จำกัด'},
+        {code:'S23', name:'องค์การเภสัชกรรม'},
+        {code:'S24', name:'บริษัท แบงคอกจีโนมิกส์อินโนเวชั่น จำกัด (มหาชน)'},
+        {code:'S25', name:'บริษัท เอนจินไลฟ์ จำกัด'},
+      ]},
+    ]
+  }
+];
+
+/* ---------- accent palette ---------- */
+const ACCENT = {
+  amber:  {chip:'bg-amber-100 text-amber-800',  bar:'bg-amber-400',  ring:'focus:ring-amber-200',  soft:'bg-amber-50 border-amber-200'},
+  orange: {chip:'bg-orange-100 text-orange-800', bar:'bg-orange-500', ring:'focus:ring-orange-200', soft:'bg-orange-50 border-orange-200'},
+  teal:   {chip:'bg-teal-100 text-teal-800',     bar:'bg-teal-500',   ring:'focus:ring-teal-200',   soft:'bg-teal-50 border-teal-200'},
+  indigo: {chip:'bg-indigo-100 text-indigo-800', bar:'bg-indigo-500', ring:'focus:ring-indigo-200', soft:'bg-indigo-50 border-indigo-200'},
+};
+const FLOOR_OF = {}; // code+floor lookup handled inline
+
+let activeFloor = '1';
+
+/* ---------- helpers ---------- */
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function norm(s){return String(s||'').toLowerCase().replace(/\s+/g,'');}
+// แตกช่วงรหัส เช่น A01-A04 -> [A01,A02,A03,A04] ; S2-S3 -> [S2,S3]
+function expandCodes(code){
+  const m=String(code).match(/^([A-Za-z]+)(\d+)\s*-\s*([A-Za-z]*)(\d+)$/);
+  if(!m) return [code];
+  const pre=m[1], a=parseInt(m[2],10), b=parseInt(m[4],10), pad=m[2].length;
+  const out=[];
+  for(let i=a;i<=b;i++) out.push(pre+String(i).padStart(pad,'0'));
+  return out;
+}
+function matchCode(code,q){
+  const nq=norm(q);
+  if(norm(code).includes(nq)) return true;
+  return expandCodes(code).some(c=>norm(c).includes(nq) || norm(c).replace(/^([a-z]+)0+/,'$1').includes(nq));
+}
+
+/* ---------- build flat index for search ---------- */
+const INDEX=[];
+FLOORS.forEach(f=>f.groups.forEach(g=>g.items.forEach(it=>{
+  INDEX.push({floor:f.id, floorLabel:f.label, accent:g.accent, code:it.code, name:it.name});
+})));
+
+/* ---------- render tabs ---------- */
+function renderTabs(){
+  const bar=document.getElementById('tabBar');
+  bar.innerHTML=FLOORS.map(f=>{
+    const total=f.groups.reduce((n,g)=>n+g.items.length,0);
+    const on=f.id===activeFloor;
+    return `<button onclick="setFloor('${f.id}')"
+      class="flex-1 py-2.5 px-3 rounded-xl font-extrabold text-sm transition border ${on?'tab-active border-transparent':'bg-white text-slate-600 border-orange-100 hover:border-orange-300'}">
+      <span class="flex items-center justify-center gap-1.5"><i data-lucide="building-2" class="w-4 h-4"></i> ${esc(f.label)}
+      <span class="text-[11px] font-bold ${on?'bg-white/25':'bg-orange-50 text-orange-500'} px-1.5 py-0.5 rounded-full">${total}</span></span>
+    </button>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+/* ---------- render a floor ---------- */
+function renderFloor(){
+  const f=FLOORS.find(x=>x.id===activeFloor);
+  const sec=document.getElementById('floorSection');
+  let html=`
+  <div class="fade-up">
+    <!-- map -->
+    <div class="bg-white rounded-3xl border border-orange-100 shadow-sm overflow-hidden mb-6">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-orange-50">
+        <div>
+          <h2 class="text-lg font-black text-slate-800 flex items-center gap-2"><i data-lucide="map" class="w-5 h-5 text-orange-500"></i> แผนผัง ${esc(f.label)}</h2>
+          <p class="text-xs text-slate-500 font-medium mt-0.5">${esc(f.tag)}</p>
+        </div>
+        <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full"><i data-lucide="zoom-in" class="w-3.5 h-3.5"></i> แตะเพื่อขยาย</span>
+      </div>
+      <div class="relative bg-orange-50/40">
+        <img src="${esc(f.image)}" alt="แผนผัง ${esc(f.label)}" loading="lazy"
+             onclick="openLightbox(this.src)"
+             onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')"
+             class="w-full max-h-[460px] object-contain cursor-zoom-in mx-auto"/>
+        <div class="hidden flex-col items-center justify-center text-center py-16 px-6">
+          <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mb-3"><i data-lucide="image-off" class="w-8 h-8 text-orange-400"></i></div>
+          <p class="font-bold text-slate-700">ยังไม่มีรูปแผนผัง <code class="bg-slate-100 px-1.5 py-0.5 rounded text-orange-600">${esc(f.image)}</code></p>
+          <p class="text-sm text-slate-500 mt-1 max-w-sm">นำรูปผัง${esc(f.label)}มาวางไว้โฟลเดอร์เดียวกับไฟล์นี้ในชื่อ <b>${esc(f.image)}</b> แล้วรูปจะแสดงอัตโนมัติ (รายชื่อบูธด้านล่างใช้งานได้ทันที)</p>
+        </div>
+      </div>
+    </div>`;
+
+  f.groups.forEach(g=>{
+    html+=`
+    <div class="mb-7">
+      <h3 class="text-base font-extrabold text-slate-700 mb-3 flex items-center gap-2">
+        <span class="w-1.5 h-5 rounded-full ${ACCENT[g.accent].bar}"></span>${esc(g.title)}
+        <span class="text-xs font-bold text-slate-400">(${g.items.length})</span>
+      </h3>
+      <div class="grid sm:grid-cols-2 gap-2.5">
+        ${g.items.map(it=>boothCard(it,g.accent)).join('')}
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+  sec.innerHTML=html;
+  lucide.createIcons();
+}
+
+function boothCard(it,accent){
+  const a=ACCENT[accent];
+  return `<div id="card-${esc(it.code)}" class="booth-card bg-white rounded-2xl border border-slate-100 p-3 flex items-center gap-3 shadow-sm">
+    <span class="shrink-0 min-w-[58px] text-center ${a.chip} font-black rounded-xl px-2.5 py-2 text-sm tracking-tight">${esc(it.code)}</span>
+    <p class="text-[13.5px] font-semibold text-slate-700 leading-snug">${esc(it.name)}</p>
+  </div>`;
+}
+
+/* ---------- search ---------- */
+function runSearch(q){
+  const fSec=document.getElementById('floorSection');
+  const rSec=document.getElementById('resultsSection');
+  const clear=document.getElementById('clearBtn');
+  q=q.trim();
+  clear.classList.toggle('hidden', q==='');
+  if(q===''){ rSec.classList.add('hidden'); fSec.classList.remove('hidden'); return; }
+  fSec.classList.add('hidden'); rSec.classList.remove('hidden');
+
+  const tokens=norm(q);
+  const hits=INDEX.filter(e=> norm(e.name).includes(tokens) || matchCode(e.code,q));
+  const grid=document.getElementById('resultsGrid');
+  const none=document.getElementById('noResults');
+  document.getElementById('resultCount').textContent=`พบ ${hits.length} รายการ`;
+  if(hits.length===0){ grid.innerHTML=''; none.classList.remove('hidden'); lucide.createIcons(); return; }
+  none.classList.add('hidden');
+  grid.innerHTML=hits.map(e=>{
+    const a=ACCENT[e.accent];
+    return `<button onclick="goToBooth('${e.floor}','${esc(e.code)}')" class="booth-card text-left bg-white rounded-2xl border border-slate-100 p-3 flex items-center gap-3 shadow-sm w-full">
+      <span class="shrink-0 min-w-[58px] text-center ${a.chip} font-black rounded-xl px-2.5 py-2 text-sm">${esc(e.code)}</span>
+      <span class="min-w-0">
+        <span class="block text-[13.5px] font-semibold text-slate-700 leading-snug">${esc(e.name)}</span>
+        <span class="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-orange-500"><i data-lucide="map-pin" class="w-3 h-3"></i> ${esc(e.floorLabel)}</span>
+      </span>
+    </button>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function goToBooth(floor,code){
+  document.getElementById('searchBox').value='';
+  runSearch('');
+  setFloor(floor);
+  setTimeout(()=>{
+    const el=document.getElementById('card-'+code);
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('pulse-card','border-orange-400'); setTimeout(()=>el.classList.remove('pulse-card'),1700); }
+  },120);
+}
+
+function clearSearch(){ const b=document.getElementById('searchBox'); b.value=''; runSearch(''); b.focus(); }
+function setFloor(id){ activeFloor=id; renderTabs(); renderFloor(); window.scrollTo({top:document.querySelector('.glass').offsetHeight-10,behavior:'instant'}); }
+
+/* ---------- lightbox ---------- */
+function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').classList.remove('hidden'); document.body.style.overflow='hidden'; lucide.createIcons(); }
+function closeLightbox(){ document.getElementById('lightbox').classList.add('hidden'); document.body.style.overflow=''; }
+
+/* ---------- init ---------- */
+document.getElementById('searchBox').addEventListener('input', e=>runSearch(e.target.value));
+renderTabs(); renderFloor(); lucide.createIcons();
+</script>
+</body>
+</html>
