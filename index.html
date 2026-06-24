@@ -946,7 +946,7 @@
         // =============================================================
         // 🔧 STATE — ตัวแปรสถานะทั่วไป
         // =============================================================
-        var isTestMode = new URLSearchParams(window.location.search).get('test') === '1';
+        var isTestMode = true; // ทดสอบ — เปลี่ยนเป็น false หรือลบบรรทัดนี้ก่อนวันงาน
         var lastCheckinId      = null;
         var lastRewardId       = null;
         var isInitialLoad      = true;
