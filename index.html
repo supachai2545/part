@@ -292,11 +292,6 @@
         </div>
     </header>
 
-    <!-- ================= TEST MODE BANNER ================= -->
-    <div id="testModeBanner" class="hidden bg-amber-400 text-amber-900 text-center text-sm font-bold py-2 px-4 shrink-0">
-        🧪 โหมดทดสอบ — แสดงผลงานทั้งหมด เรียงตามสาขา (ปิดโดยลบ ?test=1 ออกจาก URL)
-    </div>
-
     <!-- ================= MAIN CONTENT ================= -->
     <main class="flex-grow p-4 lg:p-6 lg:px-8 max-w-[1920px] mx-auto w-full flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-80px)] overflow-y-auto lg:overflow-hidden">
 
@@ -946,7 +941,6 @@
         // =============================================================
         // 🔧 STATE — ตัวแปรสถานะทั่วไป
         // =============================================================
-        var isTestMode = true; // ทดสอบ — เปลี่ยนเป็น false หรือลบบรรทัดนี้ก่อนวันงาน
         var lastCheckinId      = null;
         var lastRewardId       = null;
         var isInitialLoad      = true;
@@ -1108,36 +1102,23 @@
                     return;
                 }
 
-                // ── TEST MODE: แสดงทุกคน เรียงตามสาขา → รหัสผลงาน ──────────
-                let checkinData, rewardDataSorted;
-                if (isTestMode) {
-                    checkinData = [...rows].sort((a, b) => {
-                        const ba = BRANCH_ORDER.indexOf(getBranchFromCode(a['รหัสผลงาน']));
-                        const bb = BRANCH_ORDER.indexOf(getBranchFromCode(b['รหัสผลงาน']));
-                        const bi = (ba < 0 ? 99 : ba) - (bb < 0 ? 99 : bb);
-                        if (bi !== 0) return bi;
-                        return String(a['รหัสผลงาน'] || '').localeCompare(String(b['รหัสผลงาน'] || ''), undefined, { numeric: true });
+                // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────────
+                const checkinData = rows
+                    .filter(r => r['Checkin'] === 'Y' && r['รับประกาศ'] !== 'Y')
+                    .sort((a, b) => {
+                        const ta = a['เวลาCheckin'] ? new Date(a['เวลาCheckin']).getTime() : 0;
+                        const tb = b['เวลาCheckin'] ? new Date(b['เวลาCheckin']).getTime() : 0;
+                        return tb - ta;
                     });
-                    rewardDataSorted = [];
-                } else {
-                    // ── checkinData: Check-in = 'Y' และ ยังไม่รับประกาศ ──────
-                    checkinData = rows
-                        .filter(r => r['Checkin'] === 'Y' && r['รับประกาศ'] !== 'Y')
-                        .sort((a, b) => {
-                            const ta = a['เวลาCheckin'] ? new Date(a['เวลาCheckin']).getTime() : 0;
-                            const tb = b['เวลาCheckin'] ? new Date(b['เวลาCheckin']).getTime() : 0;
-                            return tb - ta;
-                        });
 
-                    // ── rewardDataSorted: รับประกาศ = 'Y' ────────────────────
-                    rewardDataSorted = rows
-                        .filter(r => r['รับประกาศ'] === 'Y')
-                        .sort((a, b) => {
-                            const ta = a['เวลารับประกาศ'] ? new Date(a['เวลารับประกาศ']).getTime() : 0;
-                            const tb = b['เวลารับประกาศ'] ? new Date(b['เวลารับประกาศ']).getTime() : 0;
-                            return tb - ta;
-                        });
-                }
+                // ── rewardDataSorted: รับประกาศ = 'Y' ────────────────────────
+                const rewardDataSorted = rows
+                    .filter(r => r['รับประกาศ'] === 'Y')
+                    .sort((a, b) => {
+                        const ta = a['เวลารับประกาศ'] ? new Date(a['เวลารับประกาศ']).getTime() : 0;
+                        const tb = b['เวลารับประกาศ'] ? new Date(b['เวลารับประกาศ']).getTime() : 0;
+                        return tb - ta;
+                    });
 
                 isInitialLoad = false;
                 updateCounters(checkinData.length, rewardDataSorted.length);
@@ -1242,7 +1223,6 @@
 
         // ── helper: check expired (> 1 hr past endTime) ────────────────────
         function isExpired(endTimeStr) {
-            if (isTestMode) return false;
             if (!endTimeStr) return false;
             const end = parseTime(endTimeStr);
             if (!end) return false;
@@ -2660,7 +2640,6 @@
         // 🚀 INIT
         // =============================================================
         window.addEventListener('DOMContentLoaded', async () => {
-            if (isTestMode) document.getElementById('testModeBanner').classList.remove('hidden');
             await syncServerTime();
 
             initTrackingPage();
