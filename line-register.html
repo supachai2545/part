@@ -35,6 +35,27 @@
 </head>
 <body>
 
+    <!-- ===== SPLASH SCREEN ===== -->
+    <div id="splashScreen" class="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-6"
+         style="background: linear-gradient(160deg, #f0faf8 0%, #e8f5f0 100%)">
+        <div class="flex flex-col items-center gap-3">
+            <p class="text-6xl font-extrabold tracking-tight" style="color:#0d4f6c">DMSc</p>
+            <div class="flex items-center gap-2">
+                <div class="h-0.5 w-16 rounded-full" style="background:#3ecf8e"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#3ecf8e"></div>
+                <div class="w-1 h-1 rounded-full" style="background:#3ecf8e"></div>
+                <div class="w-0.5 h-0.5 rounded-full" style="background:#3ecf8e"></div>
+            </div>
+            <p class="text-xl font-semibold tracking-wide" style="color:#3ecf8e">Smart E-Queue</p>
+        </div>
+        <div class="flex items-center gap-2 mt-4">
+            <div class="w-2 h-2 rounded-full animate-bounce" style="background:#3ecf8e;animation-delay:0s"></div>
+            <div class="w-2 h-2 rounded-full animate-bounce" style="background:#3ecf8e;animation-delay:.15s"></div>
+            <div class="w-2 h-2 rounded-full animate-bounce" style="background:#3ecf8e;animation-delay:.3s"></div>
+        </div>
+        <p class="text-sm font-medium" style="color:#6bafc4">กำลังเชื่อมต่อ...</p>
+    </div>
+
     <!-- ===== CONFIG ===== -->
     <script>
         var LIFF_ID       = '2010315530-js3lnuH9';
@@ -50,8 +71,6 @@
         <!-- Header -->
         <header class="bg-white/85 backdrop-blur-md border-b border-white/50 py-3 px-4 flex justify-between items-center shrink-0 sticky top-0 z-10 shadow-sm">
             <div class="flex items-center gap-3 min-w-0">
-                <img src="https://www.dmsc.moph.go.th/ckeditor/upload/files/id1/files/logodmsc_1_.png" class="h-9 w-auto object-contain">
-                <img src="https://conferenceplan.dmsc.moph.go.th/templates/yootheme/cache/b4/logo-prachum%20wichakar-34-Final-b4d9df54.webp" class="h-9 w-auto object-contain">
                 <div class="min-w-0">
                     <h1 class="text-base font-extrabold text-slate-800 leading-tight">Smart E-Queue</h1>
                     <p class="text-[10px] text-slate-400 font-medium">ติดตามลำดับการนำเสนอผลงาน E-POSTER</p>
@@ -216,6 +235,7 @@
         }
 
         function showError(msg) {
+            document.getElementById('splashScreen').classList.add('hidden');
             document.getElementById('loadingBox').classList.add('hidden');
             document.getElementById('contentBox').classList.add('hidden');
             document.getElementById('errorBox').classList.remove('hidden');
@@ -266,6 +286,7 @@
                 const { data } = await sb.from('eposter_works').select('*');
                 (data || []).forEach(r => { if (r['รหัสผลงาน']) allWorks[String(r['รหัสผลงาน']).toUpperCase().trim()] = r; });
 
+                document.getElementById('splashScreen').classList.add('hidden');
                 document.getElementById('loadingBox').classList.add('hidden');
                 document.getElementById('contentBox').classList.remove('hidden');
                 document.getElementById('helpBtn').classList.remove('hidden');
