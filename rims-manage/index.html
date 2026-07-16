@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full transition-colors duration-300">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIMS Manage - Executive Strategic Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-main: #F4F7F6; }
+        * { font-family: 'Sarabun', sans-serif; transition: all 0.2s ease; }
+        body { background-color: var(--bg-main); color: #1E293B; overflow-y: scroll; }
+        
+        .executive-card { 
+            background: #FFFFFF; border-radius: 1.5rem; 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid #E2E8F0; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .executive-card:hover { 
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.08);
+            border-color: #EC4899; transform: translateY(-3px);
+        }
+
+        .skeleton-box {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .tab-btn { position: relative; color: #64748B; font-weight: 600; white-space: nowrap; cursor: pointer; padding-bottom: 0.5rem;}
+        .tab-btn.active { font-weight: 800; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; border-radius: 10px 10px 0 0; }
+        
+        .tab-btn[data-tab="home"].active { color: #10B981; }
+        .tab-btn[data-tab="home"].active::after { background-color: #10B981; }
+        .tab-btn[data-tab="search-res"].active { color: #3B82F6; }
+        .tab-btn[data-tab="search-res"].active::after { background-color: #3B82F6; }
+        .tab-btn[data-tab="search-proj"].active { color: #A855F7; }
+        .tab-btn[data-tab="search-proj"].active::after { background-color: #A855F7; }
+        .tab-btn[data-tab="coord"].active { color: #F97316; }
+        .tab-btn[data-tab="coord"].active::after { background-color: #F97316; }
+        .tab-btn[data-tab="mou"].active { color: #06B6D4; }
+        .tab-btn[data-tab="mou"].active::after { background-color: #06B6D4; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
+        
+        /* สไตล์สำหรับ Sub-tabs ภายในหน้าแรก */
+        .sub-tab-content { display: none; animation: fadeIn 0.3s ease-out forwards; }
+        .sub-tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #loading-overlay { 
+            position: fixed; inset: 0; background: #FFFFFF; z-index: 1000; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: opacity 0.3s ease; 
+        }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .chart-container { position: relative; width: 100%; flex-grow: 1; }
+        
+        .dashboard-row-label {
+            font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #475569; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+            padding-bottom: 0.5rem; border-bottom: 2px solid #E2E8F0;
+        }
+
+        .filter-select, .search-input { 
+            background-color: #ffffff; border: 1px solid #CBD5E1; border-radius: 0.75rem; 
+            padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; width: 100%;
+        }
+        .filter-select:focus, .search-input:focus { border-color: #EC4899; box-shadow: 0 0 0 2px #FDF2F8; }
+        
+        .kpi-border-blue { border-top: 4px solid #3B82F6; }
+        .kpi-border-indigo { border-top: 4px solid #6366F1; }
+        .kpi-border-purple { border-top: 4px solid #A855F7; }
+        .kpi-border-orange { border-top: 4px solid #F97316; }
+        .kpi-border-teal { border-top: 4px solid #14B8A6; }
+        .kpi-border-pink { border-top: 4px solid #EC4899; }
+        .kpi-border-yellow { border-top: 4px solid #EAB308; }
+        .kpi-border-cyan { border-top: 4px solid #06B6D4; } 
+        
+        .list-card-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0; border-bottom: 1px dashed #E2E8F0; font-size: 0.8rem; gap: 0.5rem;
+        }
+        .list-card-item:last-child { border-bottom: none; }
+        
+        .rank-badge {
+            width: 22px; height: 22px; border-radius: 4px; display: inline-flex; flex-shrink: 0;
+            align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold;
+            background: #F1F5F9; color: #64748B; margin-right: 0.25rem;
+        }
+        .rank-1 { background: #FEF3C7; color: #D97706; }
+        .rank-2 { background: #F1F5F9; color: #475569; }
+        .rank-3 { background: #FFEDD5; color: #92400E; }
+        
+        .kpi-clickable { cursor: pointer; }
+        .kpi-clickable:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+
+        .acc-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, padding 0.3s ease; }
+        .acc-content.open { max-height: 1000px; padding-bottom: 1rem; }
+
+        .swal2-popup.news-popup { border-radius: 1.5rem !important; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1) !important; }
+
+        /* Funnel Chart Styles */
+        .funnel-stage { transition: width 1s ease-out; }
+    </style>
+</head>
+<body class="h-full overflow-x-hidden flex flex-col min-h-screen">
+
+    <div id="loading-overlay">
+        <div class="text-center">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-500 border-t-transparent mb-3"></div>
+            <p class="text-slate-500 text-xs font-bold tracking-widest uppercase" id="loading-text">กำลังเชื่อมต่อข้อมูล...</p>
+        </div>
+    </div>
+
+    <div id="app-wrapper" class="flex-1 flex flex-col">
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-40 transition-colors duration-300">
+            <div class="max-w-[1800px] mx-auto px-4 md:px-6 min-h-[4rem] flex flex-wrap md:flex-nowrap items-center justify-between py-2 md:py-0 gap-y-2 md:gap-y-0">
+                <div class="flex items-center gap-4 order-1 cursor-pointer group" onclick="window.switchTab('home')">
+                    <div class="w-10 h-10 flex items-center justify-center bg-white rounded-full group-hover:scale-105 transition-transform">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Seal_of_the_Department_of_Medical_Sciences.svg/500px-Seal_of_the_Department_of_Medical_Sciences.svg.png" alt="DMSC Logo" class="max-w-full max-h-full object-contain drop-shadow-sm">
+                    </div>
+                    <h1 class="text-lg font-black text-slate-800 tracking-tight italic hidden sm:block group-hover:text-emerald-700 transition-colors">RIMS<span class="text-emerald-600 font-bold not-italic ml-1 group-hover:text-emerald-500 transition-colors">Manage</span></h1>
+                </div>
+                
+                <nav class="flex w-full md:w-auto order-3 md:order-2 gap-5 lg:gap-6 md:h-full items-end overflow-x-auto no-scrollbar pt-3 pb-1 md:pt-0 md:pb-0 border-t border-slate-100 md:border-t-0" id="nav-tabs">
+                    <button class="tab-btn active text-[12px] font-bold uppercase tracking-widest shrink-0" data-tab="home" onclick="window.switchTab('home')">หน้าแรก</button>
+                    <button class="tab-btn text-[12px] font-bold uppercase tracking-widest shrink-0" data-tab="search-res" onclick="window.switchTab('search-res')">ค้นหานักวิจัย</button>
+                    <button class="tab-btn text-[12px] font-bold uppercase tracking-widest shrink-0" data-tab="search-proj" onclick="window.switchTab('search-proj')">ค้นหาผลงานวิจัย</button>
+                    <button class="tab-btn text-[12px] font-bold uppercase tracking-widest shrink-0" data-tab="coord" onclick="window.switchTab('coord')">ผู้ประสานงานวิจัย</button>
+                    <button class="tab-btn text-[12px] font-bold uppercase tracking-widest shrink-0" data-tab="mou" onclick="window.switchTab('mou')">ความร่วมมือ (MOU)</button>
+                    
+                    <a href="#" target="_blank" rel="noopener noreferrer" class="sys-link text-[12px] uppercase tracking-widest text-indigo-600 hover:text-indigo-800 font-bold pb-[0.5rem] flex items-center gap-1 transition no-underline shrink-0">
+                        <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> เพิ่มนักวิจัยใหม่
+                    </a>
+                </nav>
+
+                <div class="flex items-center gap-4 order-2 md:order-3">
+                    <a href="#" target="_blank" rel="noopener noreferrer" class="sys-link px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-bold text-[12px] uppercase hover:text-emerald-600 hover:border-emerald-200 transition flex items-center gap-1.5 shadow-sm cursor-pointer no-underline">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> เข้าสู่ระบบ
+                    </a>
+
+                    <div class="text-right hidden sm:block pl-4 border-l border-slate-200">
+                        <p class="text-[12px] font-bold text-emerald-500 flex items-center justify-end gap-1 mb-0.5" id="connection-status">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online
+                        </p>
+                        <p class="text-[9.5px] font-medium text-slate-400 flex items-center justify-end gap-1 tracking-wide">
+                            <i data-lucide="clock" class="w-3 h-3"></i> <span id="last-updated-time">กำลังโหลด...</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div id="global-filter" class="bg-white/90 backdrop-blur-sm border-b border-slate-200 sticky top-16 z-30 flex transition-colors duration-300">
+            <div class="max-w-[1800px] mx-auto px-6 py-3 flex flex-wrap gap-4 items-center justify-between w-full">
+                <div class="flex items-center gap-2 text-slate-500 font-bold text-[12px] uppercase tracking-wider"><i data-lucide="filter" class="w-4 h-4"></i> Global Filters</div>
+                <div class="flex gap-3">
+                    <select id="global-year" class="filter-select !w-36 font-bold text-emerald-700 text-[13px] !py-1.5" onchange="window.refreshDashboard()">
+                        <option value="all">ทุกปีงบประมาณ</option>
+                    </select>
+                    <select id="global-dept" class="filter-select !w-64 font-semibold text-[13px] !py-1.5" onchange="window.refreshDashboard()">
+                        <option value="all">ทุกหน่วยงาน</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-[1800px] mx-auto w-full p-4 md:p-6 space-y-10 pb-10">
+            
+            <!-- ================= SECTION: HOME TAB ================= -->
+            <section id="home-tab" class="tab-content active space-y-10">
+                <!-- 1. ส่วนของ KPI -->
+                <div>
+                    <div class="dashboard-row-label"><i data-lucide="target" class="w-4 h-4 text-slate-400"></i> ตัวชี้วัดเชิงกลยุทธ์ (Strategic KPI)</div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" id="kpi-grid"></div>
+                </div>
+
+                <!-- 2. เมนูเลือกมิติย่อย -->
+                <div class="flex flex-wrap justify-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl w-fit mx-auto border border-slate-200/60 shadow-inner backdrop-blur-sm">
+                    <button onclick="window.switchSubTab('perf')" class="sub-tab-btn bg-white text-blue-600 shadow-sm border-blue-200 border px-6 py-2.5 rounded-xl text-[13px] font-black transition-all flex items-center gap-2" data-subtab="perf">
+                        <i data-lucide="trending-up" class="w-4 h-4"></i> มิติผลงานและประสิทธิภาพ
+                    </button>
+                    <button onclick="window.switchSubTab('hr')" class="sub-tab-btn text-slate-500 border-transparent hover:bg-slate-200/50 border px-6 py-2.5 rounded-xl text-[13px] font-black transition-all flex items-center gap-2" data-subtab="hr">
+                        <i data-lucide="users" class="w-4 h-4"></i> มิติกำลังคนและศักยภาพ
+                    </button>
+                    <button onclick="window.switchSubTab('mou')" class="sub-tab-btn text-slate-500 border-transparent hover:bg-slate-200/50 border px-6 py-2.5 rounded-xl text-[13px] font-black transition-all flex items-center gap-2" data-subtab="mou">
+                        <i data-lucide="handshake" class="w-4 h-4"></i> มิติเครือข่ายความร่วมมือ
+                    </button>
+                </div>
+
+                <!-- 🚀 มิติที่ 1: ผลสัมฤทธิ์และประสิทธิภาพ (Sub-tab: perf) -->
+                <div id="sub-perf" class="sub-tab-content active space-y-6">
+                    <div class="p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100 shadow-sm space-y-6">
+                        <div class="flex items-center gap-3 border-b border-emerald-200 pb-4">
+                            <div class="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><i data-lucide="trending-up" class="w-6 h-6"></i></div>
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800 tracking-tight">มิติผลสัมฤทธิ์และประสิทธิภาพการวิจัย</h2>
+                                <p class="text-xs font-medium text-slate-500 mt-1">วิเคราะห์ผลผลิต การตีพิมพ์ และเจาะลึกสมรรถนะรายหน่วยงานเชิงเปรียบเทียบ</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-4 executive-card p-6 bg-white flex flex-col">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-[13px] font-bold text-slate-600 uppercase">กรวยกรองผลผลิตนักวิจัย (Pipeline Funnel)</h3>
+                                </div>
+                                <p class="text-[10px] text-slate-400 mb-6 font-medium">วิเคราะห์อัตราการลดลงจากจำนวนนักวิจัยทั้งหมด สู่ผู้ที่มีโครงการ และผู้ที่ตีพิมพ์สำเร็จ</p>
+                                
+                                <div id="funnel-container" class="flex-grow flex flex-col justify-center items-center gap-4 py-2"></div>
+                            </div>
+
+                            <div class="col-span-12 lg:col-span-8 executive-card p-6 bg-white">
+                                <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-2 gap-2">
+                                    <h3 class="text-[13px] font-bold text-slate-600 uppercase" id="title-perf-group">ประสิทธิภาพการสร้างผลงาน จำแนกตามวุฒิการศึกษา</h3>
+                                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg shrink-0">
+                                        <button onclick="window.togglePerfGroup('edu', this)" class="btn-perf-group px-3 py-1 text-[11px] font-bold rounded-md bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300 transition-all">วุฒิการศึกษา</button>
+                                        <button onclick="window.togglePerfGroup('pos', this)" class="btn-perf-group px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all">ตำแหน่ง (Top 5)</button>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-slate-400 mb-4 font-medium">เปรียบเทียบสัดส่วน <span class="text-indigo-500 font-bold">ตีพิมพ์แล้ว</span> ต่อ <span class="text-slate-300 font-bold">โครงการทั้งหมด</span> พร้อมอัตราความสำเร็จ (Success Rate)</p>
+                                <div class="chart-container h-64"><canvas id="chart-multi-perf"></canvas></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-8 executive-card p-6 bg-white">
+                                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-2 border-b border-slate-100 pb-3">
+                                    <h3 class="text-[13px] font-bold text-slate-600 uppercase">แนวโน้มภาพรวมโครงการและการตีพิมพ์ตามปีงบประมาณ</h3>
+                                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg">
+                                        <button onclick="window.togglePipeline('all', this)" class="btn-pipe px-3 py-1 text-[11px] font-bold rounded-md bg-blue-100 text-blue-700 ring-1 ring-blue-300 transition-all">เปรียบเทียบ</button>
+                                        <button onclick="window.togglePipeline('pub', this)" class="btn-pipe px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all">เฉพาะตีพิมพ์</button>
+                                        <button onclick="window.togglePipeline('proj', this)" class="btn-pipe px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all">เฉพาะโครงการ</button>
+                                    </div>
+                                </div>
+                                <div class="chart-container h-64"><canvas id="chart-pipeline"></canvas></div>
+                            </div>
+                            <div class="col-span-12 lg:col-span-4 executive-card p-8 bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col justify-center items-center text-center">
+                                <p class="text-[12px] font-bold uppercase tracking-widest opacity-90 mb-3">ระยะเวลาเฉลี่ยสู่การตีพิมพ์</p>
+                                <div class="flex items-baseline gap-2 mb-2">
+                                    <h2 class="text-7xl font-black animate-number" id="kpi-avg-time" data-target="1.8" data-decimals="1" data-suffix="">0</h2>
+                                    <span class="text-2xl font-bold opacity-80">ปี</span>
+                                </div>
+                                <div class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-medium backdrop-blur-sm mt-2">ค่าเฉลี่ยจากข้อมูลย้อนหลัง</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-6 executive-card p-6 bg-white">
+                                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-2 border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-1">ผลงานวิจัยจำแนกตามหน่วยงาน (Top 15)</h3>
+                                        <p class="text-[10px] text-slate-400 font-medium">สัดส่วน <span class="text-blue-500 font-bold">ผลงานตีพิมพ์</span> ต่อ <span class="text-slate-400 font-bold">โครงการทั้งหมด</span></p>
+                                    </div>
+                                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg shrink-0">
+                                        <button onclick="window.toggleDeptPerf('stacked', this)" class="btn-dept px-3 py-1 text-[11px] font-bold rounded-md bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300 transition-all">สัดส่วน (Stacked)</button>
+                                        <button onclick="window.toggleDeptPerf('grouped', this)" class="btn-dept px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all">เปรียบเทียบ (Group)</button>
+                                    </div>
+                                </div>
+                                <div class="chart-container h-[420px]"><canvas id="chart-res-dept-main"></canvas></div>
+                            </div>
+                            
+                            <div class="col-span-12 lg:col-span-6 flex flex-col gap-5">
+                                <div class="executive-card p-6 bg-emerald-500/10 border-emerald-200 h-1/2">
+                                    <h3 class="text-[13px] font-bold text-emerald-700 uppercase mb-3 flex items-center gap-1"><i data-lucide="zap" class="w-4 h-4 text-emerald-500"></i> หน่วยงานประสิทธิภาพสูงสุด (TOP 5)</h3>
+                                    <p class="text-[10px] text-slate-500 mb-3 font-medium leading-tight">คำนวณจาก: โครงการทั้งหมด / จำนวนนักวิจัย</p>
+                                    <div class="overflow-y-auto pr-1 flex-grow custom-scrollbar" id="list-top-eff-dept"></div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-5 h-1/2">
+                                    <div class="executive-card p-6 bg-white">
+                                        <h3 class="text-[12px] font-bold text-slate-600 uppercase mb-3 flex items-center gap-1 border-b border-slate-100 pb-2"><i data-lucide="user-check" class="w-3.5 h-3.5 text-indigo-500"></i> นักวิจัยตีพิมพ์สูงสุด</h3>
+                                        <div class="overflow-y-auto pr-1 flex-grow custom-scrollbar" id="list-top-researchers"></div>
+                                    </div>
+                                    <div class="executive-card p-6 bg-white">
+                                        <h3 class="text-[12px] font-bold text-slate-600 uppercase mb-3 flex items-center gap-1 border-b border-slate-100 pb-2"><i data-lucide="library" class="w-3.5 h-3.5 text-blue-500"></i> วารสารตีพิมพ์สูงสุด</h3>
+                                        <div class="overflow-y-auto pr-1 flex-grow custom-scrollbar" id="list-top-journals"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🌟 มิติที่ 2: ทุนมนุษย์และศักยภาพ (Sub-tab: hr) -->
+                <div id="sub-hr" class="sub-tab-content space-y-6">
+                    <div class="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 shadow-sm space-y-6">
+                        <div class="flex items-center gap-3 border-b border-blue-200 pb-4">
+                            <div class="p-2.5 bg-blue-100 text-blue-600 rounded-xl"><i data-lucide="users" class="w-6 h-6"></i></div>
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800 tracking-tight">มิติทุนมนุษย์และโครงสร้างกำลังคน</h2>
+                                <p class="text-xs font-medium text-slate-500 mt-1">วิเคราะห์ศักยภาพ ความเชี่ยวชาญ และเจาะลึกมิติความเสี่ยงด้านบุคลากรวิจัย</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-3 executive-card p-6 flex flex-col items-center justify-center bg-white">
+                                <div class="w-14 h-14 bg-orange-50 rounded-full flex items-center justify-center mb-4"><span class="text-2xl">🎂</span></div>
+                                <p class="text-[12px] font-bold text-slate-500 uppercase tracking-widest">อายุเฉลี่ยนักวิจัย</p>
+                                <div class="text-5xl font-black text-slate-800 my-2 animate-number" id="avg-age-display" data-target="0" data-decimals="0" data-suffix="">0</div>
+                                <p class="text-[13px] font-bold text-slate-500">ปี</p>
+                            </div>
+                            <div class="col-span-12 lg:col-span-3 executive-card p-6 bg-gradient-to-br from-rose-500 to-rose-600 text-white flex flex-col justify-center items-center text-center">
+                                <p class="text-[12px] font-bold uppercase tracking-widest opacity-90 mb-3">เสี่ยงเกษียณใน 5 ปี</p>
+                                <h2 class="text-6xl font-black mb-2 animate-number" id="risk-percent" data-target="0" data-decimals="1" data-suffix="%">0%</h2>
+                                <p class="text-[14px] font-bold opacity-100 animate-number mb-2" id="risk-count" data-target="0" data-decimals="0" data-suffix=" ท่าน">0 ท่าน</p>
+                                <div class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-medium backdrop-blur-sm">จากจำนวนบุคลากรทั้งหมด</div>
+                            </div>
+                            <div class="col-span-12 lg:col-span-6 executive-card p-6 bg-white">
+                                <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-4 flex items-center gap-2 border-l-4 border-rose-500 pl-3">แนวโน้มการเกษียณอายุราชการ (พ.ศ. 2569 – 2588)</h3>
+                                <div class="chart-container h-52"><canvas id="chart-retire-trend"></canvas></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-4 executive-card p-6 bg-white border-t-4 border-t-blue-500">
+                                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                                    <h3 class="text-[13px] font-bold text-slate-600 uppercase">สัดส่วนประเภทบุคลากร</h3>
+                                    <button onclick="window.toggleChartType('pType', this)" class="p-1.5 bg-slate-100 text-slate-500 hover:text-blue-600 rounded-md transition-colors"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                                <div class="chart-container h-52"><canvas id="chart-personnel-type"></canvas></div>
+                            </div>
+                            <div class="col-span-12 lg:col-span-4 executive-card p-6 bg-white border-t-4 border-t-indigo-500">
+                                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                                    <h3 class="text-[13px] font-bold text-slate-600 uppercase">ระดับการศึกษา</h3>
+                                    <button onclick="window.toggleChartType('edu', this)" class="p-1.5 bg-slate-100 text-slate-500 hover:text-indigo-600 rounded-md transition-colors"><i data-lucide="pie-chart" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                                <div class="chart-container h-52"><canvas id="chart-edu-level"></canvas></div>
+                            </div>
+                            
+                            <!-- 🕸️ Bullet/Progress Bar Risk -->
+                            <div class="col-span-12 lg:col-span-4 executive-card p-6 bg-white border-t-4 border-t-rose-500">
+                                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                                    <div>
+                                        <h3 class="text-[13px] font-bold text-slate-600 uppercase">เฝ้าระวัง: สูญเสียความเชี่ยวชาญ</h3>
+                                        <p class="text-[9px] text-rose-500 font-bold tracking-wider">สัดส่วนผู้ที่จะเกษียณใน 5 ปี เทียบกับคนทั้งหมด</p>
+                                    </div>
+                                </div>
+                                <div id="risk-bullet-container" class="space-y-3.5 overflow-y-auto h-52 custom-scrollbar pr-2 pt-1"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-8 executive-card p-6 bg-white">
+                                <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-4 flex items-center gap-2 pl-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i> หน่วยงานเสี่ยงขาดแคลนกำลังคน (เกษียณ 5 ปี >= 30%)</h3>
+                                <div class="chart-container h-48"><canvas id="chart-risk-dept"></canvas></div>
+                            </div>
+                            <div class="col-span-12 lg:col-span-4 executive-card p-8 bg-gradient-to-br from-slate-700 to-slate-800 text-white flex flex-col justify-center items-center text-center">
+                                <p class="text-[13px] font-bold uppercase tracking-widest opacity-90 mb-4">บุคลากรวิจัยที่ไม่มีผลงานเกิน 3 ปี</p>
+                                <h2 class="text-7xl font-black mb-3 animate-number text-rose-400" id="kpi-inactive-percent" data-target="0" data-decimals="1" data-suffix="%">0%</h2>
+                                <p class="text-[14px] font-medium opacity-80 mt-2">สัดส่วนนักวิจัยที่ควรได้รับการกระตุ้นผลงาน</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🤝 มิติที่ 3: เครือข่ายยุทธศาสตร์ (Sub-tab: mou) -->
+                <div id="sub-mou" class="sub-tab-content space-y-6">
+                    <div class="p-6 bg-cyan-50/50 rounded-[2rem] border border-cyan-100 shadow-sm space-y-6">
+                        <div class="flex items-center gap-3 border-b border-cyan-200 pb-4">
+                            <div class="p-2.5 bg-cyan-100 text-cyan-600 rounded-xl"><i data-lucide="handshake" class="w-6 h-6"></i></div>
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800 tracking-tight">มิติเครือข่ายความร่วมมือ (MOU)</h2>
+                                <p class="text-xs font-medium text-slate-500 mt-1">เจาะลึกทิศทางพันธมิตร และระบบแจ้งเตือนสถานะสัญญาความร่วมมืออัตโนมัติ</p>
+                            </div>
+                        </div>
+
+                        <div class="executive-card p-6 bg-white border-t-4 border-t-cyan-500">
+                            <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-4"><i data-lucide="bell-ring" class="w-4 h-4 inline pb-0.5 text-cyan-500"></i> ภาพรวมสถานะ MOU (Tracking & Renewal)</h3>
+                            <div id="mou-status-card" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="flex justify-center items-center h-20 text-slate-400 text-sm col-span-full">
+                                    <div class="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 border-t-slate-600 mr-2"></div> กำลังคำนวณข้อมูล...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                            <div class="col-span-12 lg:col-span-8 executive-card p-6 bg-white">
+                                <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-4 text-center border-b border-slate-100 pb-3">ประเภทองค์กรคู่สัญญา แยกตามหน่วยงานภายใน</h3>
+                                <div class="chart-container h-[300px] relative mt-2">
+                                    <canvas id="chart-mou-partner-types"></canvas>
+                                    <div id="mou-partner-loader" class="absolute inset-0 flex items-center justify-center bg-white/90 z-10"><div class="animate-spin h-8 w-8 border-2 border-slate-300 border-t-cyan-500 rounded-full"></div></div>
+                                </div>
+                            </div>
+                            <div class="col-span-12 lg:col-span-4 executive-card p-6 bg-white">
+                                <h3 class="text-[13px] font-bold text-slate-600 uppercase mb-4 text-center border-b border-slate-100 pb-3">สัดส่วนวัตถุประสงค์เชิงยุทธศาสตร์</h3>
+                                <div class="chart-container h-[250px] relative mb-4 mt-2">
+                                    <canvas id="chart-mou-objectives"></canvas>
+                                    <div id="mou-obj-loader" class="absolute inset-0 flex items-center justify-center bg-white/90 z-10"><div class="animate-spin h-8 w-8 border-2 border-slate-300 border-t-cyan-500 rounded-full"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: SEARCH RESEARCHER ================= -->
+            <section id="search-res-tab" class="tab-content space-y-6">
+                 <div class="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6 md:p-8 transition-colors">
+                    <div class="flex items-center gap-2 mb-6"><i data-lucide="search" class="w-6 h-6 text-blue-500"></i><h2 class="text-[20px] font-bold text-slate-800">ค้นหาข้อมูลนักวิจัย</h2></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยชื่อ - นามสกุล</label>
+                            <input type="text" id="search-res-name" class="search-input shadow-sm" placeholder="ระบุชื่อหรือนามสกุลเพื่อค้นหา..." onkeyup="if(event.key==='Enter') window.handleSearch('res')">
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยหน่วยงานสังกัด</label>
+                            <select id="search-res-dept" class="filter-select shadow-sm">
+                                <option value="all">ทุกหน่วยงาน</option>
+                                <!-- ตัวเลือกนี้จะถูกสร้างด้วย Javascript (initFiltersAndDropdowns) -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 flex-wrap pt-2 border-t border-slate-100">
+                        <button onclick="window.clearSearch('res')" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-[14px] hover:bg-slate-100 transition-colors">ล้างค่า</button>
+                        <button onclick="window.handleSearch('res')" class="px-8 py-3 rounded-xl bg-blue-600 text-white font-bold text-[14px] shadow-md hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 transform active:scale-95"><i data-lucide="search" class="w-4 h-4"></i> ค้นหา</button>
+                    </div>
+                </div>
+                <div id="res-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- ================= SECTION: SEARCH PROJECT ================= -->
+            <section id="search-proj-tab" class="tab-content space-y-6">
+                <div class="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6 md:p-8 transition-colors">
+                    <div class="flex items-center gap-2 mb-6"><i data-lucide="book-open" class="w-6 h-6 text-purple-500"></i><h2 class="text-[20px] font-bold text-slate-800">ค้นหาผลงานวิจัย</h2></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยชื่อผลงาน / นักวิจัย</label>
+                            <input type="text" id="search-proj-name" class="search-input shadow-sm" placeholder="พิมพ์ชื่อผลงานวิจัย หรือ ชื่อผู้วิจัย..." onkeyup="if(event.key==='Enter') window.handleSearch('proj')">
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยหน่วยงานสังกัด</label>
+                            <select id="search-proj-dept" class="filter-select shadow-sm">
+                                <option value="all">ทุกหน่วยงาน</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 flex-wrap pt-2 border-t border-slate-100">
+                        <button onclick="window.clearSearch('proj')" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-[14px] hover:bg-slate-100 transition-colors">ล้างค่า</button>
+                        <button onclick="window.handleSearch('proj')" class="px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-[14px] shadow-md hover:bg-purple-700 hover:shadow-lg transition-all flex items-center gap-2 transform active:scale-95"><i data-lucide="search" class="w-4 h-4"></i> ค้นหา</button>
+                    </div>
+                </div>
+                <div id="proj-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- ================= SECTION: COORDINATOR ================= -->
+            <section id="coord-tab" class="tab-content space-y-6">
+                <div class="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6 md:p-8 transition-colors">
+                    <div class="flex items-center gap-2 mb-6"><i data-lucide="users" class="w-6 h-6 text-orange-500"></i><h2 class="text-[20px] font-bold text-slate-800">ค้นหาผู้ประสานงานวิจัย</h2></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยชื่อผู้ประสานงาน</label>
+                            <input type="text" id="filter-coord-name" class="search-input shadow-sm" placeholder="ระบุชื่อผู้ประสานงาน..." onkeyup="if(event.key==='Enter') window.handleSearch('coord')">
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-slate-700 mb-2 ml-1">ค้นหาด้วยหน่วยงานสังกัด</label>
+                            <select id="filter-coord-dept" class="filter-select shadow-sm">
+                                <option value="all">ทุกหน่วยงาน</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 flex-wrap pt-2 border-t border-slate-100">
+                        <button onclick="window.clearSearch('coord')" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-[14px] hover:bg-slate-100 transition-colors">ล้างค่า</button>
+                        <button onclick="window.handleSearch('coord')" class="px-8 py-3 rounded-xl bg-orange-600 text-white font-bold text-[14px] shadow-md hover:bg-orange-700 hover:shadow-lg transition-all flex items-center gap-2 transform active:scale-95"><i data-lucide="search" class="w-4 h-4"></i> ค้นหา</button>
+                    </div>
+                </div>
+                <div id="coord-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            </section>
+
+            <!-- ================= SECTION: MOU ================= -->
+            <section id="mou-tab" class="tab-content space-y-6">
+                <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 md:p-10">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="p-3 bg-cyan-50 rounded-2xl text-cyan-600 shadow-sm">
+                            <i data-lucide="handshake" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">สืบค้นความร่วมมือ (MOU)</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-sm font-bold text-slate-700 ml-1">ชื่อความร่วมมือ / หน่วยงานพันธมิตร</label>
+                            <div class="relative">
+                                <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-slate-400"></i>
+                                <input type="text" id="search-mou-name" class="search-input pl-11 py-3.5" placeholder="พิมพ์คำค้นหาที่ต้องการ..." onkeyup="if(event.key==='Enter') window.performMouSearch()">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-bold text-slate-700 ml-1">หน่วยงานภายในกรม (DMSC)</label>
+                            <select id="search-mou-dept" class="filter-select py-3.5 cursor-pointer">
+                                <option value="all">แสดงทุกหน่วยงาน</option>
+                                <!-- ตัวเลือกจะถูกสร้างด้วย JS เพื่อลดความซ้ำซ้อน -->
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-bold text-slate-700 ml-1">สถานะของความร่วมมือ</label>
+                            <select id="filter-mou-status" class="filter-select py-3.5 cursor-pointer">
+                                <option value="all">ทุกสถานะ</option>
+                                <option value="active">กำลังดำเนินการ (Active)</option>
+                                <option value="expiring_this_year">หมดอายุภายในปีนี้</option>
+                                <option value="expiring">ใกล้หมดอายุ (ภายใน 90 วัน)</option>
+                                <option value="expired">สิ้นสุดแล้ว (Expired)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-bold text-slate-700 ml-1">ประเภทองค์กรพันธมิตร</label>
+                            <select id="filter-mou-org" class="filter-select py-3.5 cursor-pointer">
+                                <option value="all">ทุกประเภทองค์กร</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-100">
+                        <button onclick="window.clearMouSearch()" class="px-8 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-[14px] hover:bg-slate-100 transition-colors">ล้างค่าตัวกรอง</button>
+                        <button onclick="window.performMouSearch()" class="px-10 py-3 rounded-xl bg-cyan-600 text-white font-bold text-[14px] shadow-md hover:bg-cyan-700 hover:shadow-lg transition-all flex items-center gap-2 transform active:scale-95">
+                            <i data-lucide="search" class="w-4 h-4"></i> ค้นหาข้อมูล
+                        </button>
+                    </div>
+                </div>
+
+                <div id="mou-view-initial" class="py-24 text-center bg-white border-2 border-dashed border-slate-200 rounded-[3rem] flex flex-col items-center transition-all">
+                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 text-slate-300">
+                        <i data-lucide="search" class="w-12 h-12"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">พร้อมสำหรับการค้นหา</h3>
+                    <p class="text-slate-500">ระบุข้อมูลด้านบนเพื่อดึงข้อมูล MOU จากระบบ</p>
+                </div>
+                
+                <div id="mou-view-loading" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6"></div>
+                <div id="mou-view-results" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6"></div>
+            </section>
+
+        </main>
+        
+        <footer class="mt-auto py-8 border-t border-slate-200 text-center bg-white transition-colors">
+            <div class="max-w-[1800px] mx-auto px-6">
+                <p class="text-[11px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400">© 2026 Research Information Management System of the Department of Medical Sciences (RIMS Manage)</p>
+                <p class="text-[11px] font-medium text-slate-400">กองแผนงานและวิชาการ กรมวิทยาศาสตร์การแพทย์</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Master Modal -->
+    <div id="master-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="window.closeModal()"></div>
+        <div class="executive-card w-full max-w-5xl bg-slate-50 relative z-10 max-h-[90vh] flex flex-col shadow-2xl overflow-hidden rounded-[1.5rem]">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-white z-10 shadow-sm rounded-t-[1.5rem]">
+                <h3 id="modal-title" class="text-[18px] md:text-xl font-black text-slate-800 flex items-center gap-2 tracking-wide">รายละเอียด</h3>
+                <button onclick="window.closeModal()" class="p-2 hover:bg-slate-100 rounded-full transition text-slate-500 hover:text-rose-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="modal-content" class="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-6"></div>
+            <div id="modal-footer" class="p-5 border-t border-slate-200 bg-white flex justify-end gap-3 items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-10 rounded-b-[1.5rem]">
+                <button onclick="window.closeModal()" class="px-6 py-3 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition text-[14px] cursor-pointer">ปิดหน้าต่าง</button>
+                <div id="modal-action-btns" class="flex gap-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+        const get = id => document.getElementById(id);
+
+        const DMSC_DEPTS = ["สำนักเลขานุการกรม", "กองแผนงานและวิชาการ", "ศูนย์เทคโนโลยีสารสนเทศและการสื่อสาร", "กองบริหารการคลัง", "กองประชาสัมพันธ์และสื่อสารสารสาธารณะ", "กองบริหารทรัพยากรบุคคล", "สำนักมาตรฐานห้องปฏิบัติการ", "สำนักผู้ทรงคุณวุฒิกรมวิทยาศาสตร์การแพทย์", "สถาบันชีววัตถุ", "สถาบันชีววิทยาศาสตร์ทางการแพทย์", "สถาบันวิจัยวิทยาศาสตร์สาธารณสุข", "สถาบันวิจัยสมุนไพร", "สำนักเครื่องสำอางและวัตถุอันตราย", "สำนักยาและวัตถุเสพติด", "สำนักรังสีและเครื่องมือแพทย์", "สำนักคุณภาพและความปลอดภัยอาหาร", "กองทดสอบความชำนาญ", "กองความร่วมมือระหว่างประเทศ", "ศูนย์รวมบริการ", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 1 เชียงใหม่", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 1/1 เชียงราย", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 2 พิษณุโลก", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 3 นครสวรรค์", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 4 สระบุรี", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 5 สมุทรสงคราม", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 6 ชลบุรี", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 7 ขอนแก่น", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 8 อุดรธานี", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 9 นครราชสีมา", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 10 อุบลราชธานี", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 11 สุราษฎร์ธานี", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 11/1 ภูเก็ต", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 12 สงขลา", "ศูนย์วิทยาศาสตร์การแพทย์ที่ 12/1 ตรัง"];
+        
+        let GLOBAL_SYSTEM_LINK = "https://moph.link/RIMS";
+        let allData = { researchers: [], projects: [], coordinators: [], news: [] };
+        let MOUS = []; 
+        let currentCharts = {};
+        let topResearcherIds = [];
+
+        Chart.defaults.color = '#475569';
+        Chart.defaults.borderColor = '#e2e8f0';
+        Chart.defaults.font.family = 'Sarabun';
+
+        const escHTML = (str) => {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+
+        const escJS = (str) => {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '&quot;')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r');
+        };
+
+        const getF = (obj, keys) => {
+            if (!obj) return '';
+            for (let k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') {
+                    return obj[k];
+                }
+            }
+            return '';
+        };
+
+        const getSafeValue = (item, possibleKeys) => {
+            for (let key of possibleKeys) {
+                if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+                    return item[key].toString().trim();
+                }
+            }
+            return '';
+        };
+
+        const isPublished = (p) => {
+            const pubData = (getF(p, ['ผลงานตีพิมพ์', 'การตีพิมพ์', 'ตีพิมพ์']) || '').toString().trim();
+            const journal = (getF(p, ['วารสาร', 'ชื่อวารสาร', 'วารสารที่ตีพิมพ์']) || '').toString().trim();
+            const pubYear = (getF(p, ['ปีที่ตีพิมพ์', 'ปีตีพิมพ์']) || '').toString().trim();
+            
+            const isEmptyOrNegative = (val) => {
+                const v = val.toLowerCase();
+                return v === '' || v === '-' || v === 'ไม่มี' || v === 'ยังไม่ตีพิมพ์' || v === 'n/a' || v === 'ยังไม่มี';
+            };
+            return !isEmptyOrNegative(pubData) || !isEmptyOrNegative(journal) || (!isEmptyOrNegative(pubYear) && pubYear !== '0');
+        };
+
+        const formatMultiLineLabel = (text, maxLen = 30) => {
+            if (!text) return '';
+            text = text.toString();
+            if (text.length <= maxLen) return text;
+            const spaceIdx = text.indexOf(' ', 15);
+            if (spaceIdx !== -1 && spaceIdx <= maxLen + 15) return [text.substring(0, spaceIdx).trim(), text.substring(spaceIdx).trim()];
+            const breakWords = ['และ', 'กรม', 'ทางการ', 'สาธารณสุข', 'การแพทย์', 'วิจัย'];
+            for (let word of breakWords) {
+                const idx = text.indexOf(word, 10);
+                if (idx !== -1 && idx <= maxLen + 10) return [text.substring(0, idx).trim(), text.substring(idx).trim()];
+            }
+            const mid = Math.floor(text.length / 2);
+            return [text.substring(0, mid).trim() + '-', text.substring(mid).trim()];
+        };
+
+        function setLoader(show, text = 'กำลังโหลดข้อมูล...') {
+            const overlay = get('loading-overlay');
+            if (!overlay) return;
+            
+            if (show) {
+                const textEl = overlay.querySelector('p');
+                if (textEl) textEl.innerText = text;
+                overlay.classList.remove('hidden');
+                overlay.style.pointerEvents = 'auto';
+                overlay.style.opacity = '1';
+            } else {
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        function updateLastUpdatedTime() {
+            const now = new Date();
+            const day = now.getDate();
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const month = months[now.getMonth()];
+            const year = now.getFullYear() + 543;
+            const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            
+            const el = get('last-updated-time');
+            if (el) {
+                el.innerText = `อัปเดตล่าสุด: ${day} ${month} ${year}, ${time} น.`;
+            }
+        }
+
+        window.loadMockData = function() {
+            console.log("Loading Mock Data...");
+            const cs = get('connection-status');
+            if(cs) cs.innerHTML = `<span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block mr-1"></span> Mock Data (Preview)`;
+            
+            allData = {
+                researchers: Array.from({length: 50}, (_, i) => ({ 
+                    'รหัสนักวิจัย': 'R'+i, 'คำนำหน้า': 'ดร.', 'ชื่อ-นามสกุล': 'นักวิจัย สมมติ '+i, 
+                    'อายุ': (30 + i % 25).toString(), 
+                    'หน่วยงาน': DMSC_DEPTS[i % 5],
+                    'ประเภทบุคลากร': i % 2 == 0 ? 'ข้าราชการ' : 'พนักงานราชการ', 
+                    'ตำแหน่งทางวิชาการ': i % 5 == 0 ? 'เชี่ยวชาญ' : 'ชำนาญการ',
+                    'สาขาความเชี่ยวชาญ': ['ชีววิทยาโมเลกุล', 'เภสัชวิทยา', 'พิษวิทยา', 'ระบาดวิทยา'][i%4], 
+                    'ระดับการศึกษาสูงสุด': i % 3 == 0 ? 'ปริญญาเอก' : 'ปริญญาโท'
+                })),
+                projects: Array.from({length: 100}, (_, i) => ({ 
+                    'รหัสนักวิจัย': 'R' + (i % 50), 'ชื่อผลงานวิจัย': 'โครงการวิจัยจำลองที่ ' + i, 
+                    'ปีที่ดำเนินงาน': (2560 + i % 8).toString(), 'บทบาทหน้าที่': 'หัวหน้าโครงการ',
+                    'สัดส่วน %': '80', 'ผลงานตีพิมพ์': i % 2 == 0 ? 'มี' : 'ไม่มี', 
+                    'วารสาร': i % 2 == 0 ? 'Journal of DMSC' : '', 'ปีที่ตีพิมพ์': (2560 + i % 8).toString()
+                })),
+                coordinators: [
+                    { 'ชื่อ-นามสกุล': 'ผู้ประสานงาน สมมติ', 'หน่วยงาน': 'กองแผนงานและวิชาการ', 'เบอร์โทร': '0891234567', 'สถานะผู้ประสาน': 'ผู้ประสานระดับกรม' }
+                ],
+                news: [
+                    { 'หัวข้อข่าว': 'ยินดีต้อนรับสู่ระบบ RIMS (โหมดจำลองข้อมูล)' }
+                ]
+            };
+            
+            const mockMOUData = [
+                {
+                    'รหัส MOU': 'MOU-001', 'ชื่อบันทึก': 'MOU จำลอง', 'หน่วยงานคู่จัดทำ MOU': 'มหาวิทยาลัยจำลอง',
+                    'หน่วยงานที่รับผิดชอบ': 'สถาบันวิจัยวิทยาศาสตร์สาธารณสุข', 'สถานะ': 'กำลังดำเนินการ (Active)',
+                    'ระยะเวลาเริ่มต้น': '01/01/2567', 'ระยะเวลาสิ้นสุด': '31/12/2570', 'ผู้รับผิดชอบ/ผู้ประสาน': 'นายทดสอบ',
+                    'ประเภทองค์กร': 'สถาบันการศึกษา', 'ประเภท': 'วิชาการ', 'วัตถุประสงค์': 'ทดสอบระบบ'
+                }
+            ];
+            
+            window.processMouRawData(mockMOUData);
+            setLoader(false); 
+            window.refreshDashboard();
+            setTimeout(window.showNewsPopup, 1000);
+        };
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = get('loading-overlay');
+                if(loader && !loader.classList.contains('hidden')) {
+                    setLoader(false);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'โหลดข้อมูลล้มเหลว',
+                        text: 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณารีเฟรชหน้าเว็บหรือรันผ่าน Google Apps Script',
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#3B82F6'
+                    });
+                }
+            }, 15000);
+
+            try {
+                document.querySelectorAll('.sys-link').forEach(btn => btn.href = GLOBAL_SYSTEM_LINK);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                initTabs();
+                initFiltersAndDropdowns();
+                window.fetchData();
+            } catch (err) {
+                console.error("Init Error:", err);
+                setLoader(false);
+            }
+        });
+
+        window.onerror = function(msg, url, line, col, error) { 
+            console.error(msg, error);
+            setLoader(false); 
+            return false; 
+        };
+
+        window.closeModal = function() {
+            const masterModalEl = document.getElementById('master-modal');
+            if (masterModalEl) masterModalEl.classList.add('hidden');
+        };
+
+        window.switchTab = function(tabId) {
+            const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+            if(btn) {
+                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+                const target = get(`${tabId}-tab`);
+                if (target) target.classList.add('active');
+                
+                const globalFilter = get('global-filter');
+                if (globalFilter) {
+                    globalFilter.style.display = (tabId === 'home') ? 'flex' : 'none';
+                }
+
+                document.querySelectorAll('.search-input').forEach(el => el.value = '');
+                document.querySelectorAll('.filter-select:not(#global-year):not(#global-dept)').forEach(el => el.value = 'all');
+                
+                if(get('res-results')) get('res-results').innerHTML = '';
+                if(get('proj-results')) get('proj-results').innerHTML = '';
+                if(get('coord-results')) get('coord-results').innerHTML = '';
+                
+                window.clearMouSearch();
+
+                if (tabId === 'home') {
+                    window.refreshDashboard(); 
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        window.switchSubTab = function(subTabId) {
+            document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm', 'border-blue-200');
+                btn.classList.add('text-slate-500', 'hover:bg-slate-200/50', 'border-transparent');
+                if (btn.dataset.subtab === subTabId) {
+                    btn.classList.remove('text-slate-500', 'hover:bg-slate-200/50', 'border-transparent');
+                    btn.classList.add('bg-white', 'text-blue-600', 'shadow-sm', 'border-blue-200');
+                }
+            });
+            
+            document.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById('sub-' + subTabId);
+            if (target) {
+                target.classList.add('active');
+                setTimeout(() => {
+                    Object.values(currentCharts).forEach(chart => {
+                        if(chart && typeof chart.resize === 'function') {
+                            chart.resize();
+                        }
+                    });
+                }, 50);
+            }
+        };
+
+        window.clearSearch = function(type) {
+            const nameEl = document.getElementById(type === 'coord' ? 'filter-coord-name' : `search-${type}-name`);
+            const deptEl = document.getElementById(type === 'coord' ? 'filter-coord-dept' : `search-${type}-dept`);
+            
+            if (nameEl) nameEl.value = '';
+            if (deptEl) deptEl.value = 'all';
+            
+            const resultsDiv = document.getElementById(`${type}-results`);
+            if (resultsDiv) resultsDiv.innerHTML = '';
+        };
+
+        window.perfDataStore = { edu: {}, pos: {}, dept: {} };
+
+        window.updatePerfChart = function(groupType) {
+            if(!currentCharts.multiPerf) return;
+            const dataObj = window.perfDataStore[groupType] || {};
+            let entries = Object.entries(dataObj).filter(e => e[1].proj > 0);
+            
+            entries.sort((a,b) => b[1].proj - a[1].proj);
+            
+            if(groupType === 'pos' && entries.length > 5) {
+                entries = entries.slice(0, 5);
+            }
+            
+            const labels = [];
+            const pubData = [];
+            const unpubData = [];
+            const successRates = [];
+
+            entries.forEach(([key, val]) => {
+                const rate = ((val.pub / val.proj) * 100).toFixed(0);
+                let labelKey = key;
+                if(groupType === 'dept' && labelKey.length > 25) labelKey = labelKey.substring(0, 25) + '...';
+                labels.push(`${labelKey} (${rate}%)`);
+                pubData.push(val.pub);
+                unpubData.push(val.proj - val.pub);
+                successRates.push(rate + '%');
+            });
+
+            currentCharts.multiPerf.data.labels = labels;
+            currentCharts.multiPerf.data.datasets[0].data = pubData;
+            currentCharts.multiPerf.data.datasets[1].data = unpubData;
+            currentCharts.multiPerf.options.plugins.tooltip.callbacks.afterBody = function(ctxs) {
+                const idx = ctxs[0].dataIndex;
+                return `\nอัตราความสำเร็จ (Success Rate): ${successRates[idx]}`;
+            };
+            currentCharts.multiPerf.update();
+        };
+
+        window.togglePerfGroup = function(view, btn) {
+            document.querySelectorAll('.btn-perf-group').forEach(b => b.className = 'btn-perf-group px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all');
+            btn.className = 'btn-perf-group px-3 py-1 text-[11px] font-bold rounded-md bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300 transition-all';
+            
+            const titleMap = {
+                'edu': 'ประสิทธิภาพการสร้างผลงาน จำแนกตามวุฒิการศึกษา',
+                'pos': 'ประสิทธิภาพการสร้างผลงาน จำแนกตามตำแหน่งทางวิชาการ (Top 5)',
+                'dept': 'ประสิทธิภาพการสร้างผลงาน จำแนกตามหน่วยงาน'
+            };
+            const titleEl = document.getElementById('title-perf-group');
+            if(titleEl) titleEl.innerText = titleMap[view];
+
+            window.updatePerfChart(view);
+        };
+
+        window.togglePipeline = function(view, btn) {
+            document.querySelectorAll('.btn-pipe').forEach(b => b.className = 'btn-pipe px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all');
+            btn.className = 'btn-pipe px-3 py-1 text-[11px] font-bold rounded-md bg-blue-100 text-blue-700 ring-1 ring-blue-300 transition-all';
+
+            const chart = currentCharts.pipeline;
+            if(!chart) return;
+            
+            if(view === 'all') {
+                chart.setDatasetVisibility(0, true); 
+                chart.setDatasetVisibility(1, true); 
+            } else if(view === 'pub') {
+                chart.setDatasetVisibility(0, true);
+                chart.setDatasetVisibility(1, false);
+            } else if(view === 'proj') {
+                chart.setDatasetVisibility(0, false);
+                chart.setDatasetVisibility(1, true);
+            }
+            chart.update();
+        };
+
+        window.toggleDeptPerf = function(view, btn) {
+            document.querySelectorAll('.btn-dept').forEach(b => b.className = 'btn-dept px-3 py-1 text-[11px] font-bold rounded-md bg-slate-50 text-slate-500 hover:bg-white transition-all');
+            btn.className = 'btn-dept px-3 py-1 text-[11px] font-bold rounded-md bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300 transition-all';
+
+            const chart = currentCharts.dept;
+            if(!chart) return;
+
+            if(view === 'stacked') {
+                chart.options.scales.x.stacked = true;
+                chart.options.scales.y.stacked = true;
+            } else if(view === 'grouped') {
+                chart.options.scales.x.stacked = false;
+                chart.options.scales.y.stacked = false;
+            }
+            chart.update();
+        };
+
+        window.toggleChartType = function(chartKey, btn) {
+            const chart = currentCharts[chartKey];
+            if(!chart) return;
+            const currentType = chart.config.type;
+            const newType = (currentType === 'doughnut' || currentType === 'pie') ? 'bar' : (chartKey === 'edu' ? 'pie' : 'doughnut');
+            
+            chart.config.type = newType;
+            if(newType === 'bar') {
+                chart.options.indexAxis = 'x'; 
+                if(chart.options.scales) {
+                    chart.options.scales.x.display = true;
+                    chart.options.scales.y.display = true;
+                }
+            } else {
+                if(chart.options.scales) {
+                    chart.options.scales.x.display = false;
+                    chart.options.scales.y.display = false;
+                }
+            }
+            chart.update();
+            
+            if(newType === 'bar') btn.innerHTML = '<i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>';
+            else btn.innerHTML = '<i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>';
+            lucide.createIcons();
+        };
+
+        function initTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    window.switchTab(btn.dataset.tab);
+                }
+            });
+        }
+
+        function initFiltersAndDropdowns() {
+            const yearSel = get('global-year');
+            const currentY = new Date().getFullYear() + 543;
+            if (yearSel) {
+                yearSel.innerHTML = '<option value="all">ทุกปีงบประมาณ</option>';
+                for(let i=0; i<11; i++) {
+                    const y = currentY - i;
+                    yearSel.add(new Option(y, y));
+                }
+            }
+            
+            // ใช้ลูปเติมหน่วยงานให้ทุก Dropdown ที่เกี่ยวข้อง (รวมถึงของ MOU ด้วยเพื่อลดความซ้ำซ้อนของ HTML)
+            const deptSels = ['global-dept', 'search-res-dept', 'search-proj-dept', 'filter-coord-dept', 'search-mou-dept'];
+            deptSels.forEach(id => {
+                const sel = get(id);
+                if (sel) {
+                    sel.innerHTML = '<option value="all">ทุกหน่วยงาน</option>';
+                    DMSC_DEPTS.forEach(d => sel.add(new Option(d, d)));
+                }
+            });
+        }
+
+        function runSingleAnimation(el) {
+            const target = parseFloat(el.getAttribute('data-target')) || 0;
+            const suffix = el.getAttribute('data-suffix') || '';
+            const decimals = parseInt(el.getAttribute('data-decimals')) || 0;
+            const duration = 1200;
+            
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 4);
+                const currentVal = easeProgress * target;
+                
+                let displayVal;
+                if (decimals > 0) { displayVal = currentVal.toFixed(decimals); } 
+                else { displayVal = Math.floor(currentVal).toLocaleString(); }
+                
+                el.innerHTML = displayVal + suffix;
+                if (progress < 1) window.requestAnimationFrame(step);
+                else el.innerHTML = (decimals > 0 ? target.toFixed(decimals) : target.toLocaleString()) + suffix;
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function runAnimations() {
+            document.querySelectorAll('.animate-number').forEach(el => runSingleAnimation(el));
+        }
+
+        window.showNewsPopup = function() {
+            if (allData.news && allData.news.length > 0) {
+                const newsList = allData.news.map(n => `<li class="mb-1">${escHTML(getF(n, ['หัวข้อข่าว']))}</li>`).join('');
+                Swal.fire({
+                    title: '<span class="text-lg font-bold text-indigo-700 flex items-center gap-2"><i data-lucide="bell-ring" class="w-5 h-5"></i> ข่าวสารและประกาศ</span>',
+                    html: `<ul class="text-left text-[13px] text-slate-600 list-disc pl-5">${newsList}</ul>`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 8000,
+                    timerProgressBar: true,
+                    background: '#ffffff',
+                    customClass: { popup: 'news-popup' },
+                    didOpen: () => { if (typeof lucide !== 'undefined') lucide.createIcons(); }
+                });
+            }
+        }
+
+        window.fetchData = function() {
+            // เมื่อเปิดไฟล์ตรงๆ (file://) ไม่มี Netlify Function ให้เรียก จึงใช้ข้อมูลจำลองแทน
+            if (location.protocol === 'file:') {
+                console.log("Local file context. Loading Mock Data...");
+                window.loadMockData();
+                return;
+            }
+
+            fetch('/.netlify/functions/dashboard-data')
+                .then(res => {
+                    if (!res.ok) return Promise.reject({ unreachable: true, message: `HTTP ${res.status}` });
+                    return res.json();
+                })
+                .then(r => {
+                    if (r && r.success) {
+                        allData = {
+                            researchers: r.researchers || [],
+                            projects: r.projects || [],
+                            coordinators: r.coordinators || [],
+                            news: r.news || []
+                        };
+                        const cs = get('connection-status');
+                        if (cs) cs.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block mr-1"></span> Online`;
+
+                        setLoader(false);
+                        window.refreshDashboard();
+                        setTimeout(window.showNewsPopup, 1000);
+                    } else {
+                        return Promise.reject({ unreachable: false, message: (r && r.message) || 'ไม่สามารถดึงข้อมูลได้' });
+                    }
+                })
+                .catch(err => {
+                    console.error("Dashboard fetch error:", err);
+                    if (err && err.unreachable) {
+                        // ยังไม่ได้ deploy Netlify Function หรือกำลังรันแบบ static เฉยๆ -> แสดงข้อมูลจำลองแทน
+                        console.log("Netlify Function unreachable. Loading Mock Data...");
+                        window.loadMockData();
+                    } else {
+                        setLoader(false);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'การโหลดข้อมูลผิดพลาด',
+                            text: (err && err.message) || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ',
+                            confirmButtonColor: '#3B82F6'
+                        });
+                    }
+                });
+
+            fetch('/.netlify/functions/mou-data')
+                .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
+                .then(r => {
+                    if (r && r.success) window.processMouRawData(r.data);
+                })
+                .catch(e => console.error("MOU fetch error:", e));
+        }
+
+        window.refreshDashboard = function() {
+            try {
+                const globalYearEl = get('global-year');
+                const globalDeptEl = get('global-dept');
+                const fYear = globalYearEl ? globalYearEl.value : 'all';
+                const fDept = globalDeptEl ? globalDeptEl.value : 'all';
+
+                const res = (allData.researchers || []).filter(r => fDept === 'all' || getF(r, ['หน่วยงาน']) === fDept);
+                
+                const resMap = new Map();
+                (allData.researchers || []).forEach(r => {
+                    const rId = getF(r, ['รหัสนักวิจัย']);
+                    if(rId) resMap.set(rId, r);
+                });
+
+                const projWithDept = (allData.projects || []).map(p => {
+                    const r = resMap.get(getF(p, ['รหัสนักวิจัย']));
+                    return { ...p, 'หน่วยงาน_derived': r ? getF(r, ['หน่วยงาน']) : 'ไม่ระบุ' };
+                });
+
+                const proj = projWithDept.filter(p => {
+                    const deptMatch = (fDept === 'all' || p['หน่วยงาน_derived'] === fDept);
+                    const yearMatch = (fYear === 'all' || (getF(p, ['ปีที่ดำเนินงาน']) || '').toString() == fYear);
+                    return deptMatch && yearMatch;
+                });
+                
+                const uniqueProjectsMap = new Map();
+                proj.forEach(p => {
+                    let pName = (getF(p, ['ชื่อผลงานวิจัย']) || '').toString().trim();
+                    if (pName && !uniqueProjectsMap.has(pName)) uniqueProjectsMap.set(pName, p);
+                });
+                const uniqueProjects = Array.from(uniqueProjectsMap.values());
+
+                const activeIds = [...new Set(projWithDept.filter(p => parseInt((getF(p, ['ปีที่ดำเนินงาน']) || '0').toString()) >= 2567).map(p => getF(p, ['รหัสนักวิจัย'])))];
+
+                const filteredMous = MOUS.filter(m => {
+                    const deptMatch = fDept === 'all' || m.dept === fDept;
+                    const yearMatch = fYear === 'all' || (m.start && m.start.includes(fYear)) || (m.end && m.end.includes(fYear));
+                    return deptMatch && yearMatch;
+                });
+
+                window.renderStrategicDashboard(res, proj, uniqueProjects, activeIds, filteredMous, fYear);
+                updateLastUpdatedTime();
+            } catch (err) { 
+                console.error("Dashboard Error:", err); 
+            }
+        }
+
+        window.getYoYBadge = function(val) {
+            if (val === 0) return `<span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full ml-2 inline-flex items-center">- 0%</span>`;
+            if (val > 0) return `<span class="text-[10px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full ml-2 inline-flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-0.5"></i> ${val.toFixed(1)}%</span>`;
+            return `<span class="text-[10px] text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full ml-2 inline-flex items-center"><i data-lucide="trending-down" class="w-3 h-3 mr-0.5"></i> ${Math.abs(val).toFixed(1)}%</span>`;
+        }
+
+        window.renderStrategicDashboard = function(res, proj, uniqueProj, activeIds, filteredMous = [], fYear = 'all') {
+            if (typeof Chart !== 'undefined') {
+                ['pipeline', 'pType', 'edu', 'multiPerf', 'retire', 'dept', 'risk', 'mouObj', 'mouPartner'].forEach(c => {
+                    if(currentCharts[c] && typeof currentCharts[c].destroy === 'function') currentCharts[c].destroy();
+                });
+            }
+
+            const pubs = uniqueProj.filter(p => isPublished(p));
+            const totalRes = res.length;
+            const totalUniqueProj = uniqueProj.length;
+            const totalPubs = pubs.length;
+            const validAges = res.map(r => parseInt((getF(r, ['อายุ']) || '').toString())).filter(a => !isNaN(a));
+            const retire5Yrs = validAges.filter(a => a >= 55).length;
+            const convRate = totalUniqueProj > 0 ? (totalPubs / totalUniqueProj * 100) : 0;
+            const prodRate = totalRes > 0 ? (totalUniqueProj / totalRes) : 0;
+            
+            const currentYearTh = new Date().getFullYear() + 543;
+            const targetYear = fYear !== 'all' ? parseInt(fYear) : currentYearTh;
+            const prevYear = targetYear - 1;
+
+            const projCurr = uniqueProj.filter(p => parseInt(getF(p, ['ปีที่ดำเนินงาน'])) === targetYear).length;
+            const projPrev = uniqueProj.filter(p => parseInt(getF(p, ['ปีที่ดำเนินงาน'])) === prevYear).length;
+            const projYoY = projPrev > 0 ? ((projCurr - projPrev) / projPrev * 100) : (projCurr > 0 ? 100 : 0);
+
+            const pubCurr = pubs.filter(p => {
+                let y = parseInt(getF(p, ['ปีที่ตีพิมพ์']));
+                if(isNaN(y)) y = parseInt(getF(p, ['ปีที่ดำเนินงาน']));
+                return y === targetYear;
+            }).length;
+            const pubPrev = pubs.filter(p => {
+                let y = parseInt(getF(p, ['ปีที่ตีพิมพ์']));
+                if(isNaN(y)) y = parseInt(getF(p, ['ปีที่ดำเนินงาน']));
+                return y === prevYear;
+            }).length;
+            const pubYoY = pubPrev > 0 ? ((pubCurr - pubPrev) / pubPrev * 100) : (pubCurr > 0 ? 100 : 0);
+
+            const deptResCount = {};
+            res.forEach(r => {
+                const d = getF(r, ['หน่วยงาน']);
+                if(d) deptResCount[d] = (deptResCount[d] || 0) + 1;
+            });
+            const deptsCount = Object.keys(deptResCount).length;
+
+            const trendY = [2559, 2560, 2561, 2562, 2563, 2564, 2565, 2566, 2567, 2568];
+            const pTypes = {}; res.forEach(r => { const t = getF(r, ['ประเภทบุคลากร']) || 'ไม่ระบุ'; pTypes[t] = (pTypes[t] || 0) + 1; });
+            const eduLevels = { 'ปริญญาตรี': 0, 'ปริญญาโท': 0, 'ปริญญาเอก': 0 }; res.forEach(r => { const edu = getF(r, ['ระดับการศึกษาสูงสุด']); if(edu && eduLevels[edu] !== undefined) eduLevels[edu]++; });
+            
+            const expStats = {};
+            const expRetireStats = {};
+            const curY = 2568;
+            
+            window.perfDataStore = { edu: {}, pos: {}, dept: {} };
+            
+            res.forEach(r => {
+                let exp = getF(r, ['สาขาความเชี่ยวชาญ']) || 'ไม่ระบุ';
+                if (exp !== '-' && exp !== '' && exp !== 'ไม่ระบุ') {
+                    if(exp.length > 25) exp = exp.substring(0,25)+'...'; 
+                    expStats[exp] = (expStats[exp] || 0) + 1;
+                    
+                    const age = parseInt((getF(r, ['อายุ']) || '').toString()) || 0;
+                    if(age >= 55) { 
+                        expRetireStats[exp] = (expRetireStats[exp] || 0) + 1;
+                    }
+                }
+                
+                let edu = (getF(r, ['ระดับการศึกษาสูงสุด']) || '').toString().trim() || 'อื่นๆ';
+                let pos = (getF(r, ['ตำแหน่งทางวิชาการ']) || '').toString().trim() || 'ไม่ระบุตำแหน่ง';
+                let dept = (getF(r, ['หน่วยงาน']) || '').toString().trim() || 'ไม่ระบุหน่วยงาน';
+                
+                const rId = getF(r, ['รหัสนักวิจัย']);
+                const rProjs = proj.filter(p => getF(p, ['รหัสนักวิจัย']) === rId);
+                
+                if (rProjs.length > 0) {
+                    const pubCount = rProjs.filter(p => isPublished(p)).length;
+                    const projCount = rProjs.length;
+
+                    if(!window.perfDataStore.edu[edu]) window.perfDataStore.edu[edu] = { proj: 0, pub: 0 };
+                    window.perfDataStore.edu[edu].proj += projCount;
+                    window.perfDataStore.edu[edu].pub += pubCount;
+
+                    if(!window.perfDataStore.pos[pos]) window.perfDataStore.pos[pos] = { proj: 0, pub: 0 };
+                    window.perfDataStore.pos[pos].proj += projCount;
+                    window.perfDataStore.pos[pos].pub += pubCount;
+
+                    if(!window.perfDataStore.dept[dept]) window.perfDataStore.dept[dept] = { proj: 0, pub: 0 };
+                    window.perfDataStore.dept[dept].proj += projCount;
+                    window.perfDataStore.dept[dept].pub += pubCount;
+                }
+            });
+            
+            const expRetireRiskList = [];
+            Object.keys(expStats).forEach(exp => {
+                const total = expStats[exp];
+                const retire = expRetireStats[exp] || 0;
+                if (total > 0) {
+                    const pct = (retire / total) * 100;
+                    expRetireRiskList.push({ name: exp, total, retire, pct });
+                }
+            });
+            expRetireRiskList.sort((a, b) => b.pct - a.pct || b.total - a.total);
+
+            const retireYStats = {}; for(let i=2569; i<=2588; i++) retireYStats[i] = 0;
+            
+            const deptAgeStats = {};
+            res.forEach(r => {
+                const d = getF(r, ['หน่วยงาน']);
+                const age = parseInt((getF(r, ['อายุ']) || '').toString()) || 0;
+                if(age > 0) {
+                    const rY = curY + (60 - age);
+                    if(rY >= 2569 && rY <= 2588) retireYStats[rY]++;
+                }
+                if(d) {
+                    if(!deptAgeStats[d]) deptAgeStats[d] = { total: 0, retire: 0 };
+                    deptAgeStats[d].total++;
+                    if(age >= 55) deptAgeStats[d].retire++;
+                }
+            });
+
+            const riskDepts = {};
+            Object.entries(deptAgeStats).forEach(([d, stats]) => {
+                const p = (stats.retire / stats.total) * 100;
+                if(p >= 30) riskDepts[d] = p;
+            });
+
+            const deptStats = {}; 
+            const deptPubStats = {}; 
+            uniqueProj.forEach(p => { 
+                const d = p['หน่วยงาน_derived'] || 'ไม่ระบุ'; 
+                deptStats[d] = (deptStats[d] || 0) + 1; 
+                if(isPublished(p)) {
+                    deptPubStats[d] = (deptPubStats[d] || 0) + 1;
+                }
+            });
+
+            const jStats = {}; 
+            pubs.forEach(p => { 
+                const journal = (getF(p, ['วารสาร']) || '').toString().trim(); 
+                if(journal && journal !== '-' && journal !== 'ไม่มี' && journal.toLowerCase() !== 'n/a' && journal !== 'ยังไม่ตีพิมพ์') {
+                    jStats[journal] = (jStats[journal] || 0) + 1; 
+                }
+            });
+            const sortedJ = Object.entries(jStats).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+            const resPubCount = {};
+            proj.filter(p => isPublished(p)).forEach(p => { const rid = getF(p, ['รหัสนักวิจัย']); if(rid) resPubCount[rid] = (resPubCount[rid] || 0) + 1; });
+            const sortedResPub = Object.entries(resPubCount).sort((a,b) => b[1]-a[1]).slice(0, 5); 
+            topResearcherIds = sortedResPub.map(x => x[0]);
+
+            const effDepts = [];
+            DMSC_DEPTS.forEach(d => {
+                const dResCount = deptResCount[d] || 0;
+                const dProj = deptStats[d] || 0;
+                if(dResCount > 0) effDepts.push({ dept: d, eff: dProj / dResCount, count: dProj });
+            });
+            effDepts.sort((a,b) => b.eff - a.eff);
+
+            const activeResCount = res.filter(r => activeIds.includes(getF(r, ['รหัสนักวิจัย']))).length;
+            const resIdsWithProj = [...new Set(proj.map(p => getF(p, ['รหัสนักวิจัย'])))];
+            const peopleWithProj = res.filter(r => resIdsWithProj.includes(getF(r, ['รหัสนักวิจัย']))).length;
+            const resIdsWithPub = [...new Set(pubs.map(p => getF(p, ['รหัสนักวิจัย'])))];
+            const peopleWithPub = res.filter(r => resIdsWithPub.includes(getF(r, ['รหัสนักวิจัย']))).length;
+
+            const funnelData = [
+                { label: 'บุคลากรทั้งหมด', value: totalRes, color: 'bg-slate-300' },
+                { label: 'สร้างโครงการวิจัย', value: peopleWithProj, color: 'bg-blue-400' },
+                { label: 'ตีพิมพ์ผลงานสำเร็จ', value: peopleWithPub, color: 'bg-indigo-600' }
+            ];
+
+            const funnelContainer = get('funnel-container');
+            if (funnelContainer) {
+                const maxVal = totalRes > 0 ? totalRes : 1;
+                funnelContainer.innerHTML = funnelData.map((f, i) => {
+                    const pct = ((f.value / maxVal) * 100).toFixed(0);
+                    const dropPct = i > 0 ? (((funnelData[i-1].value - f.value) / funnelData[i-1].value) * 100).toFixed(0) : 0;
+                    const dropAlert = i > 0 && dropPct > 50 ? `<span class="text-rose-500 font-black text-[9px] bg-rose-50 px-1 rounded ml-1">-${dropPct}%</span>` : '';
+                    
+                    return `
+                        <div class="w-full flex flex-col items-center group relative cursor-help">
+                            <div class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">${f.label} ${dropAlert}</div>
+                            <div class="h-10 ${f.color} rounded-lg shadow-inner flex items-center justify-center text-white font-black text-lg funnel-stage relative overflow-hidden" style="width: ${Math.max(pct, 15)}%;">
+                                <div class="absolute inset-0 bg-white/20 w-1/2 skew-x-12 -ml-4"></div>
+                                <span class="relative z-10">${f.value}</span>
+                            </div>
+                            <div class="absolute -top-6 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                                คิดเป็น ${pct}% ของทั้งหมด
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const riskBulletContainer = get('risk-bullet-container');
+            if (riskBulletContainer) {
+                if (expRetireRiskList.length === 0) {
+                    riskBulletContainer.innerHTML = '<div class="text-center text-slate-400 text-xs mt-10">ไม่มีข้อมูลความเสี่ยง</div>';
+                } else {
+                    riskBulletContainer.innerHTML = expRetireRiskList.slice(0, 6).map(item => {
+                        const isHighRisk = item.pct >= 30; 
+                        const isCritical = item.pct >= 50; 
+                        
+                        let barColor = 'bg-blue-400';
+                        let textColor = 'text-slate-600';
+                        let badge = '';
+                        
+                        if (isCritical) {
+                            barColor = 'bg-rose-500';
+                            textColor = 'text-rose-600 font-bold';
+                            badge = '<span class="text-[8px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded ml-1 border border-rose-200">วิกฤต</span>';
+                        } else if (isHighRisk) {
+                            barColor = 'bg-amber-500';
+                            textColor = 'text-amber-700 font-bold';
+                            badge = '<span class="text-[8px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded ml-1 border border-amber-200">เฝ้าระวัง</span>';
+                        }
+
+                        return `
+                            <div class="w-full">
+                                <div class="flex justify-between items-end text-[11px] mb-1.5">
+                                    <div class="flex items-center"><span class="${textColor} truncate max-w-[150px] block" title="${escHTML(item.name)}">${escHTML(item.name)}</span>${badge}</div>
+                                    <span class="font-black ${textColor} shrink-0">${item.retire}/${item.total} คน</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex shadow-inner">
+                                    <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${item.pct}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+
+            const inactivePercentRaw = totalRes > 0 ? ((totalRes - activeResCount) / totalRes * 100) : 0;
+            const avgAge = validAges.length > 0 ? Math.round(validAges.reduce((a, b) => a + b, 0) / validAges.length) : 0;
+            const riskPercentRaw = totalRes > 0 ? (retire5Yrs / totalRes * 100) : 0;
+
+            const kpiGrid = get('kpi-grid');
+            if (kpiGrid) {
+                const activeMousCount = filteredMous.filter(m => m.status !== 'expired').length;
+                
+                const kpis = [
+                    { label: 'นักวิจัยทั้งหมด', rawVal: totalRes, decimals: 0, suffix: '', color: 'blue', action: "window.switchTab('search-res')" },
+                    { label: 'ผลงานวิจัยทั้งหมด', rawVal: totalUniqueProj, decimals: 0, suffix: '', color: 'indigo', action: "window.switchTab('search-proj')", yoy: window.getYoYBadge(projYoY) },
+                    { label: 'ตีพิมพ์ทั้งหมด', rawVal: totalPubs, decimals: 0, suffix: '', color: 'purple', action: "window.switchTab('search-proj')", yoy: window.getYoYBadge(pubYoY) },
+                    { label: 'หน่วยงานที่มีนักวิจัย', rawVal: deptsCount, decimals: 0, suffix: '', color: 'orange', action: "window.switchTab('search-res')" },
+                    { label: 'อัตราการเปลี่ยนเป็นผลงาน', rawVal: convRate, decimals: 1, suffix: '%', color: 'teal', action: "window.switchTab('search-proj')" },
+                    { label: 'ผลงานโครงการวิจัยต่อคน', rawVal: prodRate, decimals: 2, suffix: '', color: 'yellow', action: "window.switchTab('search-proj')" },
+                    { label: 'MOU ที่มีผลบังคับใช้', rawVal: activeMousCount, decimals: 0, suffix: ' ฉบับ', color: 'cyan', action: "window.switchTab('mou')", id: 'kpi-mou-val' }
+                ];
+                kpiGrid.innerHTML = kpis.map(k => `
+                    <div class="executive-card p-4 kpi-border-${k.color} flex flex-col justify-center kpi-clickable" onclick="${k.action}">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase leading-tight mb-1 flex items-center justify-between" title="${k.label}">
+                            <span class="truncate">${k.label}</span>
+                            ${k.yoy || ''}
+                        </p>
+                        <h4 class="text-3xl md:text-2xl font-black text-slate-800 animate-number mt-1" ${k.id ? `id="${k.id}"` : ''} data-target="${k.rawVal}" data-decimals="${k.decimals}" data-suffix="${k.suffix}">0</h4>
+                    </div>`).join('');
+            }
+
+            const avgAgeEl = get('avg-age-display');
+            if(avgAgeEl) { avgAgeEl.setAttribute('data-target', avgAge); avgAgeEl.innerHTML = '0'; }
+
+            const rpEl = get('risk-percent');
+            if(rpEl) { rpEl.setAttribute('data-target', riskPercentRaw); rpEl.innerHTML = '0%'; }
+            
+            const rcEl = get('risk-count');
+            if(rcEl) { rcEl.setAttribute('data-target', retire5Yrs); rcEl.innerHTML = '0 ท่าน'; }
+
+            const listTopEff = get('list-top-eff-dept');
+            if(listTopEff) listTopEff.innerHTML = effDepts.slice(0, 5).map((d, i) => `<div class="list-card-item border-emerald-100 py-1.5"><div class="flex items-center mr-2"><span class="rank-badge rank-${i+1} bg-emerald-100 text-emerald-700 w-5 h-5 text-[10px]">${i+1}</span><span class="text-[12px] font-bold text-slate-600 leading-tight break-words line-clamp-2" title="${escHTML(d.dept)}">${escHTML(d.dept)}</span></div><span class="font-black text-emerald-600 text-sm">${d.eff.toFixed(2)}</span></div>`).join('');
+
+            const listTopRes = get('list-top-researchers');
+            if(listTopRes) listTopRes.innerHTML = sortedResPub.map((x, i) => {
+                const rObj = res.find(r => getF(r, ['รหัสนักวิจัย']) == x[0]);
+                const name = rObj ? (getF(rObj, ['ชื่อ - นามสกุล', 'ชื่อ-นามสกุล']) || '').toString().trim() : 'N/A';
+                return `<div class="list-card-item py-1.5"><div class="flex items-center mr-2"><span class="text-[12px] font-bold text-slate-600 leading-tight break-words line-clamp-1">${escHTML(name)}</span></div><span class="font-black text-indigo-600 text-sm">${x[1]}</span></div>`;
+            }).join('');
+
+            const listTopJ = get('list-top-journals');
+            if(listTopJ) listTopJ.innerHTML = sortedJ.map((j, i) => {
+                return `<div class="list-card-item py-1.5"><div class="flex items-center mr-2"><span class="text-[12px] font-bold text-slate-600 leading-tight break-words line-clamp-1" title="${escHTML(j[0])}">${escHTML(j[0])}</span></div><span class="font-black text-blue-600 text-sm">${j[1]}</span></div>`;
+            }).join('');
+
+            const kpiAvgTime = get('kpi-avg-time');
+            if(kpiAvgTime) { kpiAvgTime.setAttribute('data-target', '1.8'); kpiAvgTime.innerHTML = '0'; }
+
+            const inactiveEl = get('kpi-inactive-percent');
+            if(inactiveEl) { inactiveEl.setAttribute('data-target', inactivePercentRaw); inactiveEl.innerHTML = '0%'; }
+
+            if (typeof Chart !== 'undefined') {
+                const ctxPipe = get('chart-pipeline');
+                if (ctxPipe) {
+                    currentCharts.pipeline = new Chart(ctxPipe, {
+                        type: 'line',
+                        data: {
+                            labels: trendY,
+                            datasets: [
+                                { label: 'ผลงานตีพิมพ์', data: trendY.map(y => uniqueProj.filter(p => {
+                                    if (!isPublished(p)) return false;
+                                    let pubYear = (getF(p, ['ปีที่ตีพิมพ์']) || '').toString().trim();
+                                    if(!pubYear || pubYear === '-') pubYear = (getF(p, ['ปีที่ดำเนินงาน']) || '').toString().trim();
+                                    return pubYear == y;
+                                }).length), borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, borderWidth: 2, tension: 0.4 },
+                                { label: 'โครงการวิจัยทั้งหมด', data: trendY.map(y => uniqueProj.filter(p => (getF(p, ['ปีที่ดำเนินงาน']) || '').toString() == y).length), borderColor: '#10B981', backgroundColor: 'transparent', fill: false, borderWidth: 2, tension: 0.4 }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: {size: 12, family: 'Sarabun'} } } }, scales: { x: { ticks: { font: { family: 'Sarabun', size: 11 } } }, y: { ticks: { font: { family: 'Sarabun', size: 11 } } } } }
+                    });
+                }
+                
+                const ctxMultiPerf = get('chart-multi-perf');
+                if (ctxMultiPerf) {
+                    currentCharts.multiPerf = new Chart(ctxMultiPerf, {
+                        type: 'bar',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: 'ตีพิมพ์แล้ว',
+                                    data: [],
+                                    backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                                    borderRadius: 4,
+                                    barPercentage: 0.6
+                                },
+                                {
+                                    label: 'รอตีพิมพ์ (โครงการ)',
+                                    data: [],
+                                    backgroundColor: 'rgba(226, 232, 240, 0.8)',
+                                    borderRadius: 4,
+                                    barPercentage: 0.6
+                                }
+                            ]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'top', labels: { boxWidth: 10, font: {family: 'Sarabun', size: 11} } },
+                                tooltip: {
+                                    callbacks: {
+                                        afterBody: function(ctxs) { return ''; } 
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: { stacked: true, ticks: { font: { family: 'Sarabun', size: 11 } } },
+                                y: { stacked: true, ticks: { font: { family: 'Sarabun', size: 12, weight: 'bold' } } }
+                            }
+                        }
+                    });
+                    
+                    window.updatePerfChart('edu');
+                }
+
+                const ctxPT = get('chart-personnel-type');
+                if(ctxPT) currentCharts.pType = new Chart(ctxPT, { 
+                    type: 'doughnut', 
+                    data: { labels: Object.keys(pTypes), datasets: [{ data: Object.values(pTypes), backgroundColor: ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981'], borderColor: '#FFFFFF', borderWidth: 2 }] }, 
+                    options: { 
+                        cutout: '70%', maintainAspectRatio: false, 
+                        plugins: { legend: { position: 'right', labels: { boxWidth: 8, font: {size: 11, family: 'Sarabun'} } } }
+                    } 
+                });
+
+                const ctxEdu = get('chart-edu-level');
+                if(ctxEdu) currentCharts.edu = new Chart(ctxEdu, { 
+                    type: 'bar', 
+                    data: { labels: Object.keys(eduLevels), datasets: [{ data: Object.values(eduLevels), backgroundColor: '#6366F1', borderRadius: 4 }] }, 
+                    options: { 
+                        maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { family: 'Sarabun', size: 11 } } }, y: { ticks: { font: { family: 'Sarabun', size: 11 } } } }
+                    } 
+                });
+                
+                const ctxRet = get('chart-retire-trend');
+                if(ctxRet) {
+                    currentCharts.retire = new Chart(ctxRet, { 
+                        type: 'line', data: { labels: Object.keys(retireYStats), datasets: [{ label: 'จำนวนบุคลากรที่จะเกษียณ', data: Object.values(retireYStats), borderColor: '#F43F5E', backgroundColor: 'rgba(244, 63, 94, 0.1)', fill: true, tension: 0.4, borderWidth: 2, pointBackgroundColor: '#F43F5E', pointRadius: 4 }] }, 
+                        options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Sarabun', size: 11 } } }, x: { ticks: { font: { family: 'Sarabun', size: 11 } } } } } 
+                    });
+                }
+
+                const ctxDept = get('chart-res-dept-main');
+                if(ctxDept) {
+                    currentCharts.dept = new Chart(ctxDept, { 
+                        type: 'bar', 
+                        data: { 
+                            labels: top15Depts.map(d => formatMultiLineLabel(d[0], 28)), 
+                            datasets: [
+                                { label: 'ตีพิมพ์แล้ว', data: top15Depts.map(d => deptPubStats[d[0]] || 0), backgroundColor: '#3B82F6', borderRadius: 4 },
+                                { label: 'โครงการวิจัย (รอตีพิมพ์)', data: top15Depts.map(d => d[1] - (deptPubStats[d[0]] || 0)), backgroundColor: '#E2E8F0', borderRadius: 4 }
+                            ] 
+                        }, 
+                        options: { 
+                            indexAxis: 'y', 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Sarabun', size: 12 } } } }, 
+                            scales: { 
+                                x: { stacked: true, ticks: { font: { family: 'Sarabun', size: 11 } } }, 
+                                y: { stacked: true, ticks: { autoSkip: false, font: { size: 11, family: 'Sarabun' } } } 
+                            } 
+                        } 
+                    });
+                }
+            }
+
+            window.updateMouDashboardCharts(filteredMous);
+            runAnimations();
+            lucide.createIcons(); 
+        }
+
+        window.updateMouDashboardCharts = function(mouData) {
+            if(get('mou-obj-loader')) get('mou-obj-loader').style.display = 'none';
+            if(get('mou-partner-loader')) get('mou-partner-loader').style.display = 'none';
+
+            let resCount = 0, toolCount = 0, hrCount = 0;
+            mouData.forEach(m => {
+                if (m.hasResearch) resCount++;
+                if (m.hasTool) toolCount++;
+                if (m.hasHR) hrCount++;
+            });
+
+            if (typeof Chart !== 'undefined') {
+                const ctxObj = get('chart-mou-objectives');
+                if (ctxObj) {
+                    currentCharts.mouObj = new Chart(ctxObj, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['วิจัยและศึกษา', 'ห้องปฏิบัติการและเครื่องมือ', 'พัฒนาบุคลากรวิชาการ'],
+                            datasets: [{
+                                data: [resCount, toolCount, hrCount],
+                                backgroundColor: ['#06B6D4', '#10B981', '#F59E0B'],
+                                borderColor: '#FFFFFF', borderWidth: 2
+                            }]
+                        },
+                        options: { 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { position: 'right', labels: { boxWidth: 8, font: {size: 11, family: 'Sarabun'} } } }
+                        }
+                    });
+                }
+
+                const deptOrgMap = {};
+                const orgTypes = new Set();
+                mouData.forEach(m => {
+                    const d = m.dept && m.dept !== '-' ? m.dept : 'ไม่ระบุ';
+                    const o = m.typeOrg && m.typeOrg !== '-' ? m.typeOrg : 'ไม่ระบุ';
+                    orgTypes.add(o);
+                    if (!deptOrgMap[d]) deptOrgMap[d] = { total: 0 };
+                    if (!deptOrgMap[d][o]) deptOrgMap[d][o] = 0;
+                    deptOrgMap[d][o]++;
+                    deptOrgMap[d].total++;
+                });
+
+                const sortedDepts = Object.keys(deptOrgMap).sort((a, b) => deptOrgMap[b].total - deptOrgMap[a].total).slice(0, 7);
+                const orgTypeArray = Array.from(orgTypes);
+                const colors = ['#0EA5E9', '#EC4899', '#F59E0B', '#8B5CF6', '#10B981'];
+
+                const datasets = orgTypeArray.map((org, idx) => ({
+                    label: org,
+                    data: sortedDepts.map(d => deptOrgMap[d][org] || 0),
+                    backgroundColor: colors[idx % colors.length],
+                    borderRadius: 4
+                }));
+
+                const ctxPartner = get('chart-mou-partner-types');
+                if (ctxPartner) {
+                    currentCharts.mouPartner = new Chart(ctxPartner, {
+                        type: 'bar',
+                        data: {
+                            labels: sortedDepts.map(d => formatMultiLineLabel(d, 15)),
+                            datasets: datasets
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            scales: { 
+                                x: { stacked: true, ticks: { font: {size: 11, family: 'Sarabun'} } }, 
+                                y: { stacked: true, ticks: { font: {size: 11, family: 'Sarabun'}, stepSize: 1 } } 
+                            },
+                            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 11, family: 'Sarabun'} } } }
+                        }
+                    });
+                }
+            }
+
+            const statusCard = get('mou-status-card');
+            if (statusCard) {
+                let activeCount = 0;
+                let expiring6MoCount = 0;
+                let expiredCount = 0;
+
+                mouData.forEach(m => {
+                    if (m.status === 'expired') {
+                        expiredCount++;
+                    } else if (m.daysLeft !== null && m.daysLeft <= 180) {
+                        expiring6MoCount++;
+                    } else {
+                        activeCount++;
+                    }
+                });
+
+                statusCard.innerHTML = `
+                        <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100/80 shadow-sm col-span-1">
+                            <div>
+                                <div class="w-8 h-8 rounded-full bg-emerald-200/50 text-emerald-600 flex items-center justify-center mb-2"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
+                                <p class="text-[11px] font-bold text-emerald-800 uppercase tracking-widest">Active</p>
+                                <p class="text-[9px] text-emerald-600 leading-tight">> 6 เดือน</p>
+                            </div>
+                            <span class="text-3xl font-black text-emerald-700 animate-number" data-target="${activeCount}">0</span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100/80 shadow-sm col-span-1">
+                            <div>
+                                <div class="w-8 h-8 rounded-full bg-amber-200/50 text-amber-600 flex items-center justify-center mb-2"><i data-lucide="alert-circle" class="w-4 h-4"></i></div>
+                                <p class="text-[11px] font-bold text-amber-800 uppercase tracking-widest">Expiring</p>
+                                <p class="text-[9px] text-amber-600 leading-tight">< 180 วัน</p>
+                            </div>
+                            <span class="text-3xl font-black text-amber-700 animate-number" data-target="${expiring6MoCount}">0</span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100/80 shadow-sm col-span-1">
+                            <div>
+                                <div class="w-8 h-8 rounded-full bg-rose-200/50 text-rose-600 flex items-center justify-center mb-2"><i data-lucide="x-circle" class="w-4 h-4"></i></div>
+                                <p class="text-[11px] font-bold text-rose-800 uppercase tracking-widest">Expired</p>
+                                <p class="text-[9px] text-rose-600 leading-tight">สิ้นสุดแล้ว</p>
+                            </div>
+                            <span class="text-3xl font-black text-rose-700 animate-number" data-target="${expiredCount}">0</span>
+                        </div>
+                `;
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+
+        window.calculateMouStatus = function(endDateStr) {
+            let status = 'active';
+            let daysLeft = null;
+            
+            if (!endDateStr || endDateStr === '-' || endDateStr === '') return { status, daysLeft };
+            
+            const parts = endDateStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; 
+                let year = parseInt(parts[2], 10);
+                if (year > 2500) year -= 543;
+                
+                const endDate = new Date(year, month, day);
+                const today = new Date();
+                today.setHours(0,0,0,0); 
+                
+                const diffTime = endDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                daysLeft = diffDays;
+                
+                if (diffDays < 0) {
+                    status = 'expired';
+                } else if (diffDays <= 90) {
+                    status = 'expiring';
+                } else if (endDate.getFullYear() === today.getFullYear()) {
+                    status = 'expiring_this_year';
+                }
+            }
+            return { status, daysLeft };
+        }
+
+        window.processMouRawData = function(rawData) {
+            if(!rawData || rawData.length === 0) return;
+
+            let orgTypesSet = new Set(); 
+            let customStatusesSet = new Set(); 
+
+            MOUS = rawData.map(item => {
+                const partnerName = (getSafeValue(item, ['หน่วยงานคู่จัดทำ MOU']) || 'ไม่ระบุหน่วยงาน').toString();
+                const deptName = (getSafeValue(item, ['หน่วยงานที่รับผิดชอบ']) || 'ไม่ระบุหน่วยงาน').toString();
+                const orgType = (getSafeValue(item, ['ประเภทองค์กร']) || '-').toString();
+                const customStatus = getSafeValue(item, ['สถานะ']);
+                const start = (getSafeValue(item, ['ระยะเวลาเริ่มต้น']) || '-').toString();
+                const end = (getSafeValue(item, ['ระยะเวลาสิ้นสุด']) || '-').toString();
+                
+                const reqRes = getSafeValue(item, ['ด้านการศึกษาและวิจัย']);
+                const reqTool1 = getSafeValue(item, ['สนับสนุน/พัฒนา การใช้เครื่องมือและห้องปฏิบัติการในการดำเนินงาน', 'สนับสนุน/พัฒนาเครื่องมือและห้องปฏิบัติการ']);
+                const reqTool2 = getSafeValue(item, ['ด้านการพัฒาระบบประกันคุณภาพห้องปฏิบัติการ', 'พัฒนาระบบประกันคุณภาพห้องปฏิบัติการ']);
+                const reqToolArray = [];
+                if (reqTool1 && reqTool1 !== '-') reqToolArray.push(reqTool1);
+                if (reqTool2 && reqTool2 !== '-') reqToolArray.push(reqTool2);
+                const reqTool = reqToolArray.join('\n') || '-';
+
+                const reqHR = getSafeValue(item, ['ด้านวิชาการและพัฒนาบุคลากร']);
+
+                const hasResearch = reqRes !== '-' && reqRes !== '' && reqRes !== 'ไม่มีข้อมูล';
+                const hasTool = reqTool !== '-' && reqTool !== '' && reqTool !== 'ไม่มีข้อมูล';
+                const hasHR = reqHR !== '-' && reqHR !== '' && reqHR !== 'ไม่มีข้อมูล';
+                
+                if (orgType !== '' && orgType !== '-') {
+                    orgTypesSet.add(orgType);
+                }
+                if (customStatus !== '' && customStatus !== '-') {
+                    customStatusesSet.add(customStatus);
+                }
+
+                const statusInfo = window.calculateMouStatus(end);
+
+                let mainContact = getSafeValue(item, ['ผู้รับผิดชอบ/ผู้ประสาน', 'ผู้รับผิดชอบ\n/ผู้ประสาน', 'ผู้รับผิดชอบ /ผู้ประสาน']) || '-';
+                let infoContact = getSafeValue(item, ['ติดต่อ']) || '';
+
+                let objectives = getSafeValue(item, ['วัตถุประสงค์']) || 'ไม่มีข้อมูล';
+                let scope = getSafeValue(item, ['หมายเหตุ']) || '-';
+
+                return {
+                    id: (getSafeValue(item, ['รหัส MOU']) || '-').toString(),
+                    title: (getSafeValue(item, ['ชื่อบันทึก']) || 'ไม่มีชื่อบันทึก').toString(),
+                    partner: partnerName,
+                    dept: deptName,
+                    start: start,
+                    end: end,
+                    status: statusInfo.status,
+                    daysLeft: statusInfo.daysLeft,
+                    customStatus: customStatus,
+                    typeOrg: orgType || '-',
+                    typeMou: getSafeValue(item, ['ประเภท']) || '-',
+                    scope: scope,
+                    documentLink: getSafeValue(item, ['MOUจริง', 'เอกสารแนบ']),
+                    trackingLink: getSafeValue(item, ['ความก้าวหน้าMOU', 'ติดตาม']),
+                    pShort: partnerName !== 'ไม่ระบุหน่วยงาน' ? partnerName.charAt(0).toUpperCase() : '?',
+                    hasResearch, hasTool, hasHR, 
+                    contacts: {
+                        main: mainContact,
+                        info: infoContact
+                    },
+                    details: {
+                        objectives: objectives,
+                        activities: `ด้านการศึกษาและวิจัย:\n${reqRes || '-'}\n\nด้านวิชาการและพัฒนาบุคลากร:\n${reqHR || '-'}`,
+                        resources: `สนับสนุน/พัฒนา การใช้เครื่องมือและระบบคุณภาพห้องปฏิบัติการ:\n${reqTool || '-'}`
+                    }
+                };
+            });
+
+            const orgSelect = get('filter-mou-org');
+            if(orgSelect) {
+                orgSelect.innerHTML = '<option value="all">ทุกประเภทองค์กร</option>';
+                Array.from(orgTypesSet).sort().forEach(org => {
+                    orgSelect.add(new Option(org, org));
+                });
+            }
+            
+            const statusSelect = get('filter-mou-status');
+            if(statusSelect) {
+                statusSelect.innerHTML = `
+                    <option value="all">ทุกสถานะ</option>
+                    <option value="active">กำลังดำเนินการ (Active)</option>
+                    <option value="expiring_this_year">หมดอายุภายในปีนี้</option>
+                    <option value="expiring">ใกล้หมดอายุ (ภายใน 90 วัน)</option>
+                    <option value="expired">สิ้นสุดแล้ว (Expired)</option>
+                `;
+                if(customStatusesSet.size > 0) {
+                    const optGroup = document.createElement('optgroup');
+                    optGroup.label = "สถานะการดำเนินงาน (กำหนดเอง)";
+                    Array.from(customStatusesSet).sort().forEach(cs => {
+                        const opt = new Option(cs, cs);
+                        optGroup.appendChild(opt);
+                    });
+                    statusSelect.appendChild(optGroup);
+                }
+            }
+
+            window.refreshDashboard();
+        }
+
+        window.performMouSearch = function() {
+            get('mou-view-initial').classList.add('hidden');
+            get('mou-view-results').classList.add('hidden');
+            get('mou-view-loading').classList.remove('hidden');
+            
+            get('mou-view-loading').innerHTML = Array(4).fill(0).map(() => `
+                <div class="executive-card p-5">
+                    <div class="flex gap-4 items-start mb-6">
+                        <div class="w-[52px] h-[52px] skeleton-box rounded-[16px] shrink-0"></div>
+                        <div class="flex-1 pt-1 space-y-2.5">
+                            <div class="h-4 skeleton-box rounded w-3/4"></div>
+                            <div class="h-3 skeleton-box rounded w-full"></div>
+                            <div class="h-3 skeleton-box rounded w-1/2 mt-2"></div>
+                        </div>
+                    </div>
+                    <div class="w-full mt-auto h-[46px] skeleton-box rounded-[14px]"></div>
+                </div>
+            `).join('');
+
+            setTimeout(() => {
+                const nameKey = get('search-mou-name').value.toLowerCase();
+                const deptKey = get('search-mou-dept').value;
+                const statusKey = get('filter-mou-status').value;
+                const orgKey = get('filter-mou-org').value;
+
+                let filtered = MOUS.filter(m => {
+                    const matchName = m.title.toLowerCase().includes(nameKey) || m.partner.toLowerCase().includes(nameKey) || m.id.toLowerCase().includes(nameKey);
+                    const cleanDeptKey = deptKey.replace(/\s+/g, '');
+                    const cleanMDept = m.dept.replace(/\s+/g, '');
+                    const matchDept = deptKey === 'all' || cleanMDept.includes(cleanDeptKey) || cleanDeptKey.includes(cleanMDept);
+                    const matchStatus = statusKey === 'all' || m.status === statusKey || m.customStatus === statusKey;
+                    const matchOrg = orgKey === 'all' || m.typeOrg === orgKey;
+                                      
+                    return matchName && matchDept && matchStatus && matchOrg;
+                });
+
+                window.renderMouCards(filtered);
+                get('mou-view-loading').classList.add('hidden');
+                get('mou-view-results').classList.remove('hidden');
+            }, 600); 
+        }
+
+        window.renderMouCards = function(data) {
+            const grid = get('mou-view-results');
+            if (!grid) return;
+            if (data.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-16 text-center text-slate-400 font-medium text-lg bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-sm">ไม่พบข้อมูล MOU ที่ตรงกับเงื่อนไขการค้นหา</div>`;
+                return;
+            }
+
+            grid.innerHTML = data.map(m => {
+                let badgeHtml = '';
+                if (m.status === 'expired') {
+                    badgeHtml = `
+                    <div class="absolute top-3 right-3 z-10">
+                        <div class="bg-rose-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-rose-600 tracking-wide">
+                            <i data-lucide="x-circle" class="w-3 h-3"></i> หมดอายุ
+                        </div>
+                    </div>`;
+                } else if (m.status === 'expiring') {
+                    const textDays = m.daysLeft !== null ? m.daysLeft : 90;
+                    badgeHtml = `
+                    <div class="absolute top-3 right-3 z-10">
+                        <div class="bg-orange-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-orange-600 tracking-wide">
+                            <i data-lucide="clock" class="w-3 h-3"></i> จะหมดอายุในอีก ${textDays} วัน
+                        </div>
+                    </div>`;
+                } else if (m.status === 'expiring_this_year') {
+                    badgeHtml = `
+                    <div class="absolute top-3 right-3 z-10">
+                        <div class="bg-amber-400 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-amber-500 tracking-wide">
+                            <i data-lucide="calendar-clock" class="w-3 h-3"></i> หมดอายุภายในปีนี้
+                        </div>
+                    </div>`;
+                }
+                
+                const initialChar = m.pShort || '';
+                const safeId = escJS(m.id);
+                
+                let timeInfoHtml = '';
+                if (m.customStatus) {
+                    timeInfoHtml = `
+                    <div class="text-[12px] text-indigo-600 mt-2 font-bold flex items-center gap-1.5 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-100 w-fit">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        <span>${escHTML(m.customStatus)}</span>
+                    </div>`;
+                } else {
+                    timeInfoHtml = `
+                    <div class="text-[12px] text-slate-500 mt-2 font-medium flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 w-fit">
+                        <i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i>
+                        <span>${escHTML(m.start)} - <span class="${m.status !== 'active' ? 'text-red-500 font-bold' : ''}">${escHTML(m.end)}</span></span>
+                    </div>`;
+                }
+
+                return `
+                <div class="executive-card p-5 group transition-all relative">
+                    ${badgeHtml}
+                    <div class="flex gap-4 items-start mb-6">
+                        <div class="w-[52px] h-[52px] bg-[#F0F5FF] text-[#06B6D4] rounded-[16px] flex items-center justify-center text-2xl font-bold shrink-0 border border-cyan-100 shadow-sm mt-1">
+                            ${escHTML(initialChar)}
+                        </div>
+                        <div class="flex-1 pr-16 min-w-0">
+                            <h4 class="text-[15px] font-bold text-slate-800 line-clamp-2 leading-snug" title="${escHTML(m.title)}">${escHTML(m.title)}</h4>
+                            <p class="text-[13px] text-cyan-700 mt-1 font-bold truncate" title="${escHTML(m.partner)}"><i data-lucide="building-2" class="w-3.5 h-3.5 inline pb-0.5 text-cyan-500"></i> ${escHTML(m.partner)}</p>
+                            ${timeInfoHtml}
+                        </div>
+                    </div>
+                    <button onclick="window.openMouModal('${safeId}')" class="w-full mt-auto py-3 bg-[#F8FAFC] hover:bg-cyan-500 text-slate-600 hover:text-white font-bold text-[13px] rounded-[14px] transition-all border border-slate-100 shadow-sm cursor-pointer flex justify-center items-center gap-2">
+                        ดูรายละเอียด
+                    </button>
+                </div>
+            `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        window.openMouModal = function(mId) {
+            const m = MOUS.find(x => x.id === mId);
+            if (!m) return;
+            
+            let statusStyle, statusIcon, statusLabel;
+            if (m.customStatus) {
+                statusStyle = 'bg-indigo-100 text-indigo-700 border-indigo-200'; statusIcon = 'activity'; statusLabel = m.customStatus;
+            } else if (m.status === 'active') { 
+                statusStyle = 'bg-green-100 text-green-700 border-green-200'; statusIcon = 'check-circle'; statusLabel = 'กำลังดำเนินการ'; 
+            } else if (m.status === 'expired') { 
+                statusStyle = 'bg-red-100 text-red-700 border-red-200'; statusIcon = 'x-circle'; statusLabel = 'สิ้นสุดแล้ว'; 
+            } else if (m.status === 'expiring') { 
+                statusStyle = 'bg-orange-100 text-orange-700 border-orange-200'; statusIcon = 'alert-circle'; statusLabel = 'ใกล้หมดอายุ'; 
+            } else if (m.status === 'expiring_this_year') { 
+                statusStyle = 'bg-yellow-100 text-yellow-800 border-yellow-300'; statusIcon = 'calendar-clock'; statusLabel = 'หมดอายุภายในปีนี้'; 
+            }
+
+            let documentHtml = '';
+            if (m.documentLink && (m.documentLink.startsWith('http://') || m.documentLink.startsWith('https://'))) {
+                documentHtml = `<a href="${m.documentLink}" target="_blank" class="w-full flex items-center justify-between p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold transition-colors cursor-pointer mt-2"><span>เปิดเอกสาร MOU (คลิกเพื่อเปิด)</span><i data-lucide="external-link" class="w-4 h-4"></i></a>`;
+            } else {
+                documentHtml = `<div class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 text-xs font-bold mt-2"><span>ไม่มีเอกสารแนบในระบบ</span><i data-lucide="file-minus" class="w-4 h-4"></i></div>`;
+            }
+
+            let trackingHtml = '';
+            if (m.trackingLink && (m.trackingLink.startsWith('http://') || m.trackingLink.startsWith('https://'))) {
+                trackingHtml = `<a href="${m.trackingLink}" target="_blank" class="w-full flex items-center justify-between p-3 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs font-bold transition-colors cursor-pointer mt-2"><span>เอกสารความก้าวหน้า MOU (คลิกเพื่อเปิด)</span><i data-lucide="external-link" class="w-4 h-4"></i></a>`;
+            } else {
+                trackingHtml = `<div class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 text-xs font-bold mt-2"><span>ไม่มีเอกสารความก้าวหน้าในระบบ</span><i data-lucide="file-minus" class="w-4 h-4"></i></div>`;
+            }
+
+            let coordinatorHtml = `
+                <div class="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm ${m.contacts.info ? 'cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group' : ''}" ${m.contacts.info ? `onclick="const el = document.getElementById('contact-info-${m.id}'); el.classList.toggle('hidden'); const icon = document.getElementById('contact-icon-${m.id}'); if(!el.classList.contains('hidden')) { icon.style.transform = 'rotate(180deg)' } else { icon.style.transform = 'rotate(0deg)' }"` : ''}>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-orange-50 text-orange-600 rounded-lg"><i data-lucide="users" class="w-5 h-5"></i></div>
+                            <span class="text-xs font-black uppercase tracking-widest text-slate-400">ผู้ประสานงาน</span>
+                        </div>
+                        ${m.contacts.info ? `<div class="text-orange-400 bg-orange-50 rounded-full p-1 group-hover:bg-orange-100 transition-colors"><i data-lucide="chevron-down" id="contact-icon-${m.id}" class="w-4 h-4 transition-transform duration-300"></i></div>` : ''}
+                    </div>
+                    <p class="text-sm font-bold text-slate-700 leading-relaxed">${escHTML(m.contacts.main).replace(/\n/g, '<br>')}</p>
+                    ${m.contacts.info ? `
+                    <div id="contact-info-${m.id}" class="hidden mt-4 pt-4 border-t border-slate-100 animate-[fadeIn_0.3s_ease-out]">
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2"><i data-lucide="book-user" class="w-3.5 h-3.5 inline pb-0.5"></i> ข้อมูลติดต่อเพิ่มเติม</p>
+                        <p class="text-[13px] text-slate-600 whitespace-pre-wrap">${escHTML(m.contacts.info).replace(/\n/g, '<br>')}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            const modalTitleEl = get('modal-title');
+            if (modalTitleEl) modalTitleEl.innerHTML = `<i data-lucide="handshake" class="w-6 h-6 text-cyan-600"></i> <span class="text-slate-500 font-normal mr-1">รายละเอียดความร่วมมือ (MOU)</span>`;
+            
+            const modalActionBtnsEl = get('modal-action-btns');
+            if (modalActionBtnsEl) modalActionBtnsEl.innerHTML = '';
+
+            const modalContentEl = get('modal-content');
+            if(modalContentEl) {
+                modalContentEl.innerHTML = `
+                <div class="bg-white rounded-[2rem] border border-slate-200 p-8 flex flex-col md:flex-row gap-8 items-center relative overflow-hidden shadow-sm mb-6">
+                    <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-slate-50 rounded-full opacity-50"></div>
+                    <div class="flex items-center gap-4 shrink-0 z-10">
+                        <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-black shadow-lg border-4 border-white text-xs shrink-0">DMSC</div>
+                        <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-white font-black shadow-lg border-4 border-white -ml-6 text-xl shrink-0">${escHTML(m.pShort)}</div>
+                    </div>
+                    <div class="z-10 text-center md:text-left w-full">
+                        <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
+                            <span class="text-xs font-black text-slate-400 uppercase tracking-widest">${escHTML(m.id)}</span>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">${escHTML(m.typeMou)}</span>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">${escHTML(m.typeOrg)}</span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${statusStyle} ml-auto">
+                                <i data-lucide="${statusIcon}" class="w-3.5 h-3.5"></i> ${escHTML(statusLabel)}
+                            </span>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-black text-slate-800 leading-tight mt-2">${escHTML(m.title)}</h2>
+                        <h3 class="text-sm font-bold text-cyan-600 mt-2"><i data-lucide="building-2" class="w-4 h-4 inline pb-0.5"></i> ${escHTML(m.partner)}</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    ${m.customStatus ? 
+                        `<div class="bg-indigo-50/30 p-6 rounded-[1.5rem] border border-indigo-100 shadow-sm relative overflow-hidden">
+                            <div class="flex items-center gap-3 mb-4 relative z-10"><div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i data-lucide="activity" class="w-5 h-5"></i></div><span class="text-xs font-black uppercase tracking-widest text-slate-400">สถานะปัจจุบัน</span></div>
+                            <div class="space-y-1 relative z-10"><p class="text-lg font-bold text-indigo-700 leading-snug">${escHTML(m.customStatus)}</p></div>
+                        </div>` 
+                    : 
+                        `<div class="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm">
+                            <div class="flex items-center gap-3 mb-4"><div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i data-lucide="calendar" class="w-5 h-5"></i></div><span class="text-xs font-black uppercase tracking-widest text-slate-400">ระยะเวลาสัญญา</span></div>
+                            <div class="space-y-1"><p class="text-sm font-bold text-slate-500">เริ่มต้น: <span class="text-slate-800">${escHTML(m.start)}</span></p><p class="text-sm font-bold text-slate-500">สิ้นสุด: <span class="${m.status !== 'active' ? 'text-red-500' : 'text-slate-800'}">${escHTML(m.end)}</span></p></div>
+                        </div>`
+                    }
+                    <div class="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4"><div class="p-2 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="target" class="w-5 h-5"></i></div><span class="text-xs font-black uppercase tracking-widest text-slate-400">หน่วยงานรับผิดชอบ</span></div>
+                        <p class="text-sm font-bold text-slate-700 leading-relaxed">${escHTML(m.dept)}</p>
+                    </div>
+                    ${coordinatorHtml}
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-4">
+                        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                            <button onclick="window.toggleMouAcc('obj')" class="w-full flex items-center justify-between p-5 font-bold text-slate-800 hover:bg-slate-50 transition-colors">
+                                <span class="flex items-center gap-3"><i data-lucide="award" class="w-5 h-5 text-blue-500"></i> วัตถุประสงค์ / หมายเหตุ</span>
+                                <i data-lucide="chevron-down" id="arr-mou-obj" class="w-5 h-5"></i>
+                            </button>
+                            <div id="acc-mou-obj" class="acc-content px-12 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap"><b>วัตถุประสงค์:</b><br>${escHTML(m.details.objectives).replace(/\n/g, '<br>')}<br><br><b>หมายเหตุ:</b><br>${escHTML(m.scope).replace(/\n/g, '<br>')}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                            <button onclick="window.toggleMouAcc('act')" class="w-full flex items-center justify-between p-5 font-bold text-slate-800 hover:bg-slate-50 transition-colors">
+                                <span class="flex items-center gap-3"><i data-lucide="activity" class="w-5 h-5 text-emerald-500"></i> ด้านวิชาการและงานวิจัย</span>
+                                <i data-lucide="chevron-down" id="arr-mou-act" class="w-5 h-5"></i>
+                            </button>
+                            <div id="acc-mou-act" class="acc-content px-12 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">${m.details.activities.replace(/\n/g, '<br>')}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                            <button onclick="window.toggleMouAcc('res')" class="w-full flex items-center justify-between p-5 font-bold text-slate-800 hover:bg-slate-50 transition-colors">
+                                <span class="flex items-center gap-3"><i data-lucide="microscope" class="w-5 h-5 text-purple-500"></i> ห้องปฏิบัติการและเครื่องมือ</span>
+                                <i data-lucide="chevron-down" id="arr-mou-res" class="w-5 h-5"></i>
+                            </button>
+                            <div id="acc-mou-res" class="acc-content px-12 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">${m.details.resources.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                            <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4"></i> ไฟล์เอกสาร</h4>
+                            <div class="space-y-2">
+                                ${documentHtml}
+                                ${trackingHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                
+                modalContentEl.scrollTop = 0;
+            }
+
+            const masterModalEl = get('master-modal');
+            if (masterModalEl) masterModalEl.classList.remove('hidden');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setTimeout(() => window.toggleMouAcc('obj'), 50);
+        }
+
+        window.toggleMouAcc = function(id) {
+            const el = get(`acc-mou-${id}`);
+            const arr = get(`arr-mou-${id}`);
+            if(el) {
+                el.classList.toggle('open');
+                if(arr) arr.style.transform = el.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+            }
+        }
+
+        window.clearMouSearch = function() {
+            if(get('search-mou-name')) get('search-mou-name').value = '';
+            if(get('search-mou-dept')) get('search-mou-dept').value = 'all';
+            if(get('filter-mou-status')) get('filter-mou-status').value = 'all';
+            if(get('filter-mou-org')) get('filter-mou-org').value = 'all';
+            
+            if(get('mou-view-initial')) get('mou-view-initial').classList.remove('hidden');
+            if(get('mou-view-results')) get('mou-view-results').classList.add('hidden');
+            if(get('mou-view-loading')) get('mou-view-loading').classList.add('hidden');
+            if(get('mou-view-results')) get('mou-view-results').innerHTML = '';
+        }
+
+        window.getSkeletonHTML = function(count = 3) {
+            return Array(count).fill(`
+                <div class="executive-card p-6 flex flex-col justify-between">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-14 h-14 rounded-[1rem] skeleton-box flex-shrink-0"></div>
+                        <div class="flex-1 space-y-3 pt-2">
+                            <div class="h-4 skeleton-box rounded w-3/4"></div>
+                            <div class="h-3 skeleton-box rounded w-1/2"></div>
+                        </div>
+                    </div>
+                    <div class="h-10 skeleton-box rounded-xl w-full"></div>
+                </div>
+            `).join('');
+        }
+
+        window.handleSearch = function(type) {
+            const resultsDiv = get(`${type}-results`);
+            if (resultsDiv) {
+                resultsDiv.innerHTML = window.getSkeletonHTML(6);
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+            }
+
+            setTimeout(() => {
+                try {
+                    const nameEl = get(type === 'coord' ? 'filter-coord-name' : `search-${type}-name`);
+                    const deptEl = get(type === 'coord' ? 'filter-coord-dept' : `search-${type}-dept`);
+                    
+                    const name = nameEl ? nameEl.value.toLowerCase() : '';
+                    const dept = deptEl ? deptEl.value : 'all';
+                    
+                    if (type === 'res') {
+                        const list = allData.researchers.filter(r => {
+                            const rName = ((getF(r, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล']) || '').toString()).trim().toLowerCase();
+                            const rEdu = (getF(r, ['ระดับการศึกษาสูงสุด']) || '').toString().toLowerCase();
+                            const rType = (getF(r, ['ประเภทบุคลากร']) || '').toString().toLowerCase();
+                            const rExp = (getF(r, ['สาขาความเชี่ยวชาญ']) || '').toString().toLowerCase();
+                            
+                            const matchKey = rName.includes(name) || rEdu.includes(name) || rType.includes(name) || rExp.includes(name);
+                            const matchDept = (dept === 'all' || getF(r, ['หน่วยงาน']) === dept);
+                            return (name === "" || matchKey) && matchDept;
+                        });
+                        window.renderResearcherCards(list);
+                    } else if (type === 'proj') {
+                        const resMap = new Map();
+                        (allData.researchers || []).forEach(r => {
+                            const rId = getF(r, ['รหัสนักวิจัย']);
+                            if(rId) resMap.set(rId, r);
+                        });
+
+                        const list = allData.projects.map(p => {
+                            const r = resMap.get(getF(p, ['รหัสนักวิจัย']));
+                            const fullName = r ? ((getF(r, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล']) || '').toString()).trim() : '';
+                            return { ...p, 'หน่วยงาน_derived': r ? getF(r, ['หน่วยงาน']) : 'ไม่ระบุ', 'researcherName': fullName };
+                        }).filter(p => {
+                            const pName = (getF(p, ['ชื่อผลงานวิจัย']) || '').toString().toLowerCase();
+                            const rName = (p.researcherName || '').toString().toLowerCase();
+                            return (name === "" || pName.includes(name) || rName.includes(name)) && (dept === 'all' || p['หน่วยงาน_derived'] === dept);
+                        });
+                        
+                        const uniqueSearchProjectsMap = new Map();
+                        list.forEach(p => {
+                            let pName = (getF(p, ['ชื่อผลงานวิจัย']) || '').toString().trim();
+                            if (pName && !uniqueSearchProjectsMap.has(pName)) uniqueSearchProjectsMap.set(pName, p);
+                        });
+                        window.renderProjectCards(Array.from(uniqueSearchProjectsMap.values()));
+                    } else if (type === 'coord') {
+                        const list = allData.coordinators.filter(c => {
+                            const cName = (getF(c, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล', 'FullName']) || '').toString().toLowerCase();
+                            const cDept = getF(c, ['หน่วยงาน', 'Department']);
+                            return (name === "" || cName.includes(name)) && (dept === 'all' || cDept === dept);
+                        });
+                        window.renderCoordinatorCards(list);
+                    }
+                } catch(err) {
+                    console.error("Search Error:", err);
+                    if(resultsDiv) resultsDiv.innerHTML = `<div class="col-span-full text-center text-rose-500 py-12 font-bold text-[16px]">เกิดข้อผิดพลาดในการค้นหา</div>`;
+                }
+            }, 600);
+        }
+
+        window.renderResearcherCards = function(list) {
+            const container = get('res-results');
+            if (!container) return;
+            if(list.length === 0) { container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium text-[16px] bg-white border border-dashed border-slate-200 rounded-[2rem]">ไม่พบข้อมูลนักวิจัย</div>'; return; }
+            
+            container.innerHTML = list.map(r => {
+                const rId = getF(r, ['รหัสนักวิจัย']);
+                const rankIndex = topResearcherIds.indexOf(rId);
+                const fullName = ((getF(r, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล']) || '').toString()).trim() || 'ไม่ระบุชื่อ';
+                const safeName = escJS(fullName);
+                const showName = escHTML(fullName);
+                
+                let badgeHtml = '';
+                if (rankIndex !== -1) {
+                    const rankNumber = rankIndex + 1;
+                    let bgStyle = '';
+                    let iconName = '';
+                    let badgeLabel = '';
+                    let fillClass = 'fill-none text-white';
+
+                    if (rankNumber === 1) {
+                        bgStyle = 'from-yellow-400 to-amber-500 shadow-yellow-500/30 ring-1 ring-yellow-200';
+                        iconName = 'trophy'; badgeLabel = 'เหรียญทอง'; fillClass = 'fill-white text-white';
+                    } else if (rankNumber === 2) {
+                        bgStyle = 'from-slate-300 to-slate-400 shadow-slate-400/30 ring-1 ring-slate-200';
+                        iconName = 'medal'; badgeLabel = 'เหรียญเงิน';
+                    } else if (rankNumber === 3) {
+                        bgStyle = 'from-amber-600 to-orange-700 shadow-orange-600/30 ring-1 ring-orange-400';
+                        iconName = 'medal'; badgeLabel = 'เหรียญทองแดง';
+                    } else {
+                        bgStyle = 'from-blue-400 to-indigo-500 shadow-blue-500/30 ring-1 ring-blue-300';
+                        iconName = 'star'; badgeLabel = 'TOP 10'; fillClass = 'fill-white text-white';
+                    }
+
+                    badgeHtml = `
+                    <div class="absolute top-4 right-4 z-20 group/badge flex flex-col items-end">
+                        <div class="bg-gradient-to-br ${bgStyle} text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-1 cursor-help hover:scale-105 transition-transform duration-300">
+                            <i data-lucide="${iconName}" class="w-3.5 h-3.5 ${fillClass}"></i> ${badgeLabel}
+                        </div>
+                        <div class="opacity-0 invisible group-hover/badge:opacity-100 group-hover/badge:visible transition-all duration-300 absolute top-full mt-2 right-0 bg-slate-800/80 backdrop-blur-md text-white text-[11px] py-1.5 px-3 rounded-lg shadow-sm whitespace-nowrap font-medium pointer-events-none">
+                            นักวิจัยตีพิมพ์สูงสุด อันดับที่ ${rankNumber}
+                            <div class="absolute -top-1 right-4 w-2 h-2 bg-slate-800/80 transform rotate-45"></div>
+                        </div>
+                    </div>`;
+                }
+
+                return `
+                <div class="executive-card p-6 flex flex-col justify-between group transition-all relative">
+                    ${badgeHtml}
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-14 h-14 flex-shrink-0 bg-blue-50 text-blue-600 rounded-[1rem] flex items-center justify-center font-bold text-2xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-blue-100/50">
+                            ${escHTML(fullName[0]) || '?'}
+                        </div>
+                        <div class="min-w-0 flex-1 pt-1 ${rankIndex !== -1 ? 'pr-16' : ''}">
+                            <h4 class="font-bold text-slate-800 leading-tight mb-1.5 text-[16px] line-clamp-2 transition-colors">${showName}</h4>
+                            <p class="text-[13px] font-medium text-slate-500 line-clamp-1">${escHTML(getF(r, ['หน่วยงาน']))}</p>
+                        </div>
+                    </div>
+                    <button onclick="window.openResearcherDetail('${escJS(rId)}')" class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-[14px] font-bold hover:bg-blue-600 hover:text-white transition-all border border-slate-100 hover:border-blue-600 cursor-pointer shadow-sm">ดูรายละเอียด</button>
+                </div>
+            `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        window.renderProjectCards = function(list) {
+            const container = get('proj-results');
+            if (!container) return;
+            if(list.length === 0) { container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium text-[16px] bg-white border border-dashed border-slate-200 rounded-[2rem]">ไม่พบข้อมูลผลงานวิจัย</div>'; return; }
+            container.innerHTML = list.map(p => {
+                const rawTitle = (getF(p, ['ชื่อผลงานวิจัย']) || '').toString();
+                const safeTitle = escJS(rawTitle);
+                const showTitle = escHTML(rawTitle);
+                
+                return `
+                <div class="executive-card p-6 flex flex-col justify-between group transition-all">
+                    <div class="mb-6">
+                        <span class="px-3.5 py-1.5 bg-purple-50 text-purple-600 text-[11px] font-black tracking-widest uppercase rounded-lg mb-4 inline-block border border-purple-100 shadow-sm">ปี พ.ศ. ${escHTML(getF(p, ['ปีที่ดำเนินงาน']))}</span>
+                        <h4 class="font-bold text-slate-800 text-[16px] leading-relaxed line-clamp-3 transition-colors">${showTitle}</h4>
+                    </div>
+                    <button onclick="window.openProjectDetail('${safeTitle}')" class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-[14px] font-bold hover:bg-purple-600 hover:text-white transition-all border border-slate-100 hover:border-purple-600 cursor-pointer shadow-sm">ดูรายละเอียด</button>
+                </div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        window.renderCoordinatorCards = function(list) {
+            const container = get('coord-results');
+            if (!container) return;
+            if(list.length === 0) { container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium text-[16px] bg-white border border-dashed border-slate-200 rounded-[2rem]">ไม่พบข้อมูลผู้ประสานงานวิจัย</div>'; return; }
+            container.innerHTML = list.map(c => {
+                const cName = getF(c, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล', 'FullName']);
+                const cDept = getF(c, ['หน่วยงาน', 'Department']);
+                const cStatus = getF(c, ['สถานะผู้ประสาน', 'Status']);
+                const cPhone = getF(c, ['เบอร์โทร', 'เบอร์โทรศัพท์', 'InternalExt']);
+                return `
+                <div class="executive-card p-6 border-l-4 border-l-orange-500 group transition-all">
+                    <div class="flex justify-between items-start mb-5">
+                        <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300 shadow-sm border border-orange-100/50">
+                            <i data-lucide="phone" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-[11px] font-black px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg uppercase tracking-wider">${escHTML(cStatus)}</span>
+                    </div>
+                    <h4 class="font-bold text-slate-800 text-[16px] mb-1.5 line-clamp-1 transition-colors">${escHTML(cName)}</h4>
+                    <p class="text-[13px] font-medium text-slate-500 truncate mb-6">${escHTML(cDept)}</p>
+                    <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-[12px] text-slate-400 font-bold uppercase tracking-widest">เบอร์ติดต่อ</span>
+                        <span class="text-[15px] font-black text-orange-600 bg-orange-50 px-3.5 py-1.5 rounded-xl border border-orange-100 shadow-sm">${escHTML(cPhone) || '-'}</span>
+                    </div>
+                </div>
+            `;
+            }).join('');
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        window.openResearcherDetail = function(id) {
+            const r = allData.researchers.find(x => getF(x, ['รหัสนักวิจัย']) == id);
+            if (!r) return;
+            const works = allData.projects.filter(p => getF(p, ['รหัสนักวิจัย']) == id);
+            const rName = ((getF(r, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล']) || '').toString()).trim() || 'ไม่ระบุชื่อ';
+            
+            const modalTitleEl = get('modal-title');
+            if (modalTitleEl) modalTitleEl.innerHTML = `<i data-lucide="user" class="w-6 h-6 text-emerald-600"></i> <span class="text-slate-500 font-normal mr-1">ข้อมูลนักวิจัย:</span> ${escHTML(getF(r, ['คำนำหน้า']))}${escHTML(rName)}`;
+            
+            const modalActionBtnsEl = get('modal-action-btns');
+            if (modalActionBtnsEl) {
+                modalActionBtnsEl.innerHTML = `<a href="#" onclick="window.open(GLOBAL_SYSTEM_LINK, '_blank')" rel="noopener noreferrer" class="px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-md transition text-[14px] uppercase flex items-center gap-2 no-underline cursor-pointer"><i data-lucide="edit" class="w-4 h-4"></i> แก้ไขข้อมูลนักวิจัย</a>`;
+            }
+            
+            works.sort((a,b) => {
+                const yearA = parseInt(getF(a, ['ปีที่ดำเนินงาน'])) || 0;
+                const yearB = parseInt(getF(b, ['ปีที่ดำเนินงาน'])) || 0;
+                return yearB - yearA;
+            });
+
+            let timelineHtml = `<div class="relative border-l-2 border-slate-200 ml-3 md:ml-4 space-y-8 pb-4">`;
+            
+            if (works.length === 0) {
+                timelineHtml = '<div class="text-center py-12 text-slate-400 text-[15px] font-medium border border-dashed border-slate-200 bg-slate-50 rounded-2xl">ไม่มีประวัติผลงานวิจัย</div>';
+            } else {
+                works.forEach((w, index) => {
+                    let pubStatus = isPublished(w);
+                    const rawTitle = (getF(w, ['ชื่อผลงานวิจัย']) || '').toString();
+                    const safeTitle = escJS(rawTitle);
+                    const pYear = getF(w, ['ปีที่ดำเนินงาน']) || '-';
+                    
+                    let nodeColor = pubStatus ? 'bg-indigo-500 ring-indigo-200' : 'bg-emerald-500 ring-emerald-200';
+                    let cardBorder = pubStatus ? 'border-indigo-100' : 'border-emerald-100';
+                    let iconStr = pubStatus ? 'check-circle-2' : 'clock';
+                    
+                    let pubDetailsHtml = '';
+                    if (pubStatus) {
+                        let pubNameRaw = (getF(w, ['ผลงานตีพิมพ์']) || '').toString().trim();
+                        let pubJournal = (getF(w, ['วารสาร']) || '').toString().trim() || '-';
+                        let pubYearStr = (getF(w, ['ปีที่ตีพิมพ์']) || '').toString().trim() || '-';
+                        let evLink = (getF(w, ['ลิงก์หลักฐาน']) || '').toString().trim();
+                        
+                        let displayPubName = (!['มี','yes','true','ตีพิมพ์แล้ว'].includes(pubNameRaw.toLowerCase())) && pubNameRaw !== '' ? pubNameRaw : 'ตีพิมพ์ผลงานวิจัยสำเร็จ';
+                        let evBtn = (evLink && evLink !== '-' && evLink.startsWith('http')) ? `<a href="${evLink}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-[11px] font-bold hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer border border-indigo-200" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> ดูหลักฐานการตีพิมพ์</a>` : '';
+                        
+                        pubDetailsHtml = `
+                            <div class="mt-4 pt-4 border-t border-slate-100">
+                                <p class="text-[11px] text-indigo-600 font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><i data-lucide="book-open" class="w-3.5 h-3.5"></i> ข้อมูลการตีพิมพ์ (${escHTML(pubYearStr)})</p>
+                                <p class="text-[13px] font-bold text-slate-700">${escHTML(displayPubName)}</p>
+                                <p class="text-[12px] text-slate-500 mt-1"><span class="font-bold">วารสาร:</span> ${escHTML(pubJournal)}</p>
+                                ${evBtn}
+                            </div>
+                        `;
+                    }
+
+                    timelineHtml += `
+                        <div class="relative pl-6 md:pl-8 group">
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full ${nodeColor} ring-4 shadow-sm flex items-center justify-center transition-transform group-hover:scale-125"></div>
+                            
+                            <div onclick="window.openProjectDetail('${safeTitle}')" class="p-5 bg-white border ${cardBorder} hover:border-blue-400 hover:shadow-md transition-all duration-300 rounded-2xl shadow-sm cursor-pointer relative overflow-hidden">
+                                <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500">
+                                    <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+                                </div>
+                                
+                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                    <span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-black uppercase tracking-widest">ปี ${escHTML(pYear)}</span>
+                                    <span class="px-2.5 py-1 ${pubStatus ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'} rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                                        <i data-lucide="${iconStr}" class="w-3 h-3"></i> ${pubStatus ? 'ตีพิมพ์แล้ว' : 'กำลังดำเนินการ / รอตีพิมพ์'}
+                                    </span>
+                                </div>
+                                
+                                <p class="text-[15px] font-bold text-slate-800 leading-snug pr-6 group-hover:text-blue-600 transition-colors">${escHTML(rawTitle)}</p>
+                                
+                                <div class="flex flex-wrap gap-3 text-[12px] mt-3">
+                                    <span class="text-slate-600 font-medium"><span class="text-slate-400">บทบาท:</span> ${escHTML(getF(w, ['บทบาทหน้าที่']))}</span>
+                                    <span class="text-slate-300">|</span>
+                                    <span class="text-emerald-600 font-bold"><span class="text-emerald-500">สัดส่วน:</span> ${escHTML(getF(w, ['สัดส่วน %']))}%</span>
+                                </div>
+                                
+                                ${pubDetailsHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+                timelineHtml += `</div>`;
+            }
+
+            const modalContentEl = get('modal-content');
+            if (modalContentEl) {
+                modalContentEl.innerHTML = `
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <div class="text-center pb-8 border-b border-slate-100">
+                        <div class="w-24 h-24 bg-emerald-50 rounded-[1.5rem] flex items-center justify-center text-emerald-600 text-4xl font-black mx-auto mb-4 border border-emerald-100">${escHTML((rName||'?')[0])}</div>
+                        <span class="inline-block px-4 py-1.5 bg-emerald-50 text-emerald-600 text-[11px] font-black tracking-widest uppercase rounded-lg mb-4 border border-emerald-100/50">${escHTML(getF(r, ['ตำแหน่งทางวิชาการ']) || 'ไม่ระบุตำแหน่ง')}</span>
+                        <h2 class="text-xl md:text-2xl font-black text-slate-800 leading-relaxed mb-5 max-w-3xl mx-auto">${escHTML(rName)}</h2>
+                        
+                        <div class="flex flex-wrap items-center justify-center gap-3">
+                            <span class="px-5 py-2.5 bg-slate-50 text-slate-600 text-[13px] font-bold rounded-xl flex items-center gap-2 shadow-sm border border-slate-100">
+                                <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i> ${escHTML(getF(r, ['หน่วยงาน']) || '-')}
+                            </span>
+                            <span class="px-5 py-2.5 bg-slate-50 text-slate-600 text-[13px] font-bold rounded-xl flex items-center gap-2 shadow-sm border border-slate-100">
+                                <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i> ${escHTML(getF(r, ['e-mail']) || '-')}
+                            </span>
+                            <span class="px-5 py-2.5 bg-slate-50 text-slate-600 text-[13px] font-bold rounded-xl flex items-center gap-2 shadow-sm border border-slate-100">
+                                <i data-lucide="phone" class="w-4 h-4 text-slate-400"></i> โทร: ${escHTML(getF(r, ['เบอร์โทรศัพท์']) || '-')} 
+                                <span class="text-slate-300 mx-1">|</span> ภายใน: ${escHTML(getF(r, ['เบอร์โทรภายใน']) || '-')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                            <h4 class="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i data-lucide="star" class="w-4 h-4 text-amber-500"></i> ความเชี่ยวชาญ</h4>
+                            <p class="text-[16px] font-bold text-slate-800 leading-snug">${escHTML(getF(r, ['สาขาความเชี่ยวชาญ']) || '-')}</p>
+                            <p class="text-[13px] text-slate-500 mt-2 leading-relaxed">${escHTML(getF(r, ['ความเชี่ยวชาญ']) || '-')}</p>
+                        </div>
+                        <div class="p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                            <h4 class="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i data-lucide="graduation-cap" class="w-4 h-4 text-blue-500"></i> การศึกษา</h4>
+                            <p class="text-[16px] font-bold text-slate-800 leading-snug">${escHTML(getF(r, ['ระดับการศึกษาสูงสุด']) || '-')}</p>
+                            <p class="text-[13px] text-slate-500 mt-2 leading-relaxed">${escHTML(getF(r, ['สาขาที่จบ']) || '-')}</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+                            <h4 class="text-[15px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><i data-lucide="microscope" class="w-5 h-5 text-indigo-500"></i> ไทม์ไลน์ประวัติผลงานวิจัย</h4>
+                            <span class="text-[12px] font-bold bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-lg border border-slate-200">${works.length} รายการ</span>
+                        </div>
+                        <div class="mt-4">
+                            ${timelineHtml}
+                        </div>
+                    </div>
+                </div>`;
+                
+                modalContentEl.scrollTop = 0;
+            }
+            
+            const masterModalEl = get('master-modal');
+            if (masterModalEl) masterModalEl.classList.remove('hidden'); 
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        window.openProjectDetail = function(title) {
+            const team = allData.projects.filter(p => (getF(p, ['ชื่อผลงานวิจัย']) || '').toString().trim() === title);
+            if (team.length === 0) return;
+            
+            const modalTitleEl = get('modal-title');
+            if (modalTitleEl) modalTitleEl.innerHTML = `<i data-lucide="book" class="w-6 h-6 text-purple-600"></i> <span class="text-slate-500 font-normal mr-1">ข้อมูลโครงการวิจัย</span>`;
+            
+            const modalActionBtnsEl = get('modal-action-btns');
+            if (modalActionBtnsEl) modalActionBtnsEl.innerHTML = '';
+            
+            let teamHtml = team.map(m => {
+                const rId = getF(m, ['รหัสนักวิจัย']);
+                const res = allData.researchers.find(x => getF(x, ['รหัสนักวิจัย']) == rId);
+                const rName = res ? ((getF(res, ['ชื่อ-นามสกุล', 'ชื่อ - นามสกุล']) || '').toString()).trim() : 'ไม่ทราบชื่อ';
+                return `
+                <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between hover:bg-white hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer group" onclick="window.openResearcherDetail('${escJS(rId)}')">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-[1rem] flex items-center justify-center font-black text-[16px] shrink-0 border border-emerald-200/50">${escHTML(rName[0]||'?')}</div>
+                        <div>
+                            <h4 class="text-[14px] font-bold text-slate-800 leading-tight transition-colors line-clamp-1">${escHTML(rName)}</h4>
+                            <p class="text-[11px] text-slate-500 uppercase mt-1 font-bold tracking-wide">${escHTML(getF(m, ['บทบาทหน้าที่']))}</p>
+                        </div>
+                    </div>
+                    <div class="text-right pl-3">
+                        <span class="text-[14px] font-black text-emerald-600 bg-emerald-50 px-3.5 py-1.5 rounded-xl border border-emerald-100/50">${escHTML(getF(m, ['สัดส่วน %']))}%</span>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            const firstP = team[0];
+            const pYear = getF(firstP, ['ปีที่ดำเนินงาน']);
+            const pubStatus = isPublished(firstP) ? 'ตีพิมพ์แล้ว' : 'ไม่ได้ตีพิมพ์';
+            const journal = getF(firstP, ['วารสาร']);
+            const pubYear = getF(firstP, ['ปีที่ตีพิมพ์']);
+            const pubNameRaw = (getF(firstP, ['ผลงานตีพิมพ์']) || '').toString().trim();
+            const evLink = (getF(firstP, ['ลิงก์หลักฐาน']) || '').toString().trim();
+            const displayPubName = (!['มี','yes','true','ตีพิมพ์แล้ว'].includes(pubNameRaw.toLowerCase())) && pubNameRaw !== '' ? pubNameRaw : 'มีการตีพิมพ์ผลงานวิจัยนี้เรียบร้อยแล้ว';
+            const evBtn = (evLink && evLink !== '-' && evLink.startsWith('http')) ? `<a href="${evLink}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"><i data-lucide="external-link" class="w-4 h-4"></i> เปิดดูหลักฐานการตีพิมพ์</a>` : '';
+            
+            const modalContentEl = get('modal-content');
+            if (modalContentEl) {
+                modalContentEl.innerHTML = `
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <div class="text-center pb-8 border-b border-slate-100">
+                        <span class="inline-block px-4 py-1.5 bg-indigo-50 text-indigo-600 text-[11px] font-black tracking-widest uppercase rounded-lg mb-4 border border-indigo-100/50">รายละเอียดโครงการ</span>
+                        <h2 class="text-xl md:text-2xl font-black text-slate-800 leading-relaxed mb-5 max-w-3xl mx-auto">${escHTML(title)}</h2>
+                        <div class="flex flex-wrap items-center justify-center gap-3">
+                            <span class="px-5 py-2.5 bg-slate-50 text-slate-600 text-[13px] font-bold rounded-xl flex items-center gap-2 shadow-sm border border-slate-100"><i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i> ปีดำเนินงาน: ${escHTML(pYear || '-')}</span>
+                            <span class="px-5 py-2.5 ${isPublished(firstP) ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500 border-slate-200'} border text-[13px] font-bold rounded-xl flex items-center gap-2 shadow-sm">
+                                <i data-lucide="${isPublished(firstP) ? 'check-circle-2' : 'info'}" class="w-4 h-4"></i> สถานะ: ${escHTML(pubStatus)}
+                            </span>
+                        </div>
+                    </div>
+
+                    ${isPublished(firstP) ? `
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl border border-blue-100 p-8 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between shadow-sm relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 opacity-5 text-blue-500"><i data-lucide="book-open" class="w-48 h-48"></i></div>
+                        <div class="flex items-start gap-5 relative z-10">
+                            <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm shrink-0 border border-blue-100"><i data-lucide="book-marked" class="w-7 h-7"></i></div>
+                            <div>
+                                <p class="text-[11px] text-blue-700 font-black uppercase tracking-widest mb-1.5">ข้อมูลการตีพิมพ์</p>
+                                <p class="text-[16px] font-bold text-slate-800 leading-snug mb-2">${escHTML(displayPubName)}</p>
+                                <p class="text-[13px] text-slate-700"><span class="font-bold text-slate-500">วารสาร:</span> ${escHTML(journal || '-')}</p>
+                                ${evBtn}
+                            </div>
+                        </div>
+                        <div class="bg-white/90 backdrop-blur px-6 py-4 rounded-2xl shadow-sm border border-white text-center min-w-[110px] shrink-0 relative z-10">
+                            <p class="text-[10px] text-slate-500 font-black uppercase mb-1 tracking-widest">ปีที่ตีพิมพ์</p>
+                            <p class="text-[20px] font-black text-blue-700">${escHTML(pubYear || '-')}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div>
+                        <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+                            <h4 class="text-[15px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><i data-lucide="users-2" class="w-5 h-5 text-emerald-500"></i> ทีมนักวิจัย</h4>
+                            <span class="text-[12px] font-bold bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-lg border border-slate-200">${team.length} ท่าน</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${teamHtml}
+                        </div>
+                    </div>
+                </div>`;
+                
+                modalContentEl.scrollTop = 0;
+            }
+            
+            const masterModalEl = get('master-modal');
+            if (masterModalEl) masterModalEl.classList.remove('hidden'); 
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
